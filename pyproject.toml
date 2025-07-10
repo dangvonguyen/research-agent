@@ -4,4 +4,15 @@ version = "0.1.0"
 description = "An intelligent agent for automating literature review and scientific discovery: finds, analyzes, and summarizes research papers."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "aiohttp[speedups]>=3.12.13",
+    "bs4>=0.0.2",
+]
+
+[dependency-groups]
+dev = [
+    "coverage>=7.9.2",
+    "mypy>=1.16.1",
+    "pytest>=8.4.1",
+    "ruff>=0.12.2",
+]
