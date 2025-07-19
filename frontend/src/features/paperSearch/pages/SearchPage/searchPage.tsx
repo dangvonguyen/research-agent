@@ -15,11 +15,10 @@ const SearchPage = () => {
       </div>
       <div className={styles.right}>
         {results.map((r, i) => (
-          <SearchResultCard key={i} title={r.title} summary={r.summary} />
+          <SearchResultCard key={i} title={r.title} summary={r.summary} onClick={() => console.log("Clicked on paper")}/>
         ))}
       </div>
     </div>
   )
 }
-
 export default SearchPage
