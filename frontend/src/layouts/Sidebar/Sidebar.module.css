@@ -1,0 +1,25 @@
+.sidebar {
+  width: 200px;
+  background-color: #f9f9f9;
+  border-right: 1px solid #e0e0e0;
+  padding: 1rem;
+  transition: transform 0.3s ease-in-out;
+}
+
+.closed {
+  transform: translateX(-100%);
+}
+
+.open {
+  transform: translateX(0);
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
