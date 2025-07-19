@@ -3,14 +3,15 @@ import styles from "./SearchResultCard.module.css"
 interface SearchResultCardProps {
   title: string
   summary: string
+  onClick?: () => void
 }
 
-const SearchResultCard = ({ title, summary }: SearchResultCardProps) => {
+const SearchResultCard = ({ title, summary, onClick }: SearchResultCardProps) => {
   return (
-    <div className={styles.card}>
+    <button className={styles.card} onClick={onClick}>
       <h3 className={styles.title}>{title}</h3>
       <p className={styles.summary}>{summary}</p>
-    </div>
+    </button>
   )
 }
 
