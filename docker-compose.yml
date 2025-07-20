@@ -1,0 +1,17 @@
+services:
+  backend:
+    image: "${DOCKER_IMAGE_BACKEND}:${TAG:-latest}"
+    restart: always
+    build:
+      context: ./backend
+    env_file:
+      - ./.env
+      - ./backend/.env
+    command: ["fastapi", "run", "app/main.py"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "8000:8000"

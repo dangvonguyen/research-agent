@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+docker-compose.yml
+Dockerfile*
+.docker
+.dockerignore
+
+# Python-generated files
+__pycache__/
+*.py[cod]
+.Python
+build/
+dist/
+*.egg-info/
+
+# Tests
+tests/
+
+# Virtual environment
+.env
+.venv/
+venv/
+
+# Cache
+.mypy_cache
+.pytest_cache
+.ruff_cache

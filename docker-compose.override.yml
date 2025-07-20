@@ -1,0 +1,15 @@
+services:
+  backend:
+    restart: no
+    build:
+      context: ./backend
+    command: ["fastapi", "run", "--reload", "app/main.py"]
+    develop:
+      watch:
+        - path: ./backend
+          action: sync
+          target: /app
+          ignore:
+            - .venv
+        - path: ./backend/pyproject.toml
+          action: rebuild
