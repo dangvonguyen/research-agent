@@ -1,7 +1,7 @@
-import os
-import json
 import asyncio
-from dataclasses import dataclass, asdict, field
+import json
+import os
+from dataclasses import asdict, dataclass, field
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -24,7 +24,9 @@ class ACLAnthologyCrawler:
 
     BASE_URL = "https://aclanthology.org"
 
-    def __init__(self, output_dir: str, max_concurrent: int = 5, delay: float = 0.5):
+    def __init__(
+        self, output_dir: str, max_concurrent: int = 5, delay: float = 0.5
+    ) -> None:
         self.output_dir = output_dir
         self.max_concurrent = max_concurrent
         self.delay = delay
@@ -34,12 +36,12 @@ class ACLAnthologyCrawler:
 
         self.metadata_filepath = os.path.join(self.output_dir, "metadata.jsonl")
 
-    async def init_session(self):
+    async def init_session(self) -> None:
         """Initialize aiohttp session and semaphore for concurrent downloads."""
         self.session = aiohttp.ClientSession()
         self.semaphore = asyncio.Semaphore(self.max_concurrent)
 
-    async def close_session(self):
+    async def close_session(self) -> None:
         """Close aiohttp session."""
         if self.session:
             await self.session.close()
@@ -158,9 +160,8 @@ class ACLAnthologyCrawler:
             print(f"Error fetching paper metadata: {e}, {paper_id}")
             return None
 
-
     async def process_paper(self, paper_id: str) -> None:
-        """Process a single paper element: extract metadata, fetch abstract, download PDF."""
+        """Process a single paper: extract metadata, fetch abstract, download PDF."""
         paper = await self.fetch_paper_metadata(paper_id)
         if not paper:
             return
@@ -224,21 +225,3 @@ class ACLAnthologyCrawler:
             await asyncio.gather(*tasks)
         finally:
             await self.close_session()
-
-
-async def main():
-    output_dir = "acl_papers"
-    max_concurrent = 5
-    delay = 0.5
-    example_urls = [
-        "https://aclanthology.org/events/acl-2024/#2024knowledgenlp-1",
-        "https://aclanthology.org/2024.acl-long.1/"
-    ]
-
-    crawler = ACLAnthologyCrawler(output_dir, max_concurrent, delay)
-
-    await crawler.crawl(urls=example_urls)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
