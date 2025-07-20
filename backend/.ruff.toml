@@ -1,0 +1,29 @@
+[lint]
+preview = true
+select = [
+    "F", # pyflakes
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "I", # isort
+    "N", # pep8-naming
+    "UP", # pyupgrade
+    "B", # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "ANN", # flake8-annotations
+    "ARG", # flake8-unused-arguments
+    "SIM", # flake8-simplify
+    "RUF019", # unnecessary-key-check
+    "RUF100", # unused-noqa
+]
+
+ignore = [
+    "E401", # module-import-not-at-top-of-file
+    "ANN401", # any-type
+    "ARG002", # unused-method-argument
+    "SIM103", # needless-bool
+    "SIM105", # suppressible-exception
+    "SIM108", # if-else-block-instead-of-if-exp
+]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"] # unused-import

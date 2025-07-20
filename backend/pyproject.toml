@@ -1,12 +1,15 @@
 [project]
-name = "research-agent"
+name = "research-agent-api"
 version = "0.1.0"
-description = "An intelligent agent for automating literature review and scientific discovery: finds, analyzes, and summarizes research papers."
+description = "Backend API for an intelligent agent for automating literature review and scientific discovery: finds, analyzes, and summarizes research papers."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "aiohttp[speedups]>=3.12.13",
     "bs4>=0.0.2",
+    "fastapi[standard]>=0.116.1",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
 ]
 
 [dependency-groups]
