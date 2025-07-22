@@ -1,3 +1,5 @@
+import logging
+import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -7,15 +9,33 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import api_router
 from app.core.config import settings
 from app.core.db import mongodb
+from app.logging import setup_logging
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """
+    FastAPI lifespan event handler for startup and shutdown events.
+    """
+    # Setup logging
+    setup_logging()
+    logger = logging.getLogger(__name__)
+
+    start_time = time.time()
+    logger.info("Starting %s (version %s)", settings.PROJECT_NAME, settings.API_V1_STR)
+
+    # Connect to MongoDB
+    logger.info("Connecting to MongoDB...")
     await mongodb.connect()
+
+    startup_time = time.time() - start_time
+    logger.info("Application startup completed in %.2f seconds", startup_time)
 
     yield
 
-    await mongodb.close()
+    await mongodb.disconnect()
+
+    logger.info("Shutting down application %s", settings.PROJECT_NAME)
 
 
 app = FastAPI(
