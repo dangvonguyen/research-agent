@@ -1,9 +1,10 @@
-import uuid
 from typing import Any
 
+from bson.objectid import ObjectId
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import AnyHttpUrl, BaseModel, Field
 
+from app.core.db import mongodb
 from app.services.crawler import ACLAnthologyCrawler
 
 router = APIRouter()
@@ -13,7 +14,7 @@ class CrawlerRequest(BaseModel):
     urls: list[AnyHttpUrl]
     output_dir: str = "crawled_papers"
     max_concurrent: int = 5
-    delay: float = 0.5
+    delay: float = 3
 
 
 class CrawlerResponse(BaseModel):
@@ -38,10 +39,6 @@ class PaperResponse(BaseModel):
     venues: list[str] = Field(default_factory=list)
 
 
-# In-memory storage for job status
-crawler_jobs: dict[str, dict[str, Any]] = {}
-
-
 @router.post("/jobs", response_model=CrawlerResponse)
 async def create_crawler_job(
     request: CrawlerRequest, background_tasks: BackgroundTasks
@@ -51,10 +48,14 @@ async def create_crawler_job(
 
     This endpoint will start a background task to crawl the specified URLs.
     """
-    job_id = str(uuid.uuid4())
+    collection = await mongodb.get_collection('crawler_jobs')
 
     # Store job information
-    crawler_jobs[job_id] = {"status": "pending", "request": request}
+    crawler_job = await collection.insert_one(
+        {"status": "pending", "request": request.model_dump_json()}
+    )
+
+    job_id = crawler_job.inserted_id
 
     async def run_crawler_job() -> None:
         crawler = ACLAnthologyCrawler(
@@ -63,34 +64,41 @@ async def create_crawler_job(
             delay=request.delay,
         )
 
-        crawler_jobs[job_id]["status"] = "running"
+        await collection.update_one(
+            {"_id": job_id}, {"$set": {"status": "running"}}
+        )
 
         try:
             await crawler.crawl(urls=[str(url) for url in request.urls])
-            crawler_jobs[job_id]["status"] = "completed"
+            await collection.update_one(
+                {"_id": job_id}, {"$set": {"status": "completed"}}
+            )
         except Exception as e:
-            crawler_jobs[job_id]["status"] = "failed"
-            crawler_jobs[job_id]["error"] = str(e)
+            await collection.update_one(
+                {"_id": job_id}, {"$set": {"status": "failed", "request.error": str(e)}}
+            )
 
     background_tasks.add_task(run_crawler_job)
 
     return CrawlerResponse(
         status="accepted",
         message="Crawl job started",
-        job_id=job_id,
+        job_id=str(job_id),
     )
 
 
 @router.get("/jobs", response_model=CrawlerJobList)
 async def get_crawler_jobs() -> Any:
+    collection = await mongodb.get_collection('crawler_jobs')
+
     jobs = []
 
-    for job_id, job in crawler_jobs.items():
+    async for job in collection.find():
         jobs.append(
             CrawlerResponse(
                 status=job["status"],
                 message=f"Job is {job['status']}",
-                job_id=job_id,
+                job_id=str(job["_id"]),
             )
         )
 
@@ -102,13 +110,15 @@ async def get_crawler_job(job_id: str) -> Any:
     """
     Get the status of a crawling job.
     """
-    if job_id not in crawler_jobs:
-        raise HTTPException(status_code=404, detail="Job not found")
+    collection = await mongodb.get_collection('crawler_jobs')
 
-    job = crawler_jobs[job_id]
+    job = await collection.find_one({"_id": ObjectId(job_id)})
+
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
 
     return CrawlerResponse(
         status=job["status"],
         message=f"Job is {job['status']}",
-        job_id=job_id,
+        job_id=str(job["_id"]),
     )
