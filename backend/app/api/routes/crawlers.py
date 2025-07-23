@@ -2,41 +2,12 @@ from typing import Any
 
 from bson.objectid import ObjectId
 from fastapi import APIRouter, BackgroundTasks, HTTPException
-from pydantic import AnyHttpUrl, BaseModel, Field
 
 from app.core.db import mongodb
-from app.services.crawler import ACLAnthologyCrawler
+from app.models import CrawlerJobList, CrawlerRequest, CrawlerResponse
+from app.tools.crawlers import ACLAnthologyCrawler
 
 router = APIRouter()
-
-
-class CrawlerRequest(BaseModel):
-    urls: list[AnyHttpUrl]
-    output_dir: str = "crawled_papers"
-    max_concurrent: int = 5
-    delay: float = 3
-
-
-class CrawlerResponse(BaseModel):
-    status: str
-    message: str
-    job_id: str
-
-
-class CrawlerJobList(BaseModel):
-    data: list[CrawlerResponse]
-    count: int
-
-
-class PaperResponse(BaseModel):
-    id: str
-    title: str
-    authors: list[str]
-    anthology_url: str
-    pdf_url: str | None = None
-    abstract: str | None = None
-    year: int | None = None
-    venues: list[str] = Field(default_factory=list)
 
 
 @router.post("/jobs", response_model=CrawlerResponse)
@@ -58,11 +29,7 @@ async def create_crawler_job(
     job_id = crawler_job.inserted_id
 
     async def run_crawler_job() -> None:
-        crawler = ACLAnthologyCrawler(
-            output_dir=request.output_dir,
-            max_concurrent=request.max_concurrent,
-            delay=request.delay,
-        )
+        crawler = ACLAnthologyCrawler(**request.model_dump(exclude={"urls"}))
 
         await collection.update_one(
             {"_id": job_id}, {"$set": {"status": "running"}}
