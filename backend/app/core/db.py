@@ -57,7 +57,7 @@ class MongoDBManger:
             except Exception as e:
                 logger.error("Error disconnecting from MongoDB: %s", str(e))
 
-    async def get_collection(self, collection_name: str) -> AsyncCollection[Any]:
+    def get_collection(self, collection_name: str) -> AsyncCollection[Any]:
         """
         Get a collection reference with caching.
         """

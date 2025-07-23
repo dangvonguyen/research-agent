@@ -19,7 +19,7 @@ async def create_crawler_job(
 
     This endpoint will start a background task to crawl the specified URLs.
     """
-    collection = await mongodb.get_collection('crawler_jobs')
+    collection = mongodb.get_collection('crawler_jobs')
 
     # Store job information
     crawler_job = await collection.insert_one(
@@ -56,7 +56,7 @@ async def create_crawler_job(
 
 @router.get("/jobs", response_model=CrawlerJobList)
 async def get_crawler_jobs() -> Any:
-    collection = await mongodb.get_collection('crawler_jobs')
+    collection = mongodb.get_collection('crawler_jobs')
 
     jobs = []
 
@@ -77,7 +77,7 @@ async def get_crawler_job(job_id: str) -> Any:
     """
     Get the status of a crawling job.
     """
-    collection = await mongodb.get_collection('crawler_jobs')
+    collection = mongodb.get_collection('crawler_jobs')
 
     job = await collection.find_one({"_id": ObjectId(job_id)})
 
