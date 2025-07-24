@@ -4,7 +4,7 @@ import logging
 import aiofiles
 from bs4 import BeautifulSoup
 
-from app.models import Paper, PaperSource
+from app.models import PaperCreate, PaperSource
 
 from .base import BaseCrawler
 
@@ -24,7 +24,7 @@ class ACLAnthologyCrawler(BaseCrawler):
 
         self.parser = ACLAnthologyParser()
 
-    async def extract_paper_metadata(self, paper_id: str) -> Paper | None:
+    async def extract_paper_metadata(self, paper_id: str) -> PaperCreate | None:
         """
         Extract paper metadata from a paper page.
         """
@@ -39,7 +39,7 @@ class ACLAnthologyCrawler(BaseCrawler):
             paper.url = paper_url
         return paper
 
-    async def process_paper_page(self, url: str) -> Paper | None:
+    async def process_paper_page(self, url: str) -> PaperCreate | None:
         """
         Process a single paper: extract metadata and prepare for download.
         """
@@ -47,7 +47,7 @@ class ACLAnthologyCrawler(BaseCrawler):
 
         return await self.extract_paper_metadata(paper_id)
 
-    async def process_conference_page(self, url: str) -> list[Paper]:
+    async def process_conference_page(self, url: str) -> list[PaperCreate]:
         """
         Process a conference page and extract papers.
         """
@@ -63,7 +63,7 @@ class ACLAnthologyCrawler(BaseCrawler):
 
         return [r for r in await asyncio.gather(*tasks) if r]
 
-    async def process_search_page(self, url: str) -> list[Paper]:
+    async def process_search_page(self, url: str) -> list[PaperCreate]:
         """
         Process a search query page and extract papers.
         """
@@ -77,7 +77,7 @@ class ACLAnthologyCrawler(BaseCrawler):
 
         return [r for r in await asyncio.gather(*tasks) if r]
 
-    async def download_pdf(self, paper: Paper) -> None:
+    async def download_pdf(self, paper: PaperCreate) -> None:
         """
         Download a paper's PDF.
         """
@@ -89,7 +89,7 @@ class ACLAnthologyCrawler(BaseCrawler):
 
         # Skip if already downloaded
         if filepath.exists():
-            logger.info(f"Paper {paper.source_id} already downloaded")
+            logger.info(f"PaperCreate {paper.source_id} already downloaded")
             return
 
         try:
@@ -112,7 +112,7 @@ class ACLAnthologyCrawler(BaseCrawler):
         except Exception as e:
             logger.error(f"Error downloading PDF {paper.pdf_url}: {e}")
 
-    async def crawl(self, urls: list[str]) -> list[Paper]:
+    async def crawl(self, urls: list[str]) -> list[PaperCreate]:
         """
         Crawl the specified URLs and extract paper information.
         """
@@ -153,7 +153,7 @@ class ACLAnthologyParser:
     """Parser for ACL Anthology HTML content."""
 
     @staticmethod
-    def parse_paper_page(html_content: str, paper_id: str) -> Paper | None:
+    def parse_paper_page(html_content: str, paper_id: str) -> PaperCreate | None:
         """
         Parse a paper page and extract metadata.
         """
@@ -184,7 +184,7 @@ class ACLAnthologyParser:
             venue = get_metadata("Venue:") or get_metadata("Venues:")
             venues = venue.split("|") if venue else []
 
-            return Paper(
+            return PaperCreate(
                 title=title,
                 authors=authors,
                 source=PaperSource.ACL_ANTHOLOGY,
