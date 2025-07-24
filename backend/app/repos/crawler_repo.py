@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime
 from typing import Any
 
@@ -15,6 +16,8 @@ from app.models import (
 )
 
 from .base_repo import BaseRepository
+
+logger = logging.getLogger(__name__)
 
 
 class CrawlerConfigRepository(
@@ -41,21 +44,38 @@ class CrawlerJobRepository(
         """
         List documents with pagination and status filter.
         """
+        logger.debug(
+            "Retrieving documents from %s (skip=%d, limit=%d, status: %s)",
+            cls.collection_name, skip, limit, status.value if status else "None",
+        )
         collection = mongodb.get_collection(cls.collection_name)
 
-        objects = []
+        try:
+            objects = []
 
-        if status:
-            cursor = collection.find({"status": status.value})
-        else:
-            cursor = collection.find()
-        cursor = cursor.skip(skip).limit(limit).sort("updated_at", -1)
+            if status:
+                cursor = collection.find({"status": status})
+            else:
+                cursor = collection.find()
+            cursor = cursor.skip(skip).limit(limit).sort("updated_at", -1)
 
-        async for obj in cursor:
-            obj["_id"] = str(obj["_id"])
-            objects.append(cls.model_class(**obj))
+            doc_count = 0
+            async for obj in cursor:
+                obj["_id"] = str(obj["_id"])
+                objects.append(cls.model_class(**obj))
+                doc_count += 1
 
-        return objects
+            logger.debug(
+                "Retrieved %d documents from collection %s",
+                doc_count, cls.collection_name,
+            )
+            return objects
+
+        except Exception as e:
+            logger.error(
+                "Error retrieving documents from %s: %s", cls.collection_name, str(e)
+            )
+            raise
 
     @classmethod
     async def update_job_status(
@@ -64,16 +84,38 @@ class CrawlerJobRepository(
         """
         Update a crawler job's status and additional fields.
         """
+        logger.info("Updating job %s status to %s", id, status.value)
+
+        if additional_fields:
+            logger.debug(
+                "Additional fields for job %s update: %s",
+                id,
+                ", ".join(f"{k}={v}" for k, v in additional_fields.items()),
+            )
+
         collection = mongodb.get_collection(cls.collection_name)
 
         update_data = {"status": status.value, "updated_at": datetime.now(UTC)}
         update_data.update(additional_fields)
 
-        result = await collection.update_one(
-            {"_id": ObjectId(id)}, {"$set": update_data}
-        )
+        try:
+            result = await collection.update_one(
+                {"_id": ObjectId(id)}, {"$set": update_data}
+            )
 
-        if result.modified_count:
+            if result.matched_count == 0:
+                logger.warning("Job %s not found for status update", id)
+                return None
+
+            if result.modified_count > 0:
+                logger.debug(
+                    "Job %s status updated successfully to %s", id, status.value
+                )
+            else:
+                logger.debug("Job %s found but no changes made to status", id)
+
             return await cls.get(id)
-        else:
-            return None
+
+        except Exception as e:
+            logger.error("Error updating job %s status: %s", id, str(e))
+            raise

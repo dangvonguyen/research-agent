@@ -3,10 +3,11 @@ import logging
 import random
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Literal
 
 import aiohttp
 
-from app.models import Paper, PaperSource
+from app.models import PaperCreate, PaperSource
 
 logger = logging.getLogger(__name__)
 
@@ -49,21 +50,36 @@ class BaseCrawler(ABC):
         self.session: aiohttp.ClientSession | None = None
         self.semaphore: asyncio.Semaphore | None = None
         self.visited_urls: set[str] = set()
+        self._last_request_time: float = 0.0
+
+        config_dict = (dict(locals()))
+        config_dict.pop("self")
+        logger.debug(
+            "Initialized %s with settings: %s",
+            self.__class__.__name__,
+            ", ".join(f"{k}={v}" for k, v in config_dict.items()),
+        )
 
     async def init_session(self) -> None:
         """
         Initialize an aiohttp session and semaphore.
         """
+        logger.debug("Initializing HTTP session")
         self.session = aiohttp.ClientSession()
         self.semaphore = asyncio.Semaphore(self.max_concurrent)
+        logger.debug("HTTP session initialized")
 
     async def close_session(self) -> None:
         """
         Close aiohttp session.
         """
         if self.session:
+            logger.debug("Closing HTTP session")
             await self.session.close()
             self.session = None
+            logger.debug("HTTP session closed")
+        else:
+            logger.warning("Attempted to close HTTP session that was not initialized")
 
     async def _backoff(self, attempt: int, reason: str) -> None:
         """
@@ -79,79 +95,139 @@ class BaseCrawler(ABC):
         jitter_factor = 0.75 + random.random() * 0.5  # Between 0.75 and 1.25
         final_delay = capped_delay * jitter_factor
 
-        logger.warning(f"{reason}, backoff for {final_delay:.2f}s")
+        logger.warning(
+            "Request failed: %s, backing off for %.2f seconds (attempt %d/%d)",
+            reason, final_delay, attempt + 1, self.max_attempts,
+        )
         await asyncio.sleep(final_delay)
 
-    async def fetch_with_retry(self, url: str, attempt: int = 0) -> str | None:
+    async def fetch_with_retry(
+        self, url: str, mode: Literal["str", "bytes"] = "str", attempt: int = 0
+    ) -> str | bytes | None:
         """
         Fetch a URL with retry and exponential backoff.
         """
-        if attempt >= self.max_attempts:
-            logger.warning(f"Max attempts reached for {url}")
+        if not self.session or not self.semaphore:
+            logger.error("HTTP session not initialized before fetch_with_retry")
             return None
 
-        # Get headers with random user agent
-        headers = {
-            "User-Agent": random.choice(self.USER_AGENTS),
-            "Connection": "keep-alive",
-            "DNT": "1",  # Do not track
-        }
-
         try:
-            assert self.session is not None
-            await asyncio.sleep(self.delay)
+            # Select a random user agent
+            headers = {
+                "User-Agent": random.choice(self.USER_AGENTS),
+                "Connection": "keep-alive",
+                "DNT": "1",  # Do not track
+            }
 
-            async with self.session.get(url, headers=headers) as response:
-                if response.status == 200:
-                    logger.info(f"Successfully fetched {url}")
-                    return await response.text()
-                elif response.status in (429, 403, 503):  # Rate limited or blocked
-                    await self._backoff(attempt, f"Rate limited for {url}")
-                    return await self.fetch_with_retry(url, attempt + 1)
-                else:
-                    logger.warning(f"Failed to fetch {url}, status: {response.status}")
-                    return None
+            logger.debug(
+                "Fetching URL: %s (attempt %d/%d)", url, attempt + 1, self.max_attempts,
+            )
 
-        except TimeoutError:
-            await self._backoff(attempt, f"Timeout for {url}")
-            return await self.fetch_with_retry(url, attempt + 1)
+            async with self.semaphore:
+                # Add delay for rate limiting
+                if attempt == 0:
+                    elapsed = asyncio.get_event_loop().time() - self._last_request_time
+                    if elapsed < self.delay:
+                        await asyncio.sleep(self.delay - elapsed)
+
+                self._last_request_time = asyncio.get_event_loop().time()
+
+                async with self.session.get(url, headers=headers) as resp:
+                    if resp.status == 200:
+                        content: str | bytes | None = None
+                        if mode == "str":
+                            content = await resp.text()
+                        else:
+                            content = await resp.read()
+
+                        logger.debug("Successfully fetched %s", url)
+                        return content
+
+                    logger.warning(
+                        "HTTP error %d for %s (attempt %d/%d)",
+                        resp.status, url, attempt + 1, self.max_attempts,
+                    )
+
+                    # Check if we should retry
+                    if resp.status >= 500 or resp.status == 429:
+                        pass
+                    else:
+                        logger.debug(
+                            "Client error %d for %s - not retrying", resp.status, url
+                        )
+                        return None
+
+            if attempt < self.max_attempts - 1:
+                await self._backoff(attempt, f"HTTP error {resp.status}")
+                return await self.fetch_with_retry(url, mode, attempt + 1)
+            else:
+                logger.error("Max attempts reached for %s", url)
+                return None
+
+        except asyncio.TimeoutError:  # noqa: UP041
+            logger.warning(
+                "Timeout fetching %s (attempt %d/%d): %s",
+                url, attempt + 1, self.max_attempts,
+            )
+            if attempt < self.max_attempts - 1:
+                await self._backoff(attempt, "timeout")
+                return await self.fetch_with_retry(url, mode, attempt + 1)
+            return None
 
         except Exception as e:
-            logger.error(f"Error fetching {url}: {e}")
-            if attempt < self.max_attempts:
-                await self._backoff(attempt, f"Retrying {url}")
-            return await self.fetch_with_retry(url, attempt + 1)
+            logger.exception(
+                "Unexpected error fetching %s (attempt %d/%d): %s",
+                url, attempt + 1, self.max_attempts, str(e),
+            )
+            if attempt < self.max_attempts - 1:
+                await self._backoff(attempt, f"unexpected error: {e}")
+                return await self.fetch_with_retry(url, mode, attempt + 1)
+            return None
 
-    async def fetch_url(self, url: str) -> str | None:
+    async def fetch_url(
+        self, url: str, mode: Literal["str", "bytes"] = "str"
+    ) -> str | bytes | None:
         """
         Fetch a URL with rate limiting and concurrency control.
         """
+        # Check if we already visited this URL
         if url in self.visited_urls:
+            logger.debug("Skipping already visited URL: %s", url)
             return None
 
+        # Mark as visited
         self.visited_urls.add(url)
 
-        assert self.semaphore is not None
-        async with self.semaphore:
-            return await self.fetch_with_retry(url)
+        # Fetch with retry
+        logger.debug("Fetching URL: %s", url)
+        content = await self.fetch_with_retry(url, mode)
+
+        if content:
+            logger.debug("Fetch completed for %s", url)
+        else:
+            logger.warning("Failed to fetch %s after all retries", url)
+
+        return content
 
     @abstractmethod
-    async def crawl(self, urls: list[str]) -> list[Paper]:
+    async def crawl(self, urls: list[str]) -> list[PaperCreate]:
         """
         Crawl the specified URLs and extract paper information.
         """
         pass
 
     @abstractmethod
-    async def download_pdf(self, paper: Paper) -> None:
+    async def download_pdf(self, paper: PaperCreate) -> None:
         """
         Download a paper's PDF.
         """
         pass
 
-    async def download_all_pdfs(self, papers: list[Paper]) -> None:
+    async def download_all_pdfs(self, papers: list[PaperCreate]) -> None:
         """
         Download all PDFs for a list of papers.
         """
+        logger.info("Starting PDF download for %d papers", len(papers))
         tasks = [self.download_pdf(paper) for paper in papers]
         await asyncio.gather(*tasks)
+        logger.info("Completed downloading %d papers", len(papers))

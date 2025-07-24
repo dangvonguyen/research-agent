@@ -13,7 +13,7 @@ from app.logging import setup_logging
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa
     """
     FastAPI lifespan event handler for startup and shutdown events.
     """
@@ -22,20 +22,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger = logging.getLogger(__name__)
 
     start_time = time.time()
-    logger.info("Starting %s (version %s)", settings.PROJECT_NAME, settings.API_V1_STR)
+    logger.info(
+        "Starting application '%s' (version %s)",
+        settings.PROJECT_NAME, settings.API_V1_STR,
+    )
 
     # Connect to MongoDB
-    logger.info("Connecting to MongoDB...")
+    logger.info("Establishing connection to MongoDB at %s", settings.MONGODB_URI)
     await mongodb.connect()
 
     startup_time = time.time() - start_time
-    logger.info("Application startup completed in %.2f seconds", startup_time)
+    logger.info(
+        "Application startup completed successfully in %.2f seconds", startup_time
+    )
 
     yield
 
+    # Shutdown process
+    logger.info("Beginning application shutdown process")
     await mongodb.disconnect()
-
-    logger.info("Shutting down application %s", settings.PROJECT_NAME)
+    logger.info("Application '%s' shutdown completed", settings.PROJECT_NAME)
 
 
 app = FastAPI(
@@ -62,6 +68,9 @@ async def root() -> dict[str, str]:
     """
     Root endpoint with API Information
     """
+    logger = logging.getLogger(__name__)
+    logger.debug("Root endpoint accessed")
+
     return {
         "message": "Research Agent API is running",
     }
@@ -72,4 +81,13 @@ async def health_check() -> dict[str, str]:
     """
     Health check endpoints.
     """
-    return {"status": "healthy"}
+    logger = logging.getLogger(__name__)
+    db_status = await mongodb.health_check()
+    status = "healthy" if db_status else "database_error"
+
+    if db_status:
+        logger.debug("Health check passed: API and database connection OK")
+    else:
+        logger.warning("Health check detected: database connection issue")
+
+    return {"status": status}

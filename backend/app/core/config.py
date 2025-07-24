@@ -1,4 +1,8 @@
+import logging
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -20,4 +24,14 @@ class Settings(BaseSettings):
     MONGODB_NAME: str
 
 
+# Load settings from environment
 settings = Settings()  # type: ignore
+logger.info("Settings loaded for project: %s", settings.PROJECT_NAME)
+logger.debug(
+    "API settings: API_V1_STR=%s, DEBUG=%s",
+    settings.API_V1_STR, settings.DEBUG,
+)
+logger.debug(
+    "MongoDB settings: database=%s, URI=%s",
+    settings.MONGODB_NAME, settings.MONGODB_URI,
+)

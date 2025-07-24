@@ -26,7 +26,13 @@ async def create_crawler_config(config: CrawlerConfigCreate) -> Any:
     """
     Create a new crawler configuration.
     """
-    return await CrawlerConfigRepository.create(config)
+    logger.info(
+        "Creating new crawler configuration: '%s' for source %s",
+        config.name, config.source,
+    )
+    result = await CrawlerConfigRepository.create(config)
+    logger.debug("Created crawler configuration with ID: %s", result.id)
+    return result
 
 
 @router.get("/configs", response_model=list[CrawlerConfig])
@@ -34,7 +40,12 @@ async def get_crawler_configs(skip: int = 0, limit: int = 100) -> Any:
     """
     List all crawler configurations.
     """
-    return await CrawlerConfigRepository.list(skip, limit)
+    logger.debug(
+        "Retrieving crawler configurations with skip=%d, limit=%d", skip, limit
+    )
+    configs = await CrawlerConfigRepository.list(skip, limit)
+    logger.debug("Found %d crawler configurations", len(configs))
+    return configs
 
 
 @router.get("/configs/{config_id}", response_model=CrawlerConfig)
@@ -42,8 +53,10 @@ async def get_crawler_config(config_id: str) -> Any:
     """
     Get a specific crawler configuration.
     """
+    logger.debug("Retrieving crawler configuration with ID: %s", config_id)
     config = await CrawlerConfigRepository.get(config_id)
     if not config:
+        logger.warning("Crawler configuration not found: %s", config_id)
         raise HTTPException(status_code=404, detail="Crawler configuration not found")
     return config
 
@@ -53,9 +66,15 @@ async def update_crawler_config(config_id: str, config: CrawlerConfigUpdate) -> 
     """
     Update a crawler configuration.
     """
+    logger.info("Updating crawler configuration: %s", config_id)
+    logger.debug("Update data: %s", config.model_dump(exclude_unset=True))
+
     updated_config = await CrawlerConfigRepository.update(config_id, config)
     if not updated_config:
+        logger.warning("Crawler configuration not found for update: %s", config_id)
         raise HTTPException(status_code=404, detail="Crawler configuration not found")
+
+    logger.info("Successfully updated crawler configuration: %s", config_id)
     return updated_config
 
 
@@ -64,9 +83,13 @@ async def delete_crawler_config(config_id: str) -> Any:
     """
     Delete a crawler configuration.
     """
+    logger.info("Deleting crawler configuration: %s", config_id)
     success = await CrawlerConfigRepository.delete(config_id)
     if not success:
+        logger.warning("Crawler configuration not found for deletion: %s", config_id)
         raise HTTPException(status_code=404, detail="Crawler configuration not found")
+
+    logger.info("Successfully deleted crawler configuration: %s", config_id)
     return success
 
 
@@ -77,12 +100,23 @@ async def create_crawler_job(
     """
     Create and start a new crawler job.
     """
+    logger.info(
+        "Creating new crawler job for config: %s with %d URLs",
+        job.config_id, len(job.urls),
+    )
+
+    # Verify config exists
     config = await CrawlerConfigRepository.get(job.config_id)
     if not config:
+        logger.warning("Config not found for job creation: %s", job.config_id)
         raise HTTPException(status_code=404, detail="Crawler configuration not found")
 
+    # Create job in database
     created_job = await CrawlerJobRepository.create(job)
+    logger.info("Created crawler job with ID: %s", created_job.id)
 
+    # Schedule background task
+    logger.debug("Scheduling background task for job: %s", created_job.id)
     background_tasks.add_task(run_crawler_job, created_job.id)
 
     return created_job
@@ -92,10 +126,13 @@ async def create_crawler_job(
 async def get_crawler_jobs(
     skip: int = 0, limit: int = 100, status: JobStatus | None = None
 ) -> Any:
-    """
-    List all crawler jobs.
-    """
-    return await CrawlerJobRepository.list(skip, limit, status)
+    logger.debug(
+        "Retrieving crawler jobs with skip=%d, limit=%d, status=%s",
+        skip, limit, status.value if status else "None",
+    )
+    jobs = await CrawlerJobRepository.list(skip, limit, status)
+    logger.debug("Found %d crawler jobs", len(jobs))
+    return jobs
 
 
 @router.get("/jobs/{job_id}", response_model=CrawlerJob)
@@ -103,7 +140,12 @@ async def get_crawler_job(job_id: str) -> Any:
     """
     Get a crawler job.
     """
-    return await CrawlerJobRepository.get(job_id)
+    logger.debug("Retrieving crawler job with ID: %s", job_id)
+    job = await CrawlerJobRepository.get(job_id)
+    if not job:
+        logger.warning("Crawler job not found: %s", job_id)
+        raise HTTPException(status_code=404, detail="Crawler job not found")
+    return job
 
 
 @router.patch("/jobs/{job_id}", response_model=CrawlerJob)
@@ -111,9 +153,15 @@ async def update_crawler_job(job_id: str, job: CrawlerJobUpdate) -> Any:
     """
     Update a crawler job.
     """
+    logger.info("Updating crawler job: %s", job_id)
+    logger.debug("Update data: %s", job.model_dump(exclude_unset=True))
+
     updated_job = await CrawlerJobRepository.update(job_id, job)
     if not updated_job:
+        logger.warning("Crawler job not found for update: %s", job_id)
         raise HTTPException(status_code=404, detail="Crawler job not found")
+
+    logger.info("Successfully updated crawler job: %s", job_id)
     return updated_job
 
 
@@ -122,24 +170,37 @@ async def delete_crawler_job(job_id: str) -> Any:
     """
     Delete a crawler job.
     """
+    logger.info("Deleting crawler job: %s", job_id)
     success = await CrawlerJobRepository.delete(job_id)
     if not success:
+        logger.warning("Crawler job not found for deletion: %s", job_id)
         raise HTTPException(status_code=404, detail="Crawler job not found")
+
+    logger.info("Successfully deleted crawler job: %s", job_id)
     return success
 
 
-async def run_crawler_job(job_id) -> None:
+async def run_crawler_job(job_id: str) -> None:
     """
     Run a crawler job in the background.
     """
+    logger.info("Starting background job execution for job: %s", job_id)
+
     try:
-        # Get job anc config
+        # Get job and config
         job = await CrawlerJobRepository.get(job_id)
         if not job:
+            logger.error("Job not found when starting background execution: %s", job_id)
             return
 
+        logger.debug(
+            "Fetching configuration for job: %s (config_id: %s)", job_id, job.config_id
+        )
         config = await CrawlerConfigRepository.get(job.config_id)
         if not config:
+            logger.error(
+                "Configuration not found for job %s: %s", job_id, job.config_id
+            )
             await CrawlerJobRepository.update_job_status(
                 job_id,
                 status=JobStatus.FAILED,
@@ -148,6 +209,7 @@ async def run_crawler_job(job_id) -> None:
             return
 
         # Mark job as running
+        logger.info("Updating job %s status to RUNNING", job_id)
         await CrawlerJobRepository.update_job_status(
             job_id,
             status=JobStatus.RUNNING,
@@ -155,20 +217,30 @@ async def run_crawler_job(job_id) -> None:
         )
 
         if config.source == PaperSource.ACL_ANTHOLOGY:
-            config_create = CrawlerConfigCreate(**config.model_dump())
+            logger.info("Starting ACL Anthology crawler for job %s", job_id)
+            config_dict = config.model_dump(
+                include=set(CrawlerConfigCreate.model_fields.keys()),
+                exclude={"name"},
+            )
 
-            crawler = ACLAnthologyCrawler(**config_create.model_dump(exclude={"name"}))
+            crawler = ACLAnthologyCrawler(**config_dict)
 
             # Run the crawler
             urls = [str(url) for url in job.urls]
+            logger.info("Crawling %d URLs for job %s", len(urls), job_id)
             await crawler.crawl(urls)
 
+            # Update job status
+            logger.info("Crawler completed successfully for job %s", job_id)
             await CrawlerJobRepository.update_job_status(
                 job_id,
                 status=JobStatus.COMPLETED,
                 completed_at=datetime.now(UTC),
             )
         else:
+            logger.error(
+                "Unsupported crawler source %s for job %s", config.source, job_id
+            )
             await CrawlerJobRepository.update_job_status(
                 job_id,
                 status=JobStatus.FAILED,
@@ -176,6 +248,7 @@ async def run_crawler_job(job_id) -> None:
             )
 
     except Exception as e:
+        logger.exception("Error executing crawler job %s: %s", job_id, str(e))
         await CrawlerJobRepository.update_job_status(
             job_id,
             status=JobStatus.FAILED,
