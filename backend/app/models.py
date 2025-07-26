@@ -106,6 +106,16 @@ class CrawlerJob(BaseDocument, CrawlerJobBase):
     error_message: str | None = None
 
 
+class PaperSection(BaseModel):
+    """
+    Model for representing a section of a research paper.
+    """
+
+    title: str
+    content: str
+    level: int = 1
+
+
 class PaperBase(BaseModel):
     """Base model for paper metadata."""
 
@@ -119,6 +129,7 @@ class PaperBase(BaseModel):
     pdf_url: str | None = None
     local_pdf_path: str | None = None
     venues: list[str] = Field(default_factory=list)
+    sections: dict[str, PaperSection] = Field(default_factory=dict)
 
 
 class PaperCreate(BaseCreate, PaperBase):
@@ -140,6 +151,7 @@ class PaperUpdate(BaseUpdate):
     pdf_url: str | None = None
     local_pdf_path: str | None = None
     venues: list[str] | None = None
+    sections: dict[str, PaperSection] | None = None
 
 
 class Paper(BaseDocument, PaperBase):

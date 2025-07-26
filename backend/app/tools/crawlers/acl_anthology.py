@@ -42,6 +42,8 @@ class ACLAnthologyCrawler(BaseCrawler):
         paper = self.parser.parse_paper_page(html_content, paper_id)
         if paper:
             paper.url = paper_url
+            if paper.pdf_url:
+                paper.local_pdf_path = str(self.output_dir / f"{paper_id}.pdf")
             logger.debug("Successfully extracted metadata for paper: %s", paper.title)
         else:
             logger.warning("Failed to parse paper page for %s", paper_id)

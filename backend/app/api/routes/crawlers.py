@@ -14,8 +14,9 @@ from app.models import (
     JobStatus,
     PaperSource,
 )
-from app.repos import CrawlerConfigRepository, CrawlerJobRepository
+from app.repos import CrawlerConfigRepository, CrawlerJobRepository, PaperRepository
 from app.tools.crawlers import ACLAnthologyCrawler
+from app.tools.parsers import PDFParser
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -228,7 +229,22 @@ async def run_crawler_job(job_id: str) -> None:
             # Run the crawler
             urls = [str(url) for url in job.urls]
             logger.info("Crawling %d URLs for job %s", len(urls), job_id)
-            await crawler.crawl(urls)
+            papers = await crawler.crawl(urls)
+
+            # Parse papers
+            parser = PDFParser()
+            logger.info("Parsing %d papers for job %s", len(papers), job_id)
+            for paper in papers:
+                sections = parser.parse_specific_sections(
+                    paper, ["abstract", "introduction", "conclusion"]
+                )
+                paper.sections = sections
+
+            logger.info("Creating %d papers for job %s", len(papers), job_id)
+            await PaperRepository.create_many(papers)
+            logger.info(
+                "Successfully created %d papers for job %s", len(papers), job_id
+            )
 
             # Update job status
             logger.info("Crawler completed successfully for job %s", job_id)

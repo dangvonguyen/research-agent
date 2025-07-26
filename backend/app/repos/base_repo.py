@@ -52,6 +52,41 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
             raise
 
     @classmethod
+    async def create_many(cls, objs: list[CreateT]) -> list[DocT]:
+        """
+        Create many documents.
+        """
+        collection = mongodb.get_collection(cls.collection_name)
+
+        obj_dicts = []
+        for obj in objs:
+            now = datetime.now(UTC)
+            obj_dict = obj.model_dump(mode="json")
+            obj_dict["created_at"] = now
+            obj_dict["updated_at"] = now
+            obj_dicts.append(obj_dict)
+
+        try:
+            result = await collection.insert_many(obj_dicts)
+            obj_ids = [str(obj_id) for obj_id in result.inserted_ids]
+            logger.debug(
+                "Created %d documents in collection %s",
+                len(obj_ids), cls.collection_name,
+            )
+
+            objects = []
+            for obj_dict in obj_dicts:
+                obj_dict["_id"] = obj_ids[obj_dicts.index(obj_dict)]
+                objects.append(cls.model_class(**obj_dict))
+            return objects
+
+        except Exception as e:
+            logger.error(
+                "Failed to create many documents in %s: %s", cls.collection_name, str(e)
+            )
+            raise
+
+    @classmethod
     async def get(cls, id: str) -> DocT | None:
         """
         Get a document by ID.
