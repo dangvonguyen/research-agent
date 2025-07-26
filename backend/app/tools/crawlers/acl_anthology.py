@@ -2,10 +2,10 @@ import asyncio
 import logging
 from typing import Any, cast
 
-import aiofiles
 from bs4 import BeautifulSoup
 
 from app.models import PaperCreate, PaperSource
+from app.utils import bulk_run
 
 from .base import BaseCrawler
 
@@ -89,11 +89,8 @@ class ACLAnthologyCrawler(BaseCrawler):
             logger.warning("No papers found from %s", url)
             return []
 
-        logger.debug("Creating tasks to extract metadata for %d papers", len(paper_ids))
-        tasks = [self.extract_paper_metadata(paper_id) for paper_id in paper_ids]
-
-        logger.debug("Gathering paper metadata...")
-        results = await asyncio.gather(*tasks)
+        logger.debug("Extracting metadata for %d papers", len(paper_ids))
+        results = await bulk_run(self.extract_paper_metadata, paper_ids)
 
         papers = [r for r in results if r]
 
@@ -123,11 +120,8 @@ class ACLAnthologyCrawler(BaseCrawler):
             logger.warning("No papers found from %s", url)
             return []
 
-        logger.debug("Creating tasks to extract metadata for %d papers", len(paper_ids))
-        tasks = [self.extract_paper_metadata(paper_id) for paper_id in paper_ids]
-
-        logger.debug("Gathering paper metadata...")
-        results = await asyncio.gather(*tasks)
+        logger.debug("Extracting metadata for %d papers", len(paper_ids))
+        results = await bulk_run(self.extract_paper_metadata, paper_ids)
 
         papers = [r for r in results if r]
 
@@ -137,94 +131,46 @@ class ACLAnthologyCrawler(BaseCrawler):
         )
         return papers
 
-    async def download_pdf(self, paper: PaperCreate) -> None:
-        """
-        Download a paper's PDF.
-        """
-        if not paper.pdf_url:
-            logger.warning("No PDF URL available for paper: %s", paper.title)
-            return
-
-        # Create filepath for the PDF
-        filename = f"{paper.source_id}.pdf"
-        filepath = self.output_dir / filename
-
-        # Skip if already downloaded
-        if filepath.exists():
-            logger.debug("PDF already exists for %s: %s", paper.source_id, filepath)
-            return
-
-        logger.debug("Downloading PDF for paper %s", paper.source_id)
-        pdf_content = cast(bytes | None, await self.fetch_url(paper.pdf_url, "bytes"))
-
-        if not pdf_content:
-            logger.warning("Failed to download PDF for %s", paper.source_id)
-            return
-
-        try:
-            async with aiofiles.open(filepath, "wb") as f:
-                await f.write(pdf_content)
-
-            logger.info(
-                "Successfully downloaded PDF for %s to %s", paper.source_id, filepath
-            )
-        except Exception as e:
-            logger.error("Error saving PDF for %s: %s", paper.source_id, str(e))
-
     async def crawl(self, urls: list[str]) -> list[PaperCreate]:
         """
         Crawl a list of ACL Anthology URLs and extract paper information.
         """
         logger.debug("Starting crawl of %d URLs", len(urls))
 
-        # Initialize HTTP session
-        await self.init_session()
+        papers: list[PaperCreate] = []
 
-        try:
-            papers: list[PaperCreate] = []
+        # Process URLs in parallel
+        tasks: list[Any] = []
 
-            # Process URLs in parallel
-            tasks: list[Any] = []
+        for url in urls:
+            logger.debug("Processing URL: %s", url)
 
-            for url in urls:
-                logger.debug("Processing URL: %s", url)
+            if "/events/" in url or "/volumes/" in url:
+                # Conference page
+                logger.debug("URL %s identified as conference page", url)
+                tasks.append(self.process_conference_page(url))
+            elif "/search/" in url:
+                # Search page
+                logger.debug("URL %s identified as search page", url)
+                tasks.append(self.process_search_page(url))
+            else:
+                # Assume paper page
+                logger.debug("URL %s identified as paper page", url)
+                tasks.append(self.process_paper_page(url))
 
-                if "/events/" in url or "/volumes/" in url:
-                    # Conference page
-                    logger.debug("URL %s identified as conference page", url)
-                    tasks.append(self.process_conference_page(url))
-                elif "/search/" in url:
-                    # Search page
-                    logger.debug("URL %s identified as search page", url)
-                    tasks.append(self.process_search_page(url))
-                else:
-                    # Assume paper page
-                    logger.debug("URL %s identified as paper page", url)
-                    tasks.append(self.process_paper_page(url))
+        # Gather results
+        logger.debug("Waiting for all URL processing tasks to complete...")
+        results = await asyncio.gather(*tasks)
 
-            # Gather results
-            logger.debug("Waiting for all URL processing tasks to complete...")
-            results = await asyncio.gather(*tasks)
+        # Combine results
+        for result in results:
+            if isinstance(result, list):
+                papers.extend(result)
+            elif result is not None:
+                papers.append(result)
 
-            # Combine results
-            for result in results:
-                if isinstance(result, list):
-                    papers.extend(result)
-                elif result is not None:
-                    papers.append(result)
-
-            logger.info("Crawling completed, found %d papers", len(papers))
-
-            # Download PDFs
-            if papers:
-                await self.download_all_pdfs(papers)
-
-            return papers
-
-        finally:
-            # Clean up HTTP session
-            logger.debug("Closing crawler HTTP session")
-            await self.close_session()
+        logger.info("Crawling completed, found %d papers", len(papers))
+        return papers
 
 
 class ACLAnthologyParser:

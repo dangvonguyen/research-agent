@@ -17,6 +17,7 @@ from app.models import (
 from app.repos import CrawlerConfigRepository, CrawlerJobRepository, PaperRepository
 from app.tools.crawlers import ACLAnthologyCrawler
 from app.tools.parsers import PDFParser
+from app.utils import bulk_run
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -224,20 +225,22 @@ async def run_crawler_job(job_id: str) -> None:
                 exclude={"name"},
             )
 
-            crawler = ACLAnthologyCrawler(**config_dict)
+            async with ACLAnthologyCrawler(**config_dict) as crawler:
+                # Run the crawler
+                urls = [str(url) for url in job.urls]
+                logger.info("Crawling %d URLs for job %s", len(urls), job_id)
+                papers = await crawler.crawl(urls)
 
-            # Run the crawler
-            urls = [str(url) for url in job.urls]
-            logger.info("Crawling %d URLs for job %s", len(urls), job_id)
-            papers = await crawler.crawl(urls)
+                # Download PDFs
+                logger.info("Downloading %d PDFs for job %s", len(papers), job_id)
+                await bulk_run(crawler.download_pdf, papers)
 
             # Parse papers
             parser = PDFParser()
             logger.info("Parsing %d papers for job %s", len(papers), job_id)
+            section_types = ["abstract", "introduction", "conclusion"]
             for paper in papers:
-                sections = parser.parse_specific_sections(
-                    paper, ["abstract", "introduction", "conclusion"]
-                )
+                sections = parser.parse_specific_sections(paper, section_types)
                 paper.sections = sections
 
             logger.info("Creating %d papers for job %s", len(papers), job_id)

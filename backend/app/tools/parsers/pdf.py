@@ -25,6 +25,7 @@ class PDFParser:
             ],
             "conclusion": [
                 r"\bconclusion\b",
+                r"\bconclusions\b",
                 r"\bfinal\s+thoughts\b",
             ],
         }

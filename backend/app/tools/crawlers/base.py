@@ -3,8 +3,9 @@ import logging
 import random
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self, cast
 
+import aiofiles
 import aiohttp
 
 from app.models import PaperCreate, PaperSource
@@ -59,6 +60,19 @@ class BaseCrawler(ABC):
             self.__class__.__name__,
             ", ".join(f"{k}={v}" for k, v in config_dict.items()),
         )
+
+    async def __aenter__(self) -> Self:
+        """
+        Enter the crawler context manager.
+        """
+        await self.init_session()
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None:  # type: ignore
+        """
+        Exit the crawler context manager.
+        """
+        await self.close_session()
 
     async def init_session(self) -> None:
         """
@@ -216,18 +230,35 @@ class BaseCrawler(ABC):
         """
         pass
 
-    @abstractmethod
     async def download_pdf(self, paper: PaperCreate) -> None:
         """
         Download a paper's PDF.
         """
-        pass
+        if not paper.pdf_url or not paper.local_pdf_path:
+            logger.warning("No PDF URL available for paper: %s", paper.title)
+            return
 
-    async def download_all_pdfs(self, papers: list[PaperCreate]) -> None:
-        """
-        Download all PDFs for a list of papers.
-        """
-        logger.info("Starting PDF download for %d papers", len(papers))
-        tasks = [self.download_pdf(paper) for paper in papers]
-        await asyncio.gather(*tasks)
-        logger.info("Completed downloading %d papers", len(papers))
+        # Get filepath for the PDF
+        filepath = Path(paper.local_pdf_path)
+
+        # Skip if already downloaded
+        if filepath.exists():
+            logger.debug("PDF already exists for %s: %s", paper.source_id, filepath)
+            return
+
+        logger.debug("Downloading PDF for paper %s", paper.source_id)
+        pdf_content = cast(bytes | None, await self.fetch_url(paper.pdf_url, "bytes"))
+
+        if not pdf_content:
+            logger.warning("Failed to download PDF for %s", paper.source_id)
+            return
+
+        try:
+            async with aiofiles.open(filepath, "wb") as f:
+                await f.write(pdf_content)
+
+            logger.info(
+                "Successfully downloaded PDF for %s to %s", paper.source_id, filepath
+            )
+        except Exception as e:
+            logger.error("Error saving PDF for %s: %s", paper.source_id, str(e))
