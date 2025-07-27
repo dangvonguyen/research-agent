@@ -23,7 +23,9 @@ class MongoDBManger:
         """
         try:
             # Log without credentials
-            logger.debug("Creating MongoDB client with URI: %s", settings.MONGODB_URI)
+            logger.debug(
+                "Creating MongoDB client with URI: %s", settings.MONGODB_URI_SAFE
+            )
 
             self.client = AsyncMongoClient(
                 settings.MONGODB_URI,
@@ -36,13 +38,13 @@ class MongoDBManger:
             await self.client.aconnect()
 
             # Get database reference
-            self.database = self.client[settings.MONGODB_NAME]
-            logger.debug("Database reference created for: %s", settings.MONGODB_NAME)
+            self.database = self.client[settings.MONGODB_DATABASE]
+            logger.debug("Database reference created for: %s", settings.MONGODB_DATABASE)
 
             # Test the database connection
             await self.database.command("ping")
             logger.info(
-                "Connected successfully to MongoDB database: %s", settings.MONGODB_NAME
+                "Connected successfully to MongoDB database: %s", settings.MONGODB_DATABASE
             )
 
         except Exception as e:

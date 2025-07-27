@@ -1,4 +1,18 @@
 services:
+  mongodb:
+    image: mongo:${MONGODB_VERSION:-8.0.12}
+    restart: always
+    env_file:
+      - ./.env
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE=${MONGODB_DATABASE}
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app_network
+
   backend:
     image: "${DOCKER_IMAGE_BACKEND}:${TAG:-latest}"
     restart: always
@@ -7,6 +21,12 @@ services:
     env_file:
       - ./.env
       - ./backend/.env
+    environment:
+      - MONGODB_SERVER=${MONGODB_SERVER}
+      - MONGODB_PORT=${MONGODB_PORT}
+      - MONGODB_ROOT_USERNAME=${MONGODB_ROOT_USERNAME}
+      - MONGODB_ROOT_PASSWORD=${MONGODB_ROOT_PASSWORD}
+      - MONGODB_DATABASE=${MONGODB_DATABASE}
     command: ["fastapi", "run", "app/main.py"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -15,3 +35,14 @@ services:
       retries: 5
     ports:
       - "8000:8000"
+    depends_on:
+      - mongodb
+    networks:
+      - app_network
+
+volumes:
+  mongodb_data:
+
+networks:
+  app_network:
+    driver: bridge

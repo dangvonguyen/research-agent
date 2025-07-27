@@ -3,6 +3,21 @@ import logging
 import logging.config
 import sys
 from pathlib import Path
+from urllib.parse import urlparse, urlunparse
+
+
+def sanitize_mongodb_uri(uri: str, mask: str = "***") -> str:
+    """
+    Sanitize MongoDB URI by masking credentials.
+    """
+    parsed_uri = urlparse(uri)
+
+    if not parsed_uri.username and not parsed_uri.password:
+        return str(uri)
+
+    masked_netloc = f"{mask}:{mask}@{parsed_uri.hostname}:{parsed_uri.port}"
+    masked_parsed = parsed_uri._replace(netloc=masked_netloc)
+    return urlunparse(masked_parsed)
 
 
 def setup_logging() -> None:

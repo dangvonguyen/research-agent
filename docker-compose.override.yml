@@ -1,8 +1,24 @@
 services:
+  mongodb:
+    env_file:
+      - ./.env.dev
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE=${MONGODB_DATABASE}
+    ports:
+      - "${MONGODB_PORT}:27017"
+
   backend:
     restart: no
     build:
       context: ./backend
+    env_file:
+      - ./.env.dev
+    environment:
+      - MONGODB_ROOT_USERNAME=${MONGODB_ROOT_USERNAME}
+      - MONGODB_ROOT_PASSWORD=${MONGODB_ROOT_PASSWORD}
+      - MONGODB_DATABASE=${MONGODB_DATABASE}
     command: ["fastapi", "run", "--reload", "app/main.py"]
     develop:
       watch:

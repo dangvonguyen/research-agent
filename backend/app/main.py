@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa
     )
 
     # Connect to MongoDB
-    logger.info("Establishing connection to MongoDB at %s", settings.MONGODB_URI)
+    logger.info("Establishing connection to MongoDB at %s", settings.MONGODB_URI_SAFE)
     await mongodb.connect()
 
     startup_time = time.time() - start_time
