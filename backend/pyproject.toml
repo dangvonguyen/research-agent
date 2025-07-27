@@ -23,3 +23,50 @@ dev = [
     "ruff>=0.12.2",
     "types-aiofiles>=24.1.0.20250708",
 ]
+
+[tool.mypy]
+strict = true
+show_error_codes = true
+pretty = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+preview = true
+select = [
+    "F",     # pyflakes
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "I",     # isort
+    "B",     # flake8-bugbear
+    "G",     # flake8-logging-format
+    "C4",    # flake8-comprehensions
+    "ARG",   # flake8-unused-arguments
+    "PT",    # flake8-pytest-style
+    "PTH",   # flake8-use-pathlib
+    "RET",   # flake8-return
+    "SIM",   # flake8-simplify
+    "RUF",   # Ruff-specific
+    "UP",    # pyupgrade
+    "FAST",  # FastAPI
+    "ASYNC", # flake8-async
+]
+ignore = [
+    "E501",   # line-too-long
+    "G004",   # log-exception-outside-except-handler
+    "UP007",  # non-pep604-annotation-union
+    "UP045",  # non-pep604-annotation-optional
+    "ANN003", # missing-type-kwargs
+    "ARG002", # unused-method-argument
+    "RET504", # unnecessary-assign
+    "RET505", # superfluous-else-return
+    "RET506", # superfluous-else-raise
+    "PTH123", # builtin-open
+    "SIM105", # suppressible-exception
+    "SIM108", # if-else-block-instead-of-if-exp
+    "SIM117", # multiple-with-statements
+    "RUF012", # mutable-class-default
+    "C408",   # unnecessary-collection-call
+]
