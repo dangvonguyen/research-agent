@@ -1,0 +1,36 @@
+.backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: min(100vw, 800px);
+  max-width: 800px;
+
+  min-height: 500px;       /* Modal luôn có ít nhất 300px chiều cao */
+  max-height: 90vh;        /* Không vượt quá 90% chiều cao màn hình */
+  overflow-y: auto;
+
+  position: relative;
+}
+
+.close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 1.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
