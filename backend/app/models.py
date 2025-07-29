@@ -81,8 +81,8 @@ class CrawlerJobBase(BaseModel):
     """Base model for crawler jobs."""
 
     config_id: str
-    urls: list[HttpUrl]
-    status: JobStatus = JobStatus.PENDING
+    query: str | None = None
+    urls: list[HttpUrl] | None = None
 
 
 class CrawlerJobCreate(BaseCreate, CrawlerJobBase):
@@ -94,8 +94,8 @@ class CrawlerJobCreate(BaseCreate, CrawlerJobBase):
 class CrawlerJobUpdate(BaseUpdate):
     """Model for updating an existing crawler job."""
 
+    query: str | None = None
     urls: list[HttpUrl] | None = None
-    status: JobStatus | None = None
 
 
 class CrawlerJob(BaseDocument, CrawlerJobBase):
@@ -104,6 +104,7 @@ class CrawlerJob(BaseDocument, CrawlerJobBase):
     started_at: datetime | None = None
     completed_at: datetime | None = None
     error_message: str | None = None
+    status: JobStatus = JobStatus.PENDING
 
 
 class PaperSection(BaseModel):

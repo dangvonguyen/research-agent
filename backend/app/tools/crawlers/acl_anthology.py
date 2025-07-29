@@ -3,6 +3,7 @@ import logging
 from typing import Any, cast
 
 from bs4 import BeautifulSoup
+from playwright.async_api import async_playwright
 
 from app.models import PaperCreate, PaperSource
 from app.utils import bulk_run
@@ -100,19 +101,15 @@ class ACLAnthologyCrawler(BaseCrawler):
         )
         return papers
 
-    async def process_search_page(self, url: str) -> list[PaperCreate]:
+    async def process_search_page(
+        self, url: str, max_pages: int = 10
+    ) -> list[PaperCreate]:
         """
         Process a search query page and extract papers.
         """
         logger.debug("Processing search page: %s", url)
 
-        html_content = cast(str | None, await self.fetch_url(url))
-        if not html_content:
-            logger.warning("Failed to fetch search page: %s", url)
-            return []
-
-        logger.debug("Parsing paper IDs from search page")
-        paper_ids = self.parser.parse_search_page(html_content)
+        paper_ids = await self._find_search_paper_ids(url, max_pages)
 
         if paper_ids:
             logger.info("Found %d papers from %s", len(paper_ids), url)
@@ -131,11 +128,108 @@ class ACLAnthologyCrawler(BaseCrawler):
         )
         return papers
 
-    async def crawl(self, urls: list[str]) -> list[PaperCreate]:
+    async def process_search_query(
+        self, query: str, max_pages: int = 10
+    ) -> list[PaperCreate]:
         """
-        Crawl a list of ACL Anthology URLs and extract paper information.
+        Process a search query and extract papers.
         """
-        logger.debug("Starting crawl of %d URLs", len(urls))
+        logger.debug("Processing search query: %s (max pages: %d)", query, max_pages)
+
+        # Prepare search URL
+        search_url = f"{self.BASE_URL}/search/?q={query.replace(' ', '+')}"
+
+        return await self.process_search_page(search_url, max_pages)
+
+    async def _find_search_paper_ids(
+        self, url: str, max_pages: int = 10, attempt: int = 0
+    ) -> list[str]:
+        """
+        Find paper IDs from a search page using browser automation.
+        """
+        logger.debug(
+            "Finding paper IDs from search page: %s (attempt %d/%d)",
+            url, attempt + 1, self.max_attempts,
+        )
+
+        try:
+            # Use Playwright to render the page and extract paper IDs
+            paper_ids = []
+
+            async with async_playwright() as playwright:
+                browser = await playwright.chromium.launch(headless=True)
+                page = await browser.new_page()
+
+                try:
+                    # Load initial search page
+                    logger.debug("Loading search page: %s", url)
+                    await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                    await page.wait_for_selector(".gsc-result", timeout=10000)
+
+                    # Validate max_pages parameter
+                    max_pages = min(max(max_pages, 1), 10)
+
+                    # Process each page
+                    for page_num in range(1, max_pages + 1):
+                        if page_num > 1:
+                            logger.debug("Navigating to search page %d", page_num)
+                            page_selector = (
+                                f".gsc-cursor-page[aria-label='Page {page_num}']"
+                            )
+                            if await page.query_selector(page_selector):
+                                await page.click(page_selector)
+                                await page.wait_for_function(
+                                    f"""() => {{
+                                        const currentPage = document.querySelector('.gsc-cursor-current-page');
+                                        return currentPage && currentPage.textContent.trim() === '{page_num}';
+                                    }}""",
+                                    timeout=10000,
+                                )
+
+                        # Get the rendered HTML content
+                        content = await page.content()
+
+                        current_ids = self.parser.parse_search_page(content)
+                        paper_ids.extend(current_ids)
+
+                        logger.debug(
+                            "Page %d: Found %d paper IDs", page_num, len(current_ids)
+                        )
+
+                        # Rate limiting delay
+                        await page.wait_for_timeout(3000)
+
+                except Exception as e:
+                    logger.error("Failed to process search page: %s", str(e))
+                    raise
+
+                finally:
+                    await browser.close()
+
+            return paper_ids
+
+        except Exception as e:
+            logger.error(
+                "Unexpected error finding paper IDs from %s (attempt %d/%d): %s",
+                url, attempt + 1, self.max_attempts, str(e),
+            )
+            if attempt < self.max_attempts - 1:
+                await self._backoff(attempt, "Failed to find paper IDs from search")
+                return await self._find_search_paper_ids(url, max_pages, attempt + 1)
+            else:
+                logger.error("Max retries reached for finding paper IDs: %s", url)
+                return []
+
+    async def crawl(
+        self, query: str | None = None, urls: list[str] | None = None
+    ) -> list[PaperCreate]:
+        """
+        Crawl a list of ACL Anthology URLs and/or query and extract paper information.
+        """
+        if urls is None:
+            urls = []
+
+        logger.debug("Starting crawl of %d URLs and query: %s", len(urls), query)
 
         papers: list[PaperCreate] = []
 
@@ -157,6 +251,10 @@ class ACLAnthologyCrawler(BaseCrawler):
                 # Assume paper page
                 logger.debug("URL %s identified as paper page", url)
                 tasks.append(self.process_paper_page(url))
+
+        if query:
+            logger.debug("Processing search query: %s", query)
+            tasks.append(self.process_search_query(query))
 
         # Gather results
         logger.debug("Waiting for all URL processing tasks to complete...")
@@ -294,8 +392,30 @@ class ACLAnthologyParser:
         """
         Parse a search results page and extract paper IDs.
         """
-        # TODO: Implement search page parsing
-        return []
+        if not html_content:
+            logger.warning("Empty HTML content provided for search page")
+            return []
+
+        try:
+            soup = BeautifulSoup(html_content, "html.parser")
+
+            # Find all search result elements
+            result_elements = soup.find_all(class_="gsc-webResult gsc-result")
+
+            paper_ids = []
+            for element in result_elements:
+                link = element.find("a", class_="gs-title")  # type: ignore
+                paper_url = str(link["href"])  # type: ignore
+                paper_id = paper_url.strip("/").split("/")[-1]
+                paper_id = paper_id.removesuffix(".pdf")
+                paper_ids.append(paper_id)
+
+            logger.debug("Found %d paper IDs in search page", len(paper_ids))
+            return paper_ids
+
+        except Exception as e:
+            logger.error("Error parsing search page: %s", str(e))
+            return []
 
     @staticmethod
     def parse_acl_url(url: str) -> tuple[str, str | None]:

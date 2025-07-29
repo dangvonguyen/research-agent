@@ -103,9 +103,15 @@ async def create_crawler_job(
     Create and start a new crawler job.
     """
     logger.info(
-        "Creating new crawler job for config: %s with %d URLs",
-        job.config_id, len(job.urls),
+        "Creating new crawler job for config: %s with query '%s' and %d URLs",
+        job.config_id, job.query or "", len(job.urls) if job.urls else 0,
     )
+    if not job.query and not job.urls:
+        logger.warning("Job must have either a query or URLs")
+        raise HTTPException(
+            status_code=400,
+            detail="Job must have either a query or URLs",
+        )
 
     # Verify config exists
     config = await CrawlerConfigRepository.get(job.config_id)
@@ -227,9 +233,12 @@ async def run_crawler_job(job_id: str) -> None:
 
             async with ACLAnthologyCrawler(**config_dict) as crawler:
                 # Run the crawler
-                urls = [str(url) for url in job.urls]
-                logger.info("Crawling %d URLs for job %s", len(urls), job_id)
-                papers = await crawler.crawl(urls)
+                urls = [url.encoded_string() for url in job.urls] if job.urls else None
+                logger.info(
+                    "Crawling %d URLs and query '%s' for job %s",
+                    len(urls) if urls else 0, job.query or "", job_id,
+                )
+                papers = await crawler.crawl(job.query, urls)
 
                 # Download PDFs
                 logger.info("Downloading %d PDFs for job %s", len(papers), job_id)

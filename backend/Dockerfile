@@ -8,6 +8,11 @@ RUN mkdir -p /app/logs && chown -R app:app /app
 
 RUN apt-get update && apt-get install -y curl
 
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+# Builder stage
 FROM base AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.6.1 /uv /uvx /bin/
@@ -22,14 +27,22 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY . .
 
-FROM base AS runtime
+# Playwright stage
+FROM base AS playwright
+
+COPY --from=builder /app/.venv /app/.venv
+
+RUN playwright install --with-deps chromium-headless-shell
+
+# Runtime stage
+FROM playwright AS runtime
 
 COPY --from=builder --chown=app:app /app /app
 
-USER app
+RUN mkdir -p /home/app/.cache \
+    && cp -a /root/.cache/ms-playwright /home/app/.cache \
+    && chown -R app:app /home/app/.cache
 
-ENV PATH="/app/.venv/bin:$PATH" \
-    PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+USER app
 
 EXPOSE 8000

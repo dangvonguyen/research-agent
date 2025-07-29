@@ -223,19 +223,12 @@ class BaseCrawler(ABC):
 
         return content
 
-    @abstractmethod
-    async def crawl(self, urls: list[str]) -> list[PaperCreate]:
-        """
-        Crawl the specified URLs and extract paper information.
-        """
-        pass
-
     async def download_pdf(self, paper: PaperCreate) -> None:
         """
         Download a paper's PDF.
         """
         if not paper.pdf_url or not paper.local_pdf_path:
-            logger.warning("No PDF URL available for paper: %s", paper.title)
+            logger.warning("No PDF URL available for paper: %s", paper.source_id)
             return
 
         # Get filepath for the PDF
@@ -262,3 +255,12 @@ class BaseCrawler(ABC):
             )
         except Exception as e:
             logger.error("Error saving PDF for %s: %s", paper.source_id, str(e))
+
+    @abstractmethod
+    async def crawl(
+        self, query: str | None = None, urls: list[str] | None = None
+    ) -> list[PaperCreate]:
+        """
+        Crawl the specified URLs and/or query and extract paper information.
+        """
+        pass
