@@ -1,10 +1,27 @@
 // src/features/paperSearch/api/searchApi.ts
-
 import type { Paper } from "@/types/paper.types"
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const searchPapers = async (query: string, source: string): Promise<Paper[]> => {
-  // Giả lập response từ backend
+interface SearchParams {
+  query: string
+  url: string
+  source: string
+}
+
+export const searchPapers = async ({
+  query,
+  url,
+  source,
+}: SearchParams): Promise<Paper[]> => {
+  // return fetch("http://localhost:8000/api/search", {
+  //   method: "POST",
+  //   headers: { "Content-Type": "application/json" },
+  //   body: JSON.stringify({ query, url, source }),
+  // }).then(res => res.json());
+  
+
+  // Giả lập response:
+  console.log("Search API called with:", { query, url, source })
+
   return Promise.resolve([
     {
       id: "paper1",
