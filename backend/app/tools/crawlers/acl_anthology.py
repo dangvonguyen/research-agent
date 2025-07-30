@@ -293,14 +293,6 @@ class ACLAnthologyParser:
             authors = [str(tag["content"]) for tag in authors_meta]  # type: ignore
             logger.debug("Found %d authors for paper %s", len(authors), paper_id)
 
-            # Extract abstract
-            abstract_tag = soup.select_one(".acl-abstract > span")
-            abstract = abstract_tag.get_text(strip=True) if abstract_tag else None
-            if abstract:
-                logger.debug("Found abstract for paper %s: %s", paper_id, abstract)
-            else:
-                logger.debug("No abstract found for paper %s", paper_id)
-
             # Extract additional metadata
             def get_metadata(tag_string: str) -> str | None:
                 tag = soup.find("dt", string=tag_string)
@@ -337,7 +329,6 @@ class ACLAnthologyParser:
                 authors=authors,
                 source=PaperSource.ACL_ANTHOLOGY,
                 source_id=paper_id,
-                abstract=abstract,
                 year=year,
                 pdf_url=pdf_url,
                 venues=venues,

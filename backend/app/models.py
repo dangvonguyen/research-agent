@@ -124,7 +124,6 @@ class PaperBase(BaseModel):
     authors: list[str]
     source: PaperSource
     source_id: str
-    abstract: str | None = None
     year: int | None = None
     url: str | None = None
     pdf_url: str | None = None
@@ -146,7 +145,6 @@ class PaperUpdate(BaseUpdate):
     authors: list[str] | None = None
     source: PaperSource | None = None
     source_id: str | None = None
-    abstract: str | None = None
     year: int | None = None
     url: str | None = None
     pdf_url: str | None = None
