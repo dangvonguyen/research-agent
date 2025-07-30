@@ -82,7 +82,7 @@ class CrawlerConfig(BaseDocument, CrawlerConfigBase):
 class CrawlerJobBase(BaseModel):
     """Base model for crawler jobs."""
 
-    config_id: str
+    config_name: str
     query: str | None = None
     urls: list[HttpUrl] | None = None
 
@@ -132,6 +132,7 @@ class PaperBase(BaseModel):
     local_pdf_path: str | None = None
     venues: list[str] = Field(default_factory=list)
     sections: dict[str, PaperSection] = Field(default_factory=dict)
+    job_id: str | None = None
 
 
 class PaperCreate(BaseCreate, PaperBase):
@@ -153,6 +154,7 @@ class PaperUpdate(BaseUpdate):
     local_pdf_path: str | None = None
     venues: list[str] | None = None
     sections: dict[str, PaperSection] | None = None
+    job_id: str | None = None
 
 
 class Paper(BaseDocument, PaperBase):

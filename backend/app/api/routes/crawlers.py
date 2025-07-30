@@ -28,6 +28,17 @@ async def create_crawler_config(config: CrawlerConfigCreate) -> Any:
     """
     Create a new crawler configuration.
     """
+    # Check if config with the same name already exists
+    existing = await CrawlerConfigRepository.get_by_name(config.name)
+    if existing:
+        logger.warning(
+            "Crawler configuration with name '%s' already exists", config.name
+        )
+        raise HTTPException(
+            status_code=409,
+            detail=f"Crawler configuration with name '{config.name}' already exists",
+        )
+
     logger.info(
         "Creating new crawler configuration '%s' for source '%s'",
         config.name, config.source.value,
@@ -62,6 +73,19 @@ async def get_crawler_config(config_id: str) -> Any:
     config = await CrawlerConfigRepository.get(config_id)
     if not config:
         logger.warning("Crawler configuration '%s' not found", config_id)
+        raise HTTPException(status_code=404, detail="Crawler configuration not found")
+    return config
+
+
+@router.get("/configs/name/{name}", response_model=CrawlerConfig)
+async def get_crawler_config_by_name(name: str) -> Any:
+    """
+    Get a specific crawler configuration by name.
+    """
+    logger.debug("Retrieving crawler configuration with name '%s'", name)
+    config = await CrawlerConfigRepository.get_by_name(name)
+    if not config:
+        logger.warning("Crawler configuration with name '%s' not found", name)
         raise HTTPException(status_code=404, detail="Crawler configuration not found")
     return config
 
@@ -107,7 +131,7 @@ async def create_crawler_job(
     """
     logger.info(
         "Creating new crawler job for config '%s' with query '%s' and %d URLs",
-        job.config_id, job.query or "", len(job.urls) if job.urls else 0,
+        job.config_name, job.query or "", len(job.urls) if job.urls else 0,
     )
     if not job.query and not job.urls:
         logger.warning("Job must have either a query or URLs")
@@ -117,9 +141,9 @@ async def create_crawler_job(
         )
 
     # Verify config exists
-    config = await CrawlerConfigRepository.get(job.config_id)
+    config = await CrawlerConfigRepository.get_by_name(job.config_name)
     if not config:
-        logger.warning("Config '%s' not found for job creation", job.config_id)
+        logger.warning("Config '%s' not found for job creation", job.config_name)
         raise HTTPException(status_code=404, detail="Crawler configuration not found")
 
     # Create job in database
@@ -205,23 +229,26 @@ async def run_crawler_job(job_id: str) -> None:
             return
 
         logger.debug(
-            "Fetching configuration for job '%s' (config_id: %s)", job_id, job.config_id
+            "Fetching configuration for job '%s' (config name: %s)", job_id, job.config_name
         )
-        config = await CrawlerConfigRepository.get(job.config_id)
+        config = await CrawlerConfigRepository.get_by_name(job.config_name)
         if not config:
             logger.error(
-                "Configuration '%s' not found for job '%s'",
-                job_id, job.config_id,
+                "Configuration '%s' not found for job '%s'", job.config_name, job_id
             )
             await CrawlerJobRepository.update_job_status(
                 job_id,
                 status=JobStatus.FAILED,
-                error_message="Crawler configuration not found",
+                error_message=f"Configuration '{job.config_name}' not found",
             )
             return
 
-        # Mark job as running
-        logger.info("Updating job '%s' status to RUNNING", job_id)
+        logger.info(
+            "Starting job '%s' for config '%s' (source: %s)",
+            job_id, job.config_name, config.source.value
+        )
+
+        # Update job status
         await CrawlerJobRepository.update_job_status(
             job_id,
             status=JobStatus.RUNNING,
@@ -264,6 +291,7 @@ async def run_crawler_job(job_id: str) -> None:
             for paper in papers:
                 sections = parser.parse_specific_sections(paper, section_types)
                 paper.sections = sections
+                paper.job_id = job_id
 
             logger.info("Creating %d papers for job '%s'", len(papers), job_id)
             await PaperRepository.create_many(papers)

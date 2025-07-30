@@ -8,3 +8,12 @@ __all__ = [
     "CrawlerJobRepository",
     "PaperRepository",
 ]
+
+
+async def create_indexes() -> None:
+    """
+    Create indexes for the database.
+    """
+    await CrawlerConfigRepository._create_indexes()
+    await CrawlerJobRepository._create_indexes()
+    await PaperRepository._create_indexes()

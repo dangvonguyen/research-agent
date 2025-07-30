@@ -1,9 +1,10 @@
 import logging
 from abc import ABC
 from datetime import UTC, datetime
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from bson import ObjectId
+from pymongo import IndexModel
 
 from app.core.db import mongodb
 from app.models import BaseCreate, BaseDocument, BaseUpdate
@@ -20,6 +21,33 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
 
     collection_name: str
     model_class: type[DocT]
+    indexes: list[IndexModel] | None = None
+
+    @classmethod
+    async def _create_indexes(cls) -> None:
+        """
+        Create indexes for the collection.
+        """
+        logger.debug("Creating indexes for collection '%s'", cls.collection_name)
+        collection = mongodb.get_collection(cls.collection_name)
+
+        indexes = [
+            *(cls.indexes or []),
+            IndexModel([("updated_at", 1)], name=f"{cls.collection_name[:-1]}_updated_at"),
+        ]
+
+        try:
+            result = await collection.create_indexes(indexes)
+            logger.debug(
+                "Created %d indexes for collection '%s'",
+                len(result), cls.collection_name,
+            )
+        except Exception as e:
+            logger.error(
+                "Error creating indexes for collection '%s': %s",
+                cls.collection_name, str(e),
+            )
+            raise
 
     @classmethod
     async def create(cls, obj: CreateT) -> DocT:
@@ -87,37 +115,45 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
             raise
 
     @classmethod
-    async def get(cls, id: str) -> DocT | None:
+    async def get_one(cls, query: dict[str, Any]) -> DocT | None:
         """
-        Get a document by ID.
+        Get a single document by a query.
         """
         logger.debug(
-            "Retrieving document '%s' from collection '%s'", id, cls.collection_name
+            "Retrieving document from '%s' by query '%s'",
+            cls.collection_name, query,
         )
         collection = mongodb.get_collection(cls.collection_name)
 
         try:
-            obj_data = await collection.find_one({"_id": ObjectId(id)})
+            obj_data = await collection.find_one(query)
             if obj_data:
                 logger.debug(
-                    "Found document '%s' in collection '%s'",
-                    id, cls.collection_name,
+                    "Found document from '%s' by query '%s'",
+                    cls.collection_name, query,
                 )
                 obj_data["_id"] = str(obj_data["_id"])
                 return cls.model_class(**obj_data)  # type: ignore
             else:
                 logger.debug(
-                    "Document '%s' not found in collection '%s'",
-                    id, cls.collection_name,
+                    "Document not found collection '%s' by query '%s'",
+                    cls.collection_name, query,
                 )
                 return None
 
         except Exception as e:
             logger.error(
-                "Error retrieving document '%s' from '%s': %s",
-                id, cls.collection_name, str(e),
+                "Error retrieving document from '%s' by query '%s': %s",
+                cls.collection_name, query, str(e),
             )
             raise
+
+    @classmethod
+    async def get(cls, id: str) -> DocT | None:
+        """
+        Get a document by ID.
+        """
+        return await cls.get_one({"_id": ObjectId(id)})
 
     @classmethod
     async def list(cls, skip: int = 0, limit: int = 100) -> list[DocT]:

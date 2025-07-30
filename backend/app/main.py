@@ -10,6 +10,7 @@ from app.api import api_router
 from app.core.config import settings
 from app.core.db import mongodb
 from app.logging import setup_logging
+from app.repos import create_indexes
 
 
 @asynccontextmanager
@@ -30,6 +31,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa
     # Connect to MongoDB
     logger.info("Establishing connection to MongoDB at %s", settings.MONGODB_URI_SAFE)
     await mongodb.connect()
+
+    # Create database indexes
+    logger.info("Creating database indexes")
+    await create_indexes()
+    logger.info("Successfully created database indexes")
 
     startup_time = time.time() - start_time
     logger.info(

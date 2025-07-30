@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from bson import ObjectId
+from pymongo import IndexModel
 
 from app.core.db import mongodb
 from app.models import (
@@ -27,6 +28,17 @@ class CrawlerConfigRepository(
 
     collection_name = "crawler_configs"
     model_class = CrawlerConfig
+    indexes = [
+        IndexModel([("name", 1)], name="crawler_config_name", unique=True),
+    ]
+
+    @classmethod
+    async def get_by_name(cls, name: str) -> CrawlerConfig | None:
+        """
+        Get a crawler configuration by name.
+        """
+        logger.debug("Retrieving crawler config with name '%s'", name)
+        return await cls.get_one({"name": name})
 
 
 class CrawlerJobRepository(
@@ -36,6 +48,10 @@ class CrawlerJobRepository(
 
     collection_name = "crawler_jobs"
     model_class = CrawlerJob
+    indexes = [
+        IndexModel([("config_name", 1)], name="crawler_job_config_name"),
+        IndexModel([("status", 1)], name="crawler_job_status"),
+    ]
 
     @classmethod
     async def list(
