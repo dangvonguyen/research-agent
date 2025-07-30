@@ -240,6 +240,15 @@ async def run_crawler_job(job_id: str) -> None:
                 )
                 papers = await crawler.crawl(job.query, urls)
 
+                if not papers:
+                    logger.warning("No papers found for job %s", job_id)
+                    await CrawlerJobRepository.update_job_status(
+                        job_id,
+                        status=JobStatus.COMPLETED,
+                        completed_at=datetime.now(UTC),
+                    )
+                    return
+
                 # Download PDFs
                 logger.info("Downloading %d PDFs for job %s", len(papers), job_id)
                 await bulk_run(crawler.download_pdf, papers)

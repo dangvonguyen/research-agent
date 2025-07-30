@@ -286,6 +286,10 @@ class ACLAnthologyParser:
 
             # Extract metadata
             title_meta = soup.find("meta", attrs={"name": "citation_title"})
+            if not title_meta:
+                logger.warning("No title metadata found for paper %s", paper_id)
+                return None
+
             title = title_meta["content"]  # type: ignore
             logger.debug("Found title for paper %s: %s", paper_id, title)
 

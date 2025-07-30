@@ -133,7 +133,7 @@ class PDFParser:
 
             current_pos += len(line)
 
-            logger.debug("Found %d potential section headings", len(headings))
+        logger.debug("Found %d potential section headings", len(headings))
         return headings
 
     def _classify_sections(
