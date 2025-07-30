@@ -134,7 +134,7 @@ class BaseCrawler(ABC):
             }
 
             logger.debug(
-                "Fetching URL: %s (attempt %d/%d)", url, attempt + 1, self.max_attempts,
+                "Fetching URL %s (attempt %d/%d)", url, attempt + 1, self.max_attempts,
             )
 
             async with self.semaphore:
@@ -154,11 +154,11 @@ class BaseCrawler(ABC):
                         else:
                             content = await resp.read()
 
-                        logger.debug("Successfully fetched %s", url)
+                        logger.debug("Successfully fetched URL %s", url)
                         return content
 
                     logger.warning(
-                        "HTTP error %d for %s (attempt %d/%d)",
+                        "HTTP error %d for URL %s (attempt %d/%d)",
                         resp.status, url, attempt + 1, self.max_attempts,
                     )
 
@@ -167,7 +167,8 @@ class BaseCrawler(ABC):
                         pass
                     else:
                         logger.debug(
-                            "Client error %d for %s - not retrying", resp.status, url
+                            "Client error %d for URL %s - not retrying",
+                            resp.status, url,
                         )
                         return None
 
@@ -175,12 +176,12 @@ class BaseCrawler(ABC):
                 await self._backoff(attempt, f"HTTP error {resp.status}")
                 return await self.fetch_with_retry(url, mode, attempt + 1)
             else:
-                logger.error("Max attempts reached for %s", url)
+                logger.error("Max attempts reached for URL %s", url)
                 return None
 
         except asyncio.TimeoutError:  # noqa: UP041
             logger.warning(
-                "Timeout fetching %s (attempt %d/%d): %s",
+                "Timeout fetching URL %s (attempt %d/%d): %s",
                 url, attempt + 1, self.max_attempts,
             )
             if attempt < self.max_attempts - 1:
@@ -190,7 +191,7 @@ class BaseCrawler(ABC):
 
         except Exception as e:
             logger.exception(
-                "Unexpected error fetching %s (attempt %d/%d): %s",
+                "Unexpected error fetching URL %s (attempt %d/%d): %s",
                 url, attempt + 1, self.max_attempts, str(e),
             )
             if attempt < self.max_attempts - 1:
@@ -206,20 +207,20 @@ class BaseCrawler(ABC):
         """
         # Check if we already visited this URL
         if url in self.visited_urls:
-            logger.debug("Skipping already visited URL: %s", url)
+            logger.debug("Skipping already visited URL %s", url)
             return None
 
         # Mark as visited
         self.visited_urls.add(url)
 
         # Fetch with retry
-        logger.debug("Fetching URL: %s", url)
+        logger.debug("Fetching URL %s", url)
         content = await self.fetch_with_retry(url, mode)
 
         if content:
-            logger.debug("Fetch completed for %s", url)
+            logger.debug("Fetch completed for URL %s", url)
         else:
-            logger.warning("Failed to fetch %s after all retries", url)
+            logger.warning("Failed to fetch URL %s after all retries", url)
 
         return content
 
@@ -228,7 +229,7 @@ class BaseCrawler(ABC):
         Download a paper's PDF.
         """
         if not paper.pdf_url or not paper.local_pdf_path:
-            logger.warning("No PDF URL available for paper: %s", paper.source_id)
+            logger.warning("No PDF URL available for paper '%s'", paper.source_id)
             return
 
         # Get filepath for the PDF
@@ -236,14 +237,14 @@ class BaseCrawler(ABC):
 
         # Skip if already downloaded
         if filepath.exists():
-            logger.debug("PDF already exists for %s: %s", paper.source_id, filepath)
+            logger.debug("PDF already exists for paper '%s': %s", paper.source_id, filepath)
             return
 
-        logger.debug("Downloading PDF for paper %s", paper.source_id)
+        logger.debug("Downloading PDF for paper '%s'", paper.source_id)
         pdf_content = cast(bytes | None, await self.fetch_url(paper.pdf_url, "bytes"))
 
         if not pdf_content:
-            logger.warning("Failed to download PDF for %s", paper.source_id)
+            logger.warning("Failed to download PDF for paper '%s'", paper.source_id)
             return
 
         try:
@@ -251,10 +252,11 @@ class BaseCrawler(ABC):
                 await f.write(pdf_content)
 
             logger.info(
-                "Successfully downloaded PDF for %s to %s", paper.source_id, filepath
+                "Successfully downloaded PDF for paper '%s' to %s",
+                paper.source_id, filepath,
             )
         except Exception as e:
-            logger.error("Error saving PDF for %s: %s", paper.source_id, str(e))
+            logger.error("Error saving PDF for paper '%s': %s", paper.source_id, str(e))
 
     @abstractmethod
     async def crawl(

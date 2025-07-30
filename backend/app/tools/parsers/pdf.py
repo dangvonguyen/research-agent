@@ -56,19 +56,19 @@ class PDFParser:
         """
         Parse a research paper text and extract sections.
         """
-        if not paper.local_pdf_path:
-            logger.warning("No local PDF path provided for paper %s", paper.source_id)
+        if not paper.pdf_url or not paper.local_pdf_path:
+            logger.warning("No PDF file provided for paper '%s'", paper.source_id)
             return {}
 
-        logger.debug("Parsing PDF paper %s", paper.local_pdf_path)
+        logger.debug(
+            "Parsing PDF paper '%s' with path '%s'",
+            paper.source_id, paper.local_pdf_path,
+        )
         try:
             reader = PdfReader(paper.local_pdf_path)
-            logger.debug("PDF loaded with %d pages", len(reader.pages))
             text = ""
             for page in reader.pages:
                 text += page.extract_text() + "\n"
-
-            logger.debug("Extracted %d characters of text", len(text))
 
             # Normalize text
             text = self._normalize_text(text)
@@ -82,7 +82,9 @@ class PDFParser:
             return sections
 
         except Exception as e:
-            logger.error("Error parsing PDF: %s", str(e))
+            logger.error(
+                "Error parsing PDF for paper '%s': %s", paper.source_id, str(e)
+            )
             return {}
 
     def _normalize_text(self, text: str) -> str:
@@ -162,10 +164,6 @@ class PDFParser:
 
             # Classify section type
             section_type = self._classify_section_type(heading_text)
-            logger.debug(
-                "Classified heading '%s' as section type '%s'",
-                heading_text, section_type,
-            )
 
             section = PaperSection(title=heading_text, content=content, level=level)
             sections[section_type] = section
@@ -194,7 +192,7 @@ class PDFParser:
         Extract only specific section types.
         """
         logger.debug(
-            "Parsing specific sections for paper %s: %s",
+            "Parsing specific sections for paper '%s': %s",
             paper.source_id, section_types,
         )
 
@@ -204,7 +202,7 @@ class PDFParser:
 
         if missing_sections:
             logger.warning(
-                "Could not find sections %s for paper %s",
+                "Could not find sections %s for paper '%s'",
                 missing_sections, paper.source_id,
             )
 

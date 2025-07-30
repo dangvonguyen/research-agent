@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field, HttpUrl
 
 
 class PaperSource(Enum):
+    """Source of a paper."""
+
     ACL_ANTHOLOGY = "acl_anthology"
 
 

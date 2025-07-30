@@ -45,7 +45,7 @@ class CrawlerJobRepository(
         List documents with pagination and status filter.
         """
         logger.debug(
-            "Retrieving documents from %s (skip=%d, limit=%d, status: %s)",
+            "Retrieving documents from '%s' (skip=%d, limit=%d, status: %s)",
             cls.collection_name, skip, limit, status.value if status else "None",
         )
         collection = mongodb.get_collection(cls.collection_name)
@@ -54,7 +54,7 @@ class CrawlerJobRepository(
             objects = []
 
             if status:
-                cursor = collection.find({"status": status})
+                cursor = collection.find({"status": status.value})
             else:
                 cursor = collection.find()
             cursor = cursor.skip(skip).limit(limit).sort("updated_at", -1)
@@ -66,14 +66,14 @@ class CrawlerJobRepository(
                 doc_count += 1
 
             logger.debug(
-                "Retrieved %d documents from collection %s",
+                "Successfully retrieved %d documents from collection '%s'",
                 doc_count, cls.collection_name,
             )
             return objects
 
         except Exception as e:
             logger.error(
-                "Error retrieving documents from %s: %s", cls.collection_name, str(e)
+                "Error retrieving documents from '%s': %s", cls.collection_name, str(e)
             )
             raise
 
@@ -84,13 +84,12 @@ class CrawlerJobRepository(
         """
         Update a crawler job's status and additional fields.
         """
-        logger.info("Updating job %s status to %s", id, status.value)
+        logger.info("Updating job '%s' status to %s", id, status.value)
 
         if additional_fields:
             logger.debug(
-                "Additional fields for job %s update: %s",
-                id,
-                ", ".join(f"{k}={v}" for k, v in additional_fields.items()),
+                "Additional fields for job '%s' update: %s",
+                id, ", ".join(f"{k}={v}" for k, v in additional_fields.items()),
             )
 
         collection = mongodb.get_collection(cls.collection_name)
@@ -104,18 +103,18 @@ class CrawlerJobRepository(
             )
 
             if result.matched_count == 0:
-                logger.warning("Job %s not found for status update", id)
+                logger.warning("Job '%s' not found for status update", id)
                 return None
 
             if result.modified_count > 0:
                 logger.debug(
-                    "Job %s status updated successfully to %s", id, status.value
+                    "Job '%s' status updated successfully to %s", id, status.value
                 )
             else:
-                logger.debug("Job %s found but no changes made to status", id)
+                logger.debug("Job '%s' found but no changes made to status", id)
 
             return await cls.get(id)
 
         except Exception as e:
-            logger.error("Error updating job %s status: %s", id, str(e))
+            logger.error("Error updating job '%s' status: %s", id, str(e))
             raise

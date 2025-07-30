@@ -29,7 +29,8 @@ class Settings(BaseSettings):
     MONGODB_ROOT_PASSWORD: str | None = None
     MONGODB_DATABASE: str
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
+    @property
     def MONGODB_URI(self) -> str:
         query = (
             "authSource=admin"
@@ -47,7 +48,8 @@ class Settings(BaseSettings):
             query=query,
         ).encoded_string()
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
+    @property
     def MONGODB_URI_SAFE(self) -> str:
         return sanitize_mongodb_uri(self.MONGODB_URI)
 

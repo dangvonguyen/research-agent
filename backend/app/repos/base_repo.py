@@ -26,7 +26,7 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
         """
         Create a new document.
         """
-        logger.debug("Creating new document in collection: %s", cls.collection_name)
+        logger.debug("Creating new document in collection '%s'", cls.collection_name)
         collection = mongodb.get_collection(cls.collection_name)
 
         now = datetime.now(UTC)
@@ -38,7 +38,7 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
             result = await collection.insert_one(obj_dict)
             obj_id = str(result.inserted_id)
             logger.debug(
-                "Created document with ID %s in collection %s",
+                "Successfully created document '%s' in collection '%s'",
                 obj_id, cls.collection_name,
             )
 
@@ -47,7 +47,7 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
 
         except Exception as e:
             logger.error(
-                "Failed to create document in %s: %s", cls.collection_name, str(e)
+                "Error creating document in '%s': %s", cls.collection_name, str(e)
             )
             raise
 
@@ -70,7 +70,7 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
             result = await collection.insert_many(obj_dicts)
             obj_ids = [str(obj_id) for obj_id in result.inserted_ids]
             logger.debug(
-                "Created %d documents in collection %s",
+                "Successfully created %d documents in collection '%s'",
                 len(obj_ids), cls.collection_name,
             )
 
@@ -82,7 +82,7 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
 
         except Exception as e:
             logger.error(
-                "Failed to create many documents in %s: %s", cls.collection_name, str(e)
+                "Error creating many documents in '%s': %s", cls.collection_name, str(e)
             )
             raise
 
@@ -92,7 +92,7 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
         Get a document by ID.
         """
         logger.debug(
-            "Retrieving document with ID %s from collection %s", id, cls.collection_name
+            "Retrieving document '%s' from collection '%s'", id, cls.collection_name
         )
         collection = mongodb.get_collection(cls.collection_name)
 
@@ -100,21 +100,21 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
             obj_data = await collection.find_one({"_id": ObjectId(id)})
             if obj_data:
                 logger.debug(
-                    "Found document with ID %s in collection %s",
+                    "Found document '%s' in collection '%s'",
                     id, cls.collection_name,
                 )
                 obj_data["_id"] = str(obj_data["_id"])
                 return cls.model_class(**obj_data)  # type: ignore
             else:
                 logger.debug(
-                    "Document with ID %s not found in collection %s",
+                    "Document '%s' not found in collection '%s'",
                     id, cls.collection_name,
                 )
                 return None
 
         except Exception as e:
             logger.error(
-                "Error retrieving document %s from %s: %s",
+                "Error retrieving document '%s' from '%s': %s",
                 id, cls.collection_name, str(e),
             )
             raise
@@ -125,7 +125,7 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
         List documents with pagination.
         """
         logger.debug(
-            "Retrieving documents from %s (skip=%d, limit=%d)",
+            "Retrieving documents from '%s' (skip=%d, limit=%d)",
             cls.collection_name, skip, limit,
         )
         collection = mongodb.get_collection(cls.collection_name)
@@ -141,14 +141,15 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
                 doc_count += 1
 
             logger.debug(
-                "Retrieved %d documents from collection %s",
+                "Successfully retrieved %d documents from collection '%s'",
                 doc_count, cls.collection_name,
             )
             return objects
 
         except Exception as e:
             logger.error(
-                "Error retrieving documents from %s: %s", cls.collection_name, str(e)
+                "Error retrieving documents from '%s': %s",
+                cls.collection_name, str(e),
             )
             raise
 
@@ -157,12 +158,14 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
         """
         Update a document.
         """
-        logger.debug("Updating document %s in collection %s", id, cls.collection_name)
+        logger.debug(
+            "Updating document '%s' in collection '%s'", id, cls.collection_name
+        )
         collection = mongodb.get_collection(cls.collection_name)
 
         update_data = obj.model_dump(mode="json", exclude_unset=True)
         if not update_data:
-            logger.debug("No fields to update for document %s", id)
+            logger.debug("No fields to update for document '%s'", id)
             return await cls.get(id)
 
         update_data["updated_at"] = datetime.now(UTC)
@@ -174,20 +177,20 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
 
             if result.matched_count == 0:
                 logger.debug(
-                    "Document %s not found for update in collection %s",
+                    "Document '%s' not found for update in collection '%s'",
                     id, cls.collection_name,
                 )
                 return None
 
             if result.modified_count > 0:
                 logger.debug(
-                    "Document %s successfully updated in collection %s",
+                    "Document '%s' successfully updated in collection '%s'",
                     id,
                     cls.collection_name,
                 )
             else:
                 logger.debug(
-                    "Document %s found but no changes made in collection %s",
+                    "Document '%s' found but no changes made in collection '%s'",
                     id,
                     cls.collection_name,
                 )
@@ -196,7 +199,8 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
 
         except Exception as e:
             logger.error(
-                "Error updating document %s in %s: %s", id, cls.collection_name, str(e)
+                "Error updating document '%s' in '%s': %s",
+                id, cls.collection_name, str(e),
             )
             raise
 
@@ -205,7 +209,9 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
         """
         Delete a document.
         """
-        logger.debug("Deleting document %s from collection %s", id, cls.collection_name)
+        logger.debug(
+            "Deleting document '%s' from collection '%s'", id, cls.collection_name
+        )
         collection = mongodb.get_collection(cls.collection_name)
 
         try:
@@ -213,24 +219,20 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
 
             if result.deleted_count > 0:
                 logger.debug(
-                    "Successfully deleted document %s from collection %s",
-                    id,
-                    cls.collection_name,
+                    "Successfully deleted document '%s' from collection '%s'",
+                    id, cls.collection_name,
                 )
                 return True
             else:
                 logger.debug(
-                    "Document %s not found for deletion in collection %s",
-                    id,
-                    cls.collection_name,
+                    "Document '%s' not found for deletion in collection '%s'",
+                    id, cls.collection_name,
                 )
                 return False
 
         except Exception as e:
             logger.error(
-                "Error deleting document %s from %s: %s",
-                id,
-                cls.collection_name,
-                str(e),
+                "Error deleting document '%s' from '%s': %s",
+                id, cls.collection_name, str(e),
             )
             raise
