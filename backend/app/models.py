@@ -161,3 +161,30 @@ class Paper(BaseDocument, PaperBase):
     """Model for paper stored in database."""
 
     pass
+
+
+class OperationResponse(BaseModel):
+    """Base response model for database operations."""
+
+    success: bool
+    message: str
+
+
+class CreateResponse(OperationResponse):
+    """Response model for create operations."""
+
+    created_count: int
+    created_ids: list[str]
+
+
+class UpdateResponse(OperationResponse):
+    """Response model for update operations."""
+
+    matched_count: int
+    modified_count: int
+
+
+class DeleteResponse(OperationResponse):
+    """Response model for delete operations."""
+
+    deleted_count: int

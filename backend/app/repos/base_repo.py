@@ -7,7 +7,14 @@ from bson import ObjectId
 from pymongo import IndexModel
 
 from app.core.db import mongodb
-from app.models import BaseCreate, BaseDocument, BaseUpdate
+from app.models import (
+    BaseCreate,
+    BaseDocument,
+    BaseUpdate,
+    CreateResponse,
+    DeleteResponse,
+    UpdateResponse,
+)
 
 DocT = TypeVar("DocT", bound=BaseDocument)
 CreateT = TypeVar("CreateT", bound=BaseCreate)
@@ -50,7 +57,38 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
             raise
 
     @classmethod
-    async def create(cls, obj: CreateT) -> DocT:
+    async def get_by_id(cls, id: str) -> DocT | None:
+        """
+        Get a document by ID.
+        """
+        return await cls.get_one({"_id": ObjectId(id)})
+
+    @classmethod
+    async def update_by_id(
+        cls, id: str, obj: UpdateT | None = None, **additional_fields: Any
+    ) -> UpdateResponse:
+        """
+        Update a document by ID.
+        """
+        logger.debug(
+            "Updating document in collection '%s' by ID '%s'",
+            cls.collection_name, id,
+        )
+        return await cls.update_one({"_id": ObjectId(id)}, obj, **additional_fields)
+
+    @classmethod
+    async def delete_by_id(cls, id: str) -> DeleteResponse:
+        """
+        Delete a document by ID.
+        """
+        logger.debug(
+            "Deleting document from collection '%s' by ID '%s'",
+            cls.collection_name, id,
+        )
+        return await cls.delete_one({"_id": ObjectId(id)})
+
+    @classmethod
+    async def create_one(cls, obj: CreateT) -> CreateResponse:
         """
         Create a new document.
         """
@@ -70,21 +108,40 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
                 obj_id, cls.collection_name,
             )
 
-            obj_dict["_id"] = obj_id
-            return cls.model_class(**obj_dict)  # type: ignore
+            return CreateResponse(
+                success=True,
+                message="Document successfully created",
+                created_count=1,
+                created_ids=[obj_id],
+            )
 
         except Exception as e:
             logger.error(
-                "Error creating document in '%s': %s", cls.collection_name, str(e)
+                "Error creating document in collection '%s': %s",
+                cls.collection_name, str(e),
             )
             raise
 
     @classmethod
-    async def create_many(cls, objs: list[CreateT]) -> list[DocT]:
+    async def create_many(cls, objs: list[CreateT]) -> CreateResponse:
         """
         Create many documents.
         """
+        logger.debug(
+            "Creating %d documents in collection '%s'", len(objs), cls.collection_name
+        )
         collection = mongodb.get_collection(cls.collection_name)
+
+        if not objs:
+            logger.warning(
+                "No documents to create in collection '%s'", cls.collection_name
+            )
+            return CreateResponse(
+                success=False,
+                message="No documents to create",
+                created_count=0,
+                created_ids=[],
+            )
 
         obj_dicts = []
         for obj in objs:
@@ -102,25 +159,30 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
                 len(obj_ids), cls.collection_name,
             )
 
-            objects = []
-            for obj_dict in obj_dicts:
-                obj_dict["_id"] = obj_ids[obj_dicts.index(obj_dict)]
-                objects.append(cls.model_class(**obj_dict))
-            return objects
+            return CreateResponse(
+                success=True,
+                message="Documents successfully created",
+                created_count=len(obj_ids),
+                created_ids=obj_ids,
+            )
 
         except Exception as e:
             logger.error(
-                "Error creating many documents in '%s': %s", cls.collection_name, str(e)
+                "Error creating many documents in collection '%s': %s",
+                cls.collection_name, str(e),
             )
             raise
 
     @classmethod
-    async def get_one(cls, query: dict[str, Any]) -> DocT | None:
+    async def get_one(cls, query: dict[str, Any] | None = None) -> DocT | None:
         """
         Get a single document by a query.
         """
+        if query is None:
+            query = {}
+
         logger.debug(
-            "Retrieving document from '%s' by query '%s'",
+            "Retrieving document in collection '%s' by query '%s'",
             cls.collection_name, query,
         )
         collection = mongodb.get_collection(cls.collection_name)
@@ -129,46 +191,46 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
             obj_data = await collection.find_one(query)
             if obj_data:
                 logger.debug(
-                    "Found document from '%s' by query '%s'",
+                    "Found document in collection '%s' by query '%s'",
                     cls.collection_name, query,
                 )
                 obj_data["_id"] = str(obj_data["_id"])
                 return cls.model_class(**obj_data)  # type: ignore
             else:
                 logger.debug(
-                    "Document not found collection '%s' by query '%s'",
+                    "Document not found in collection '%s' by query '%s'",
                     cls.collection_name, query,
                 )
                 return None
 
         except Exception as e:
             logger.error(
-                "Error retrieving document from '%s' by query '%s': %s",
+                "Error retrieving document in collection '%s' by query '%s': %s",
                 cls.collection_name, query, str(e),
             )
             raise
 
     @classmethod
-    async def get(cls, id: str) -> DocT | None:
+    async def get_many(
+        cls, query: dict[str, Any] | None = None, skip: int = 0, limit: int = 100
+    ) -> list[DocT]:
         """
-        Get a document by ID.
+        Get many documents with pagination and optional query.
         """
-        return await cls.get_one({"_id": ObjectId(id)})
+        if query is None:
+            query = {}
 
-    @classmethod
-    async def list(cls, skip: int = 0, limit: int = 100) -> list[DocT]:
-        """
-        List documents with pagination.
-        """
         logger.debug(
-            "Retrieving documents from '%s' (skip=%d, limit=%d)",
-            cls.collection_name, skip, limit,
+            "Retrieving documents in collection '%s' (skip=%d, limit=%d, query=%s)",
+            cls.collection_name, skip, limit, query,
         )
         collection = mongodb.get_collection(cls.collection_name)
 
         objects = []
         try:
-            cursor = collection.find().skip(skip).limit(limit).sort("updated_at", -1)
+            cursor = (
+                collection.find(query).skip(skip).limit(limit).sort("updated_at", -1)
+            )
 
             doc_count = 0
             async for obj in cursor:
@@ -177,98 +239,252 @@ class BaseRepository[DocT: BaseDocument, CreateT: BaseCreate, UpdateT: BaseUpdat
                 doc_count += 1
 
             logger.debug(
-                "Successfully retrieved %d documents from collection '%s'",
+                "Successfully retrieved %d documents in collection '%s'",
                 doc_count, cls.collection_name,
             )
             return objects
 
         except Exception as e:
             logger.error(
-                "Error retrieving documents from '%s': %s",
+                "Error retrieving documents in collection '%s': %s",
                 cls.collection_name, str(e),
             )
             raise
 
     @classmethod
-    async def update(cls, id: str, obj: UpdateT) -> DocT | None:
+    async def update_one(
+        cls, query: dict[str, Any], obj: UpdateT | None = None, **additional_fields: Any
+    ) -> UpdateResponse:
         """
         Update a document.
         """
         logger.debug(
-            "Updating document '%s' in collection '%s'", id, cls.collection_name
+            "Updating document in collection '%s' by query '%s'",
+            cls.collection_name, query,
         )
         collection = mongodb.get_collection(cls.collection_name)
 
-        update_data = obj.model_dump(mode="json", exclude_unset=True)
+        update_data = obj.model_dump(mode="json", exclude_unset=True) if obj else {}
+        update_data.update(additional_fields)
+
         if not update_data:
-            logger.debug("No fields to update for document '%s'", id)
-            return await cls.get(id)
+            logger.debug(
+                "No fields to update for document in collection '%s' by query '%s'",
+                cls.collection_name, query,
+            )
+            return UpdateResponse(
+                success=False,
+                message="No fields to update",
+                matched_count=0,
+                modified_count=0,
+            )
 
         update_data["updated_at"] = datetime.now(UTC)
 
         try:
-            result = await collection.update_one(
-                {"_id": ObjectId(id)}, {"$set": update_data}
-            )
+            result = await collection.update_one(query, {"$set": update_data})
 
             if result.matched_count == 0:
                 logger.debug(
-                    "Document '%s' not found for update in collection '%s'",
-                    id, cls.collection_name,
+                    "Document not found for update in collection '%s' by query '%s'",
+                    cls.collection_name, query,
                 )
-                return None
+                return UpdateResponse(
+                    success=False,
+                    message="Document not found for update",
+                    matched_count=0,
+                    modified_count=0,
+                )
 
             if result.modified_count > 0:
                 logger.debug(
-                    "Document '%s' successfully updated in collection '%s'",
-                    id,
-                    cls.collection_name,
+                    "Document successfully updated in collection '%s' by query '%s'",
+                    cls.collection_name, query,
+                )
+                return UpdateResponse(
+                    success=True,
+                    message="Document successfully updated",
+                    matched_count=result.matched_count,
+                    modified_count=result.modified_count,
                 )
             else:
                 logger.debug(
-                    "Document '%s' found but no changes made in collection '%s'",
-                    id,
-                    cls.collection_name,
+                    "Document found but no changes made in collection '%s' by query '%s'",
+                    cls.collection_name, query,
                 )
-
-            return await cls.get(id)
+                return UpdateResponse(
+                    success=False,
+                    message="Document found but no changes made",
+                    matched_count=result.matched_count,
+                    modified_count=0,
+                )
 
         except Exception as e:
             logger.error(
-                "Error updating document '%s' in '%s': %s",
-                id, cls.collection_name, str(e),
+                "Error updating document in collection '%s' by query '%s': %s",
+                cls.collection_name, query, str(e),
             )
             raise
 
     @classmethod
-    async def delete(cls, id: str) -> bool:
+    async def update_many(
+        cls, query: dict[str, Any], obj: UpdateT | None = None, **additional_fields: Any
+    ) -> UpdateResponse:
         """
-        Delete a document.
+        Update many documents.
         """
         logger.debug(
-            "Deleting document '%s' from collection '%s'", id, cls.collection_name
+            "Updating many documents in collection '%s' by query '%s'",
+            cls.collection_name, query,
+        )
+        collection = mongodb.get_collection(cls.collection_name)
+
+        update_data = obj.model_dump(mode="json", exclude_unset=True) if obj else {}
+        update_data.update(additional_fields)
+
+        if not update_data:
+            logger.debug(
+                "No fields to update for many documents in collection '%s' by query '%s'",
+                cls.collection_name, query,
+            )
+            return UpdateResponse(
+                success=False,
+                message="No fields to update",
+                matched_count=0,
+                modified_count=0,
+            )
+
+        update_data["updated_at"] = datetime.now(UTC)
+
+        try:
+            result = await collection.update_many(query, {"$set": update_data})
+
+            if result.matched_count == 0:
+                logger.debug(
+                    "Documents not found for update in collection '%s' by query '%s'",
+                    cls.collection_name, query,
+                )
+                return UpdateResponse(
+                    success=False,
+                    message="Documents not found for update",
+                    matched_count=0,
+                    modified_count=0,
+                )
+
+            if result.modified_count > 0:
+                logger.debug(
+                    "Documents successfully updated in collection '%s' by query '%s'",
+                    cls.collection_name, query,
+                )
+                return UpdateResponse(
+                    success=True,
+                    message="Documents successfully updated",
+                    matched_count=result.matched_count,
+                    modified_count=result.modified_count,
+                )
+            else:
+                logger.debug(
+                    "Documents found but no changes made in collection '%s' by query '%s'",
+                    cls.collection_name, query,
+                )
+                return UpdateResponse(
+                    success=False,
+                    message="Documents found but no changes made",
+                    matched_count=result.matched_count,
+                    modified_count=0,
+                )
+
+        except Exception as e:
+            logger.error(
+                "Error updating document in collection '%s' by query '%s': %s",
+                cls.collection_name, query, str(e),
+            )
+            raise
+
+    @classmethod
+    async def delete_one(cls, query: dict[str, Any] | None = None) -> DeleteResponse:
+        """
+        Delete a document by a query.
+        """
+        if query is None:
+            query = {}
+
+        logger.debug(
+            "Deleting document in collection '%s' by query '%s'",
+            cls.collection_name, query,
         )
         collection = mongodb.get_collection(cls.collection_name)
 
         try:
-            result = await collection.delete_one({"_id": ObjectId(id)})
-
+            result = await collection.delete_one(query)
             if result.deleted_count > 0:
                 logger.debug(
-                    "Successfully deleted document '%s' from collection '%s'",
-                    id, cls.collection_name,
+                    "Successfully deleted document in collection '%s' by query '%s'",
+                    cls.collection_name, query,
                 )
-                return True
+                return DeleteResponse(
+                    success=True,
+                    message="Document successfully deleted",
+                    deleted_count=result.deleted_count,
+                )
             else:
                 logger.debug(
-                    "Document '%s' not found for deletion in collection '%s'",
-                    id, cls.collection_name,
+                    "Document not found for deletion in collection '%s' by query '%s'",
+                    cls.collection_name, query,
                 )
-                return False
+                return DeleteResponse(
+                    success=False,
+                    message="Document not found for deletion",
+                    deleted_count=0,
+                )
 
         except Exception as e:
             logger.error(
-                "Error deleting document '%s' from '%s': %s",
-                id, cls.collection_name, str(e),
+                "Error deleting document in collection '%s' by query '%s': %s",
+                cls.collection_name, query, str(e),
+            )
+            raise
+
+    @classmethod
+    async def delete_many(cls, query: dict[str, Any] | None = None) -> DeleteResponse:
+        """
+        Delete many documents by a query.
+        """
+        if query is None:
+            query = {}
+
+        logger.debug(
+            "Deleting many documents in collection '%s' by query '%s'",
+            cls.collection_name, query,
+        )
+        collection = mongodb.get_collection(cls.collection_name)
+
+        try:
+            result = await collection.delete_many(query)
+            if result.deleted_count > 0:
+                logger.debug(
+                    "Successfully deleted %d documents in collection '%s' by query '%s'",
+                    result.deleted_count, cls.collection_name, query,
+                )
+                return DeleteResponse(
+                    success=True,
+                    message="Documents successfully deleted",
+                    deleted_count=result.deleted_count,
+                )
+            else:
+                logger.debug(
+                    "Documents not found for deletion in collection '%s' by query '%s'",
+                    cls.collection_name, query,
+                )
+                return DeleteResponse(
+                    success=False,
+                    message="Documents not found for deletion",
+                    deleted_count=0,
+                )
+
+        except Exception as e:
+            logger.error(
+                "Error deleting many documents in collection '%s' by query '%s': %s",
+                cls.collection_name, query, str(e),
             )
             raise
