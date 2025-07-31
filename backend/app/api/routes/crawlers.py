@@ -32,7 +32,7 @@ async def create_crawler_config(config: CrawlerConfigCreate) -> Any:
     Create a new crawler configuration.
     """
     # Check if config with the same name already exists
-    existing = await CrawlerConfigRepository.get_by_name(config.name)
+    existing = await CrawlerConfigRepository.get_one({"name": config.name})
     if existing:
         logger.warning(
             "Crawler configuration with name '%s' already exists", config.name
@@ -84,7 +84,7 @@ async def get_crawler_config_by_name(name: str) -> Any:
     Get a specific crawler configuration by name.
     """
     logger.debug("Retrieving crawler configuration with name '%s'", name)
-    config = await CrawlerConfigRepository.get_by_name(name)
+    config = await CrawlerConfigRepository.get_one({"name": name})
     if not config:
         logger.warning("Crawler configuration with name '%s' not found", name)
         raise HTTPException(status_code=404, detail="Crawler configuration not found")
@@ -130,7 +130,7 @@ async def create_crawler_job(
         )
 
     # Verify config exists
-    config = await CrawlerConfigRepository.get_by_name(job.config_name)
+    config = await CrawlerConfigRepository.get_one({"name": job.config_name})
     if not config:
         logger.warning("Config '%s' not found for job creation", job.config_name)
         raise HTTPException(status_code=404, detail="Crawler configuration not found")
@@ -154,11 +154,11 @@ async def get_crawler_jobs(
         "Retrieving crawler jobs with skip=%d, limit=%d, status=%s",
         skip, limit, status.value if status else "None",
     )
-    if status:
-        jobs = await CrawlerJobRepository.get_by_status(status, skip, limit)
-    else:
-        jobs = await CrawlerJobRepository.get_many(skip=skip, limit=limit)
-    return jobs
+    return await CrawlerJobRepository.get_many(
+        {"status": status.value} if status else {},
+        skip=skip,
+        limit=limit,
+    )
 
 
 @router.get("/jobs/{job_id}", response_model=CrawlerJob)
@@ -208,14 +208,14 @@ async def run_crawler_job(job_id: str) -> None:
         logger.debug(
             "Fetching configuration for job '%s' (config name: %s)", job_id, job.config_name
         )
-        config = await CrawlerConfigRepository.get_by_name(job.config_name)
+        config = await CrawlerConfigRepository.get_one({"name": job.config_name})
         if not config:
             logger.error(
                 "Configuration '%s' not found for job '%s'", job.config_name, job_id
             )
-            await CrawlerJobRepository.update_job_status(
+            await CrawlerJobRepository.update_by_id(
                 job_id,
-                status=JobStatus.FAILED,
+                status=JobStatus.FAILED.value,
                 error_message=f"Configuration '{job.config_name}' not found",
             )
             return
@@ -226,9 +226,9 @@ async def run_crawler_job(job_id: str) -> None:
         )
 
         # Update job status
-        await CrawlerJobRepository.update_job_status(
+        await CrawlerJobRepository.update_by_id(
             job_id,
-            status=JobStatus.RUNNING,
+            status=JobStatus.RUNNING.value,
             started_at=datetime.now(UTC),
         )
 
@@ -250,9 +250,9 @@ async def run_crawler_job(job_id: str) -> None:
 
                 if not papers:
                     logger.warning("No papers found for job '%s'", job_id)
-                    await CrawlerJobRepository.update_job_status(
+                    await CrawlerJobRepository.update_by_id(
                         job_id,
-                        status=JobStatus.COMPLETED,
+                        status=JobStatus.COMPLETED.value,
                         completed_at=datetime.now(UTC),
                     )
                     return
@@ -278,9 +278,9 @@ async def run_crawler_job(job_id: str) -> None:
 
             # Update job status
             logger.info("Crawler completed successfully for job '%s'", job_id)
-            await CrawlerJobRepository.update_job_status(
+            await CrawlerJobRepository.update_by_id(
                 job_id,
-                status=JobStatus.COMPLETED,
+                status=JobStatus.COMPLETED.value,
                 completed_at=datetime.now(UTC),
             )
         else:
@@ -288,16 +288,16 @@ async def run_crawler_job(job_id: str) -> None:
                 "Unsupported crawler source '%s' for job '%s'",
                 config.source.value, job_id,
             )
-            await CrawlerJobRepository.update_job_status(
+            await CrawlerJobRepository.update_by_id(
                 job_id,
-                status=JobStatus.FAILED,
+                status=JobStatus.FAILED.value,
                 error_message=f"Crawler source '{config.source.value}' not implemented",
             )
 
     except Exception as e:
         logger.exception("Error executing crawler job '%s': %s", job_id, str(e))
-        await CrawlerJobRepository.update_job_status(
+        await CrawlerJobRepository.update_by_id(
             job_id,
-            status=JobStatus.FAILED,
+            status=JobStatus.FAILED.value,
             error_message=str(e),
         )
