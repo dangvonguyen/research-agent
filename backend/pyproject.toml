@@ -19,8 +19,10 @@ dependencies = [
 [dependency-groups]
 dev = [
     "coverage>=7.9.2",
+    "mongomock>=4.3.0",
     "mypy>=1.16.1",
     "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
     "ruff>=0.12.2",
     "types-aiofiles>=24.1.0.20250708",
 ]
