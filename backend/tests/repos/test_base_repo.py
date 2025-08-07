@@ -42,12 +42,13 @@ class TestBaseRepository:
 
         # Arrange
         doc_id = ObjectId()
+        now = datetime.now(UTC)
         test_doc = {
             "_id": doc_id,
             "field1": "test",
             "field2": 123,
-            "created_at": datetime.now(UTC),
-            "updated_at": datetime.now(UTC),
+            "created_at": now,
+            "updated_at": now,
         }
         await collection.insert_one(test_doc)
 
@@ -136,13 +137,21 @@ class TestBaseRepository:
         assert len(result.created_ids) == 0
 
     @pytest.mark.asyncio
-    async def test_get_no_query(self, mock_mongodb) -> None:
+    async def test_get_one_no_query(self, mock_mongodb) -> None:
         """
         Test getting a single document without query filter.
         """
         # Arrange
-        test_create = SampleCreate(field1="test", field2=123)
-        await SampleRepository.create_one(test_create)
+        collection = mongodb.get_collection(SampleRepository.collection_name)
+        now = datetime.now(UTC)
+        test_doc = {
+            "_id": ObjectId(),
+            "field1": "test",
+            "field2": 123,
+            "created_at": now,
+            "updated_at": now,
+        }
+        await collection.insert_one(test_doc)
 
         # Act
         result = await SampleRepository.get_one()
@@ -158,12 +167,24 @@ class TestBaseRepository:
         Test getting a single document with a query filter.
         """
         # Arrange
-        test_creates = [
-            SampleCreate(field1="test1", field2=100),
-            SampleCreate(field1="test2", field2=200),
-            SampleCreate(field1="test3"),
+        collection = mongodb.get_collection(SampleRepository.collection_name)
+        now = datetime.now(UTC)
+        test_docs = [
+            {
+                "_id": ObjectId(),
+                "field1": "test1",
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "_id": ObjectId(),
+                "field1": "test2",
+                "field2": 200,
+                "created_at": now,
+                "updated_at": now,
+            },
         ]
-        await SampleRepository.create_many(test_creates)
+        await collection.insert_many(test_docs)
 
         # Act
         result = await SampleRepository.get_one({"field1": "test2"})
