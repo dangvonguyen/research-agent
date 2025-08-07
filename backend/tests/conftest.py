@@ -130,3 +130,10 @@ class AsyncMongoCollectionMock:
         return await asyncio.to_thread(
             self._sync_collection.delete_many, filter, *args, **kwargs
         )
+
+    async def count_documents(
+        self, filter: dict[str, Any] | None = None, *args: Any, **kwargs: Any
+    ) -> int:
+        return await asyncio.to_thread(
+            self._sync_collection.count_documents, filter or {}, *args, **kwargs
+        )

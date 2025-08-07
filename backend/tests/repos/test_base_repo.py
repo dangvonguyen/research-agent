@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime
 
 import pytest
@@ -204,3 +205,376 @@ class TestBaseRepository:
 
         # Assert
         assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_many_no_query(self, mock_mongodb) -> None:
+        """
+        Test getting multiple documents without query filter.
+        """
+        # TODO: Implement this
+
+    @pytest.mark.asyncio
+    async def test_get_many_with_query(self, mock_mongodb) -> None:
+        """
+        Test getting multiple documents with a query filter.
+        """
+        # TODO: Implement this
+
+    @pytest.mark.asyncio
+    async def test_get_many_with_pagination(self, mock_mongodb) -> None:
+        """
+        Test getting multiple documents with a query filter.
+        """
+        # TODO: Implement this
+
+    @pytest.mark.asyncio
+    async def test_update_one_success(self, mock_mongodb) -> None:
+        """
+        Test getting multiple documents with a query filter.
+        """
+        # Arrange
+        collection = mongodb.get_collection(SampleRepository.collection_name)
+        doc_id = ObjectId()
+        now = datetime.now(UTC)
+        test_doc = {
+            "_id": doc_id,
+            "field1": "original",
+            "field2": 1,
+            "created_at": now,
+            "updated_at": now,
+        }
+        await collection.insert_one(test_doc)
+
+        update_obj = SampleUpdate(field1="updated", field2=2)
+
+        # Sleep to ensure the updated_at field is different
+        await asyncio.sleep(0.01)
+
+        # Act
+        update_result = await SampleRepository.update_one(
+            {"field1": "original"}, obj=update_obj
+        )
+
+        # Assert
+        assert update_result.success is True
+        assert update_result.matched_count == 1
+        assert update_result.modified_count == 1
+
+        # Verify the document was updated
+        updated_doc = await SampleRepository.get_by_id(str(doc_id))
+        assert updated_doc is not None
+        assert updated_doc.field1 == "updated"
+        assert updated_doc.field2 == 2
+        assert updated_doc.updated_at > now.replace(tzinfo=None)
+
+    @pytest.mark.asyncio
+    async def test_update_one_with_additional_fields(self, mock_mongodb) -> None:
+        """
+        Test updating a document with additional fields.
+        """
+        # Arrange
+        collection = mongodb.get_collection(SampleRepository.collection_name)
+        doc_id = ObjectId()
+        now = datetime.now(UTC)
+        test_doc = {
+            "_id": doc_id,
+            "field1": "original",
+            "field2": 1,
+            "created_at": now,
+            "updated_at": now,
+        }
+        await collection.insert_one(test_doc)
+
+        # Act
+        update_result = await SampleRepository.update_one(
+            {"field1": "original"}, None, field2=2
+        )
+
+        # Assert
+        assert update_result.success is True
+        assert update_result.matched_count == 1
+        assert update_result.modified_count == 1
+
+        # Verify the document was updated
+        updated_doc = await SampleRepository.get_by_id(str(doc_id))
+        assert updated_doc is not None
+        assert updated_doc.field2 == 2
+
+    @pytest.mark.asyncio
+    async def test_update_one_not_found(self, mock_mongodb) -> None:
+        """
+        Test updating a document that doesn't exist.
+        """
+        # Arrange
+        update_obj = SampleUpdate(field1="updated", field2=2)
+
+        # Act
+        update_result = await SampleRepository.update_one(
+            {"field1": "nonexistent"}, obj=update_obj
+        )
+
+        # Assert
+        assert update_result.success is False
+        assert update_result.matched_count == 0
+        assert update_result.modified_count == 0
+
+    @pytest.mark.asyncio
+    async def test_update_one_no_fields(self, mock_mongodb) -> None:
+        """
+        Test updating a document with no fields to update.
+        """
+        # Arrange
+        collection = mongodb.get_collection(SampleRepository.collection_name)
+        doc_id = ObjectId()
+        now = datetime.now(UTC)
+        test_doc = {
+            "_id": doc_id,
+            "field1": "original",
+            "field2": 1,
+            "created_at": now,
+            "updated_at": now,
+        }
+        await collection.insert_one(test_doc)
+
+        # Act
+        update_result = await SampleRepository.update_one({"field1": "original"}, None)
+
+        # Assert
+        assert update_result.success is False
+        assert update_result.matched_count == 0
+        assert update_result.modified_count == 0
+
+    @pytest.mark.asyncio
+    async def test_update_many_success(self, mock_mongodb) -> None:
+        """
+        Test updating multiple documents.
+        """
+        # Arrange
+        collection = mongodb.get_collection(SampleRepository.collection_name)
+        now = datetime.now(UTC)
+        test_docs = [
+            {
+                "_id": ObjectId(),
+                "field1": "update_me",
+                "field2": 1,
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "_id": ObjectId(),
+                "field1": "update_me",
+                "field2": 2,
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "_id": ObjectId(),
+                "field1": "dont_update",
+                "field2": 3,
+                "created_at": now,
+                "updated_at": now,
+            },
+        ]
+        await collection.insert_many(test_docs)
+
+        update_obj = SampleUpdate(field2=10)
+
+        # Act
+        result = await SampleRepository.update_many({"field1": "update_me"}, update_obj)
+
+        # Assert
+        assert result.success is True
+        assert result.matched_count == 2
+        assert result.modified_count == 2
+
+        # Verify updates
+        updated_docs = [
+            await SampleRepository.get_by_id(str(doc["_id"]))
+            for doc in test_docs
+            if doc["field1"] == "update_me"
+        ]
+        assert len(updated_docs) == 2
+        assert all(doc.field2 == 10 for doc in updated_docs)
+
+    @pytest.mark.asyncio
+    async def test_delete_one_success(self, mock_mongodb) -> None:
+        """
+        Test updating multiple documents that don't exist.
+        """
+        # Arrange
+        collection = mongodb.get_collection(SampleRepository.collection_name)
+        doc_id = ObjectId()
+        now = datetime.now(UTC)
+        test_doc = {
+            "_id": doc_id,
+            "field1": "delete_me",
+            "field2": 100,
+            "created_at": now,
+            "updated_at": now,
+        }
+        await collection.insert_one(test_doc)
+
+        # Act
+        result = await SampleRepository.delete_one({"field1": "delete_me"})
+
+        # Assert
+        assert result.success is True
+        assert result.deleted_count == 1
+
+        # Verify deletion
+        deleted_doc = await SampleRepository.get_by_id(str(doc_id))
+        assert deleted_doc is None
+        assert result.deleted_count == 1
+
+    @pytest.mark.asyncio
+    async def test_delete_one_not_found(self, mock_mongodb) -> None:
+        """
+        Test deleting a document that doesn't exist.
+        """
+        # Act
+        result = await SampleRepository.delete_one({"field1": "nonexistent"})
+
+        # Assert
+        assert result.success is False
+        assert result.deleted_count == 0
+
+    @pytest.mark.asyncio
+    async def test_delete_one_with_none_query(self, mock_mongodb) -> None:
+        """
+        Test deleting a document with None query.
+        """
+        # Arrange
+        collection = mongodb.get_collection(SampleRepository.collection_name)
+        now = datetime.now(UTC)
+        test_doc = [
+            {
+                "_id": ObjectId(),
+                "field1": "test1",
+                "field2": 1,
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "_id": ObjectId(),
+                "field1": "test2",
+                "field2": 2,
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "_id": ObjectId(),
+                "field1": "test3",
+                "field2": 3,
+                "created_at": now,
+                "updated_at": now,
+            },
+        ]
+        await collection.insert_many(test_doc)
+
+        # Act
+        result = await SampleRepository.delete_one(None)
+
+        # Assert
+        assert result.success is True
+        assert result.deleted_count == 1
+
+        # Verify deletion
+        assert await collection.count_documents() == 2
+
+    @pytest.mark.asyncio
+    async def test_delete_many_success(self, mock_mongodb) -> None:
+        """
+        Test deleting multiple documents.
+        """
+        # Arrange
+        collection = mongodb.get_collection(SampleRepository.collection_name)
+        now = datetime.now(UTC)
+        test_docs = [
+            {
+                "_id": ObjectId(),
+                "field1": "delete_me",
+                "field2": 1,
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "_id": ObjectId(),
+                "field1": "delete_me",
+                "field2": 2,
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "_id": ObjectId(),
+                "field1": "keep_me",
+                "field2": 3,
+                "created_at": now,
+                "updated_at": now,
+            },
+        ]
+        await collection.insert_many(test_docs)
+
+        # Act
+        result = await SampleRepository.delete_many({"field1": "delete_me"})
+
+        # Assert
+        assert result.success is True
+        assert result.deleted_count == 2
+
+        # Verify deletions
+        assert await collection.count_documents() == 1
+
+    @pytest.mark.asyncio
+    async def test_delete_many_not_found(self, mock_mongodb) -> None:
+        """
+        Test deleting multiple documents that don't exist.
+        """
+        # Act
+        result = await SampleRepository.delete_many({"field1": "nonexistent"})
+
+        # Assert
+        assert result.success is False
+        assert result.deleted_count == 0
+
+    @pytest.mark.asyncio
+    async def test_delete_many_with_none_query(self, mock_mongodb) -> None:
+        """
+        Test deleting multiple documents with None query.
+        """
+        # Arrange
+        collection = mongodb.get_collection(SampleRepository.collection_name)
+        now = datetime.now(UTC)
+        test_doc = [
+            {
+                "_id": ObjectId(),
+                "field1": "test1",
+                "field2": 1,
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "_id": ObjectId(),
+                "field1": "test2",
+                "field2": 2,
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "_id": ObjectId(),
+                "field1": "test3",
+                "field2": 3,
+                "created_at": now,
+                "updated_at": now,
+            },
+        ]
+        await collection.insert_many(test_doc)
+
+        # Act
+        result = await SampleRepository.delete_many(None)
+
+        # Assert
+        assert result.success is True
+        assert result.deleted_count == 3
+
+        # Verify deletion
+        assert await collection.count_documents() == 0
