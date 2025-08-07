@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Generator
-from typing import Any
+from typing import Any, Self
 
 import mongomock
 import pytest
+from pymongo.cursor import Cursor
 from pymongo.results import (
     DeleteResult,
     InsertManyResult,
@@ -85,9 +86,11 @@ class AsyncMongoCollectionMock:
             self._sync_collection.find_one, filter, *args, **kwargs
         )
 
-    def find(self, filter: dict[str, Any] | None = None, *args: Any, **kwargs: Any):
-        # TODO: Implement this
-        pass
+    def find(
+        self, filter: dict[str, Any] | None = None, *args: Any, **kwargs: Any
+    ) -> AsyncMongoCursorMock:
+        cursor = self._sync_collection.find(filter or {}, *args, **kwargs)
+        return AsyncMongoCursorMock(cursor)
 
     async def insert_one(
         self, document: dict[str, Any], *args: Any, **kwargs: Any
@@ -132,8 +135,40 @@ class AsyncMongoCollectionMock:
         )
 
     async def count_documents(
-        self, filter: dict[str, Any] | None = None, *args: Any, **kwargs: Any
+        self, filter: dict[str, Any], *args: Any, **kwargs: Any
     ) -> int:
         return await asyncio.to_thread(
-            self._sync_collection.count_documents, filter or {}, *args, **kwargs
+            self._sync_collection.count_documents, filter, *args, **kwargs
         )
+
+
+class AsyncMongoCursorMock:
+    """Async wrapper around mongomock Cursor"""
+
+    def __init__(self, cursor: Cursor) -> None:  # type: ignore
+        self._sync_cursor = cursor
+
+    def skip(self, skip: int) -> Self:
+        self._sync_cursor = self._sync_cursor.skip(skip)
+        return self
+
+    def limit(self, limit: int) -> Self:
+        self._sync_cursor = self._sync_cursor.limit(limit)
+        return self
+
+    def sort(self, key: str, direction: int) -> Self:
+        self._sync_cursor = self._sync_cursor.sort(key, direction)
+        return self
+
+    def __aiter__(self) -> Self:
+        self._results = list(self._sync_cursor)
+        self._index = 0
+        return self
+
+    async def __anext__(self) -> Any:
+        if self._index < len(self._results):
+            item = self._results[self._index]
+            self._index += 1
+            return item
+        else:
+            raise StopAsyncIteration

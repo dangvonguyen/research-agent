@@ -211,21 +211,98 @@ class TestBaseRepository:
         """
         Test getting multiple documents without query filter.
         """
-        # TODO: Implement this
+        # Arrange
+        collection = mongodb.get_collection(SampleRepository.collection_name)
+        now = datetime.now(UTC)
+        test_docs = [
+            {
+                "_id": ObjectId(),
+                "field1": "test1",
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "_id": ObjectId(),
+                "field1": "test2",
+                "created_at": now,
+                "updated_at": now,
+            },
+        ]
+        await collection.insert_many(test_docs)
+
+        # Act
+        results = await SampleRepository.get_many()
+
+        assert len(results) == 2
+        assert all(isinstance(doc, SampleDoc) for doc in results)
 
     @pytest.mark.asyncio
     async def test_get_many_with_query(self, mock_mongodb) -> None:
         """
         Test getting multiple documents with a query filter.
         """
-        # TODO: Implement this
+        # Arrange
+        collection = mongodb.get_collection(SampleRepository.collection_name)
+        now = datetime.now(UTC)
+        test_docs = [
+            {
+                "_id": ObjectId(),
+                "field1": "match",
+                "field2": 1,
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "_id": ObjectId(),
+                "field1": "match",
+                "field2": 2,
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "_id": ObjectId(),
+                "field1": "nomatch",
+                "field2": 3,
+                "created_at": now,
+                "updated_at": now,
+            },
+        ]
+        await collection.insert_many(test_docs)
+
+        # Act
+        results = await SampleRepository.get_many({"field1": "match"})
+
+        # Assert
+        assert len(results) == 2
+        assert all(doc.field1 == "match" for doc in results)
 
     @pytest.mark.asyncio
     async def test_get_many_with_pagination(self, mock_mongodb) -> None:
         """
         Test getting multiple documents with a query filter.
         """
-        # TODO: Implement this
+        # Arrange
+        collection = mongodb.get_collection(SampleRepository.collection_name)
+        now = datetime.now(UTC)
+        test_docs = []
+        for i in range(5):
+            test_docs.append(
+                {
+                    "_id": ObjectId(),
+                    "field1": f"doc{i}",
+                    "field2": i,
+                    "created_at": now,
+                    "updated_at": now,
+                }
+            )
+        await collection.insert_many(test_docs)
+
+        # Act
+        results = await SampleRepository.get_many(skip=2, limit=2)
+
+        # Assert
+        assert len(results) == 2
+        assert all(doc.field1 in ["doc2", "doc3"] for doc in results)
 
     @pytest.mark.asyncio
     async def test_update_one_success(self, mock_mongodb) -> None:
@@ -394,7 +471,7 @@ class TestBaseRepository:
             if doc["field1"] == "update_me"
         ]
         assert len(updated_docs) == 2
-        assert all(doc.field2 == 10 for doc in updated_docs)
+        assert all(doc is not None and doc.field2 == 10 for doc in updated_docs)
 
     @pytest.mark.asyncio
     async def test_delete_one_success(self, mock_mongodb) -> None:
@@ -479,7 +556,7 @@ class TestBaseRepository:
         assert result.deleted_count == 1
 
         # Verify deletion
-        assert await collection.count_documents() == 2
+        assert await collection.count_documents({}) == 2
 
     @pytest.mark.asyncio
     async def test_delete_many_success(self, mock_mongodb) -> None:
@@ -522,7 +599,7 @@ class TestBaseRepository:
         assert result.deleted_count == 2
 
         # Verify deletions
-        assert await collection.count_documents() == 1
+        assert await collection.count_documents({}) == 1
 
     @pytest.mark.asyncio
     async def test_delete_many_not_found(self, mock_mongodb) -> None:
@@ -577,4 +654,4 @@ class TestBaseRepository:
         assert result.deleted_count == 3
 
         # Verify deletion
-        assert await collection.count_documents() == 0
+        assert await collection.count_documents({}) == 0

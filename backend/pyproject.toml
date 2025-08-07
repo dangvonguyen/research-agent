@@ -32,12 +32,15 @@ strict = true
 show_error_codes = true
 pretty = true
 
+[[tool.mypy.overrides]]
+module = "tests.*"
+disable_error_code = ["no-untyped-def"]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 88
 
 [tool.ruff.lint]
-preview = true
 select = [
     "F",     # pyflakes
     "E",     # pycodestyle errors
