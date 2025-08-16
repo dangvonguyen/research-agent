@@ -85,6 +85,7 @@ class CrawlerJobBase(BaseModel):
     config_name: str
     query: str | None = None
     urls: list[HttpUrl] | None = None
+    max_papers: int | None = Field(default=None, ge=0)
 
 
 class CrawlerJobCreate(BaseCreate, CrawlerJobBase):
@@ -98,6 +99,7 @@ class CrawlerJobUpdate(BaseUpdate):
 
     query: str | None = None
     urls: list[HttpUrl] | None = None
+    max_papers: int | None = Field(default=None, ge=0)
 
 
 class CrawlerJob(BaseDocument, CrawlerJobBase):

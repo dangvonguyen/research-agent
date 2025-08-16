@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from typing import Any, cast
 
@@ -66,11 +65,16 @@ class ACLAnthologyCrawler(BaseCrawler):
             logger.warning("Failed to process paper page with URL %s", url)
         return paper
 
-    async def process_conference_page(self, url: str) -> list[PaperCreate]:
+    async def process_conference_page(
+        self, url: str, max_papers: int | None = None
+    ) -> list[PaperCreate]:
         """
         Process a conference page and extract papers.
         """
-        logger.debug("Processing conference page with URL %s", url)
+        logger.debug(
+            "Processing conference page with URL %s (max papers: %s)",
+            url, str(max_papers),
+        )
 
         base_url, conf_id = self.parser.parse_acl_url(url)
 
@@ -98,6 +102,14 @@ class ACLAnthologyCrawler(BaseCrawler):
             len(paper_ids), url,
         )
 
+        if max_papers:
+            paper_ids = paper_ids[:max_papers]
+
+        logger.debug(
+            "Limiting papers to %d from conference page with URL %s",
+            len(paper_ids), url,
+        )
+
         results = await bulk_run(self.extract_paper_metadata, paper_ids)
         papers = [r for r in results if r]
 
@@ -108,14 +120,16 @@ class ACLAnthologyCrawler(BaseCrawler):
         return papers
 
     async def process_search_page(
-        self, url: str, max_pages: int = 10
+        self, url: str, max_papers: int | None = None
     ) -> list[PaperCreate]:
         """
         Process a search query page and extract papers.
         """
-        logger.debug("Processing search page with URL %s", url)
+        logger.debug(
+            "Processing search page with URL %s (max papers: %s)", url, str(max_papers)
+        )
 
-        paper_ids = await self._find_search_paper_ids(url, max_pages)
+        paper_ids = await self._find_search_paper_ids(url, max_papers)
 
         if not paper_ids:
             logger.warning("No papers found from search page with URL %s", url)
@@ -124,6 +138,14 @@ class ACLAnthologyCrawler(BaseCrawler):
         logger.info("Found %d papers from search page with URL %s", len(paper_ids), url)
         logger.debug(
             "Extracting metadata for %d papers from search page with URL %s",
+            len(paper_ids), url,
+        )
+
+        if max_papers:
+            paper_ids = paper_ids[:max_papers]
+
+        logger.debug(
+            "Limiting papers to %d from search page with URL %s",
             len(paper_ids), url,
         )
 
@@ -137,20 +159,20 @@ class ACLAnthologyCrawler(BaseCrawler):
         return papers
 
     async def process_search_query(
-        self, query: str, max_pages: int = 10
+        self, query: str, max_papers: int | None = None
     ) -> list[PaperCreate]:
         """
         Process a search query and extract papers.
         """
-        logger.debug("Processing search query '%s' (max pages: %d)", query, max_pages)
+        logger.debug("Processing search query '%s' (max papers: %s)", query, str(max_papers))
 
         # Prepare search URL
         search_url = f"{self.BASE_URL}/search/?q={query.replace(' ', '+')}"
 
-        return await self.process_search_page(search_url, max_pages)
+        return await self.process_search_page(search_url, max_papers)
 
     async def _find_search_paper_ids(
-        self, url: str, max_pages: int = 10, attempt: int = 0
+        self, url: str, max_papers: int | None = None, attempt: int = 0
     ) -> list[str]:
         """
         Find paper IDs from a search page using browser automation.
@@ -175,7 +197,8 @@ class ACLAnthologyCrawler(BaseCrawler):
                     await page.wait_for_selector(".gsc-result", timeout=10000)
 
                     # Validate max_pages parameter
-                    max_pages = min(max(max_pages, 1), 10)
+                    max_pages = (max_papers - 1) // 10 + 1 if max_papers else 10
+                    max_pages = min(max_pages, 10)
 
                     # Process each page
                     for page_num in range(1, max_pages + 1):
@@ -226,7 +249,7 @@ class ACLAnthologyCrawler(BaseCrawler):
             )
             if attempt < self.max_attempts - 1:
                 await self._backoff(attempt, "Error finding paper IDs from search")
-                return await self._find_search_paper_ids(url, max_pages, attempt + 1)
+                return await self._find_search_paper_ids(url, max_papers, attempt + 1)
             else:
                 logger.error(
                     "Max retries reached for finding paper IDs from search page with URL %s (attempt %d/%d)",
@@ -234,55 +257,66 @@ class ACLAnthologyCrawler(BaseCrawler):
                 )
                 return []
 
+    async def process_url(
+        self, url: str, max_papers: int | None = None
+    ) -> list[PaperCreate]:
+        """
+        Process a single URL and return extracted papers.
+        """
+        logger.debug("Processing URL %s (max papers: %s)", url, str(max_papers))
+
+        if "/events/" in url or "/volumes/" in url:
+            logger.debug("URL %s identified as conference page", url)
+            return await self.process_conference_page(url, max_papers)
+        elif "/search/" in url:
+            logger.debug("URL %s identified as search page", url)
+            return await self.process_search_page(url, max_papers)
+        else:
+            logger.debug("URL %s identified as paper page", url)
+            paper = await self.process_paper_page(url)
+            return [paper] if paper else []
+
     async def crawl(
-        self, query: str | None = None, urls: list[str] | None = None
+        self,
+        query: str | None = None,
+        urls: list[str] | None = None,
+        max_papers: int | None = None,
     ) -> list[PaperCreate]:
         """
         Crawl a list of ACL Anthology URLs and/or query and extract paper information.
         """
-        if urls is None:
-            urls = []
-
-        logger.debug("Starting crawl of %d URLs and query '%s'", len(urls), query)
-
+        urls = urls or []
         papers: list[PaperCreate] = []
 
-        # Process URLs in parallel
-        tasks: list[Any] = []
+        logger.debug(
+            "Starting crawl of %d URLs and query '%s' (max papers: %s)",
+            len(urls), query, str(max_papers),
+        )
 
         for url in urls:
-            logger.debug("Processing URL %s", url)
+            if self._should_stop_crawling(papers, max_papers):
+                break
 
-            if "/events/" in url or "/volumes/" in url:
-                # Conference page
-                logger.debug("URL %s identified as conference page", url)
-                tasks.append(self.process_conference_page(url))
-            elif "/search/" in url:
-                # Search page
-                logger.debug("URL %s identified as search page", url)
-                tasks.append(self.process_search_page(url))
-            else:
-                # Assume paper page
-                logger.debug("URL %s identified as paper page", url)
-                tasks.append(self.process_paper_page(url))
+            remaining = max_papers - len(papers) if max_papers else None
+            papers.extend(await self.process_url(url, remaining))
 
-        if query:
+        if query and not self._should_stop_crawling(papers, max_papers):
             logger.debug("Processing search query '%s'", query)
-            tasks.append(self.process_search_query(query))
+            remaining = max_papers - len(papers) if max_papers else None
+            papers.extend(await self.process_search_query(query, remaining))
 
-        # Gather results
-        logger.debug("Waiting for all URL processing tasks to complete")
-        results = await asyncio.gather(*tasks)
-
-        # Combine results
-        for result in results:
-            if isinstance(result, list):
-                papers.extend(result)
-            elif result is not None:
-                papers.append(result)
+        # Ensure we don't exceed the max_papers limit
+        if max_papers and len(papers) > max_papers:
+            papers = papers[:max_papers]
 
         logger.info("Crawling completed, found %d papers", len(papers))
         return papers
+
+    def _should_stop_crawling(self, papers: list[PaperCreate], max_papers: int | None) -> bool:
+        """
+        Check if we should stop crawling based current page count.
+        """
+        return max_papers is not None and len(papers) >= max_papers
 
 
 class ACLAnthologyParser:

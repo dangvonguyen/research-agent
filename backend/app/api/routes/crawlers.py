@@ -246,7 +246,7 @@ async def run_crawler_job(job_id: str) -> None:
                     "Crawling %d URLs and query '%s' for job '%s'",
                     len(urls) if urls else 0, job.query or "", job_id,
                 )
-                papers = await crawler.crawl(job.query, urls)
+                papers = await crawler.crawl(job.query, urls, job.max_papers)
 
                 if not papers:
                     logger.warning("No papers found for job '%s'", job_id)

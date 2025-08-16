@@ -260,7 +260,10 @@ class BaseCrawler(ABC):
 
     @abstractmethod
     async def crawl(
-        self, query: str | None = None, urls: list[str] | None = None
+        self,
+        query: str | None = None,
+        urls: list[str] | None = None,
+        max_papers: int | None = None,
     ) -> list[PaperCreate]:
         """
         Crawl the specified URLs and/or query and extract paper information.
