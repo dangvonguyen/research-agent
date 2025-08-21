@@ -1,16 +1,28 @@
-// src/features/paperSearch/hooks/useSearchPapers.ts
 import { useState } from "react"
 import { searchPapers } from "@/features/paperSearch/api/searchApi"
-import type { Paper } from "@/types/paper.types"
+import type { components } from "@/types/openapi"
+
+type Paper = components["schemas"]["Paper"]
+
+export type SearchParams = {
+  query?: string
+  url?: string
+  source: "acl_anthology" | "arxiv"
+}
 
 export const useSearchPapers = () => {
   const [results, setResults] = useState<Paper[]>([])
   const [loading, setLoading] = useState(false)
 
-  const search = async (query: string, url: string, source: string) => {
+  const search = async ({ query, url, source }: SearchParams) => {
     setLoading(true)
     try {
-      const data = await searchPapers({ query, url, source })
+      // fallback về chuỗi rỗng nếu undefined
+      const data = await searchPapers({
+        query: query ?? "",
+        url: url ?? "",
+        source,
+      })
       setResults(data)
     } catch (error) {
       console.error("Search error:", error)

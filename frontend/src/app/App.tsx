@@ -1,5 +1,5 @@
-import MainLayout from "../layouts/MainLayout/MainLayout"
-import SearchPage from "../features/paperSearch/pages/SearchPage/searchPage"
+import MainLayout from "../layouts/MainLayout"
+import SearchPage from "@/features/paperSearch/pages/searchPage"
 
 function App() {
   return (

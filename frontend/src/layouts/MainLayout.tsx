@@ -1,7 +1,6 @@
 import { useState } from "react"
-import Header from "../Header/Header"
-import Sidebar from "../Sidebar/Sidebar"
-import styles from "./MainLayout.module.css"
+import Header from "./Header"
+import Sidebar from "./Sidebar"
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -15,11 +14,11 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   }
 
   return (
-    <div className={styles.container}>
+    <div className="flex flex-col h-full w-full">
       <Header onToggleSidebar={toggleSidebar} />
-      <div className={styles.body}>
+      <div className="flex flex-1 overflow-hidden">
         <Sidebar isOpen={isSidebarOpen} />
-        <main className={styles.content}>{children}</main>
+        <main className="flex-1 p-4 overflow-y-auto">{children}</main>
       </div>
     </div>
   )
