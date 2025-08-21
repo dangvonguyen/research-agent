@@ -37,7 +37,7 @@ const PaperDetailModal = ({ paper, onClose }: PaperDetailModalProps) => {
         {paper.sections?.abstract && (
           <div className="mt-4">
             <strong>{paper.sections.abstract.title}</strong>
-            <div>{paper.sections.abstract.content}</div>
+            <div className="text-justify mt-2">{paper.sections.abstract.content}</div>
           </div>
         )}
 
@@ -47,7 +47,7 @@ const PaperDetailModal = ({ paper, onClose }: PaperDetailModalProps) => {
           .map(([key, section]) => (
             <div className="mt-4" key={key}>
               <strong>{section.title}</strong>
-              <div>{section.content}</div>
+              <div className="text-justify mt-2">{section.content}</div>
             </div>
         ))}
 

@@ -15,7 +15,7 @@ const SearchResultCard = ({ paper, onClick }: SearchResultCardProps) => {
 
     // Cắt abstract lấy khoảng 10 từ đầu tiên
   const truncatedAbstract = abstract
-    ? abstract.split(/\s+/).slice(0, 10).join(" ") + "..."
+    ? abstract.split(/\s+/).slice(0, 15).join(" ") + "..."
     : null;
 
   return (
@@ -36,7 +36,7 @@ const SearchResultCard = ({ paper, onClick }: SearchResultCardProps) => {
 
       {truncatedAbstract && (
         <p className="text-sm text-gray-600">
-          <strong>Abstract:</strong> {abstract}
+          <strong>Abstract:</strong> {truncatedAbstract}
         </p>
       )}
     </button>
