@@ -1,5 +1,5 @@
-import Modal from "@/components/modal"
-import type { components } from "@/types/openapi"
+import Modal from "@/shared/components/ui/Modal"
+import type { components } from "@/shared/api/openapi.gen"
 
 type Paper = components["schemas"]["Paper"]
 

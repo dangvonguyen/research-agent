@@ -1,6 +1,5 @@
-// src/features/paperSearch/components/SearchResultCard/SearchResultCard.tsx
+import type { components } from "@/shared/api/openapi.gen"
 
-import type { components } from "@/types/openapi"; 
 type Paper = components["schemas"]["Paper"];       
 
 interface SearchResultCardProps {

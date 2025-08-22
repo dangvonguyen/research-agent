@@ -1,4 +1,4 @@
-import type { components } from "@/types/openapi"
+import type { components } from "@/shared/api/openapi.gen"
 
 type Paper = components["schemas"]["Paper"]
 

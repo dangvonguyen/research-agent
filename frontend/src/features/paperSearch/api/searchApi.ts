@@ -126,7 +126,7 @@
 // //   ])
 // // }
 
-import type { components } from "@/types/openapi"
+import type { components } from "@/shared/api/openapi.gen"
 import { mockSearchPapers } from "@/mocks/searchPapers.mock"
 
 type CrawlerConfig = components["schemas"]["CrawlerConfig"]
