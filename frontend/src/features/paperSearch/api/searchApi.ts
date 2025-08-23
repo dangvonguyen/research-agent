@@ -1,4 +1,3 @@
-
 // import type { components } from "@/types/openapi"
 
 // type CrawlerConfig = components["schemas"]["CrawlerConfig"]
@@ -97,7 +96,6 @@
 // //   //   headers: { "Content-Type": "application/json" },
 // //   //   body: JSON.stringify({ query, url, source }),
 // //   // }).then(res => res.json());
-  
 
 // //   // Giả lập response:
 // //   console.log("Search API called with:", { query, url, source })
@@ -126,12 +124,9 @@
 // //   ])
 // // }
 
-import type { components } from "@/shared/api/openapi.gen"
 import { mockSearchPapers } from "@/mocks/searchPapers.mock"
 
-type CrawlerConfig = components["schemas"]["CrawlerConfig"]
-type CrawlerJob = components["schemas"]["CrawlerJob"]
-type Paper = components["schemas"]["Paper"]
+import type { CrawlerConfig, CrawlerJob, Paper } from "@/shared/api"
 
 interface SearchParams {
   query: string
@@ -157,9 +152,7 @@ export const searchPapers = async ({
     const configRes = await fetch(`${API_BASE}/v1/crawlers/configs`)
     const configs: CrawlerConfig[] = await configRes.json()
 
-    const matchedConfig = configs.find(
-      (c) => c.source === source.toLowerCase()
-    )
+    const matchedConfig = configs.find((c) => c.source === source.toLowerCase())
     if (!matchedConfig) {
       throw new Error(`No config found for source: ${source}`)
     }

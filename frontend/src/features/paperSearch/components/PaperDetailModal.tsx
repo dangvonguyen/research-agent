@@ -1,14 +1,13 @@
-import Modal from "@/shared/components/ui/Modal"
-import type { components } from "@/shared/api/openapi.gen"
+import { Modal } from "@/shared/components"
 
-type Paper = components["schemas"]["Paper"]
+import type { Paper } from "@/shared/api"
 
 interface PaperDetailModalProps {
   paper: Paper | null
   onClose: () => void
 }
 
-const PaperDetailModal = ({ paper, onClose }: PaperDetailModalProps) => {
+export const PaperDetailModal = ({ paper, onClose }: PaperDetailModalProps) => {
   if (!paper) return null
 
   return (
@@ -37,7 +36,9 @@ const PaperDetailModal = ({ paper, onClose }: PaperDetailModalProps) => {
         {paper.sections?.abstract && (
           <div className="mt-4">
             <strong>{paper.sections.abstract.title}</strong>
-            <div className="text-justify mt-2">{paper.sections.abstract.content}</div>
+            <div className="text-justify mt-2">
+              {paper.sections.abstract.content}
+            </div>
           </div>
         )}
 
@@ -49,7 +50,7 @@ const PaperDetailModal = ({ paper, onClose }: PaperDetailModalProps) => {
               <strong>{section.title}</strong>
               <div className="text-justify mt-2">{section.content}</div>
             </div>
-        ))}
+          ))}
 
         {/* Link PDF */}
         <div className="mt-6">
@@ -68,5 +69,3 @@ const PaperDetailModal = ({ paper, onClose }: PaperDetailModalProps) => {
     </Modal>
   )
 }
-
-export default PaperDetailModal

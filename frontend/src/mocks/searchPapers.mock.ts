@@ -1,6 +1,4 @@
-import type { components } from "@/shared/api/openapi.gen"
-
-type Paper = components["schemas"]["Paper"]
+import type { Paper } from "@/shared/api"
 
 export const mockSearchPapers = async (): Promise<Paper[]> => {
   console.log("Using MOCK search API")
@@ -19,23 +17,23 @@ export const mockSearchPapers = async (): Promise<Paper[]> => {
       sections: {
         abstract: {
           title: "Abstract",
-          content: "This paper explores the capabilities of Large Language Models (LLMs) in understanding, reasoning, and generating human-like text across a wide range of tasks. In particular, it investigates their strengths, limitations, and potential applications in both academic research and real-world scenarios.",
+          content:
+            "This paper explores the capabilities of Large Language Models (LLMs) in understanding, reasoning, and generating human-like text across a wide range of tasks. In particular, it investigates their strengths, limitations, and potential applications in both academic research and real-world scenarios.",
           level: 1,
         },
         introduction: {
-        title: "Introduction",
-        content:
+          title: "Introduction",
+          content:
             "In this study, we investigate the potential and limitations of large language models (LLMs) when applied to complex academic and industrial tasks. Recent advancements in natural language processing have demonstrated that LLMs can perform not only basic text generation, but also reasoning, summarization, and retrieval-based applications at scale. However, questions remain regarding their reliability, interpretability, and integration into real-world systems. This paper provides both a theoretical discussion and an empirical evaluation to shed light on how LLMs can be effectively adopted while mitigating common challenges.",
-        level: 1,
+          level: 1,
         },
 
         conclusion: {
-        title: "Conclusion",
-        content:
+          title: "Conclusion",
+          content:
             "We conclude that LLMs represent a transformative step in artificial intelligence, offering significant benefits for information retrieval, content generation, and decision support. While they show strong performance in tasks requiring linguistic fluency and contextual understanding, they also exhibit limitations such as susceptibility to hallucinations, sensitivity to input phrasing, and high computational demands. Future research should focus on improving trustworthiness, designing hybrid architectures that combine symbolic and neural methods, and developing evaluation benchmarks that better capture real-world requirements. By addressing these challenges, LLMs can be harnessed more responsibly and effectively across diverse domains.",
-        level: 1,
+          level: 1,
         },
-
       },
       job_id: null,
       _id: "paper1",

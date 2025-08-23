@@ -1,12 +1,10 @@
 // src/features/paperSearch/pages/SearchPage.tsx
 import { useState } from "react"
-import SearchForm from "../components/SearchForm"
-import SearchResultCard from "../components/SearchResultCard"
-import PaperDetailModal from "../components/PaperDetailModal"
-import { useSearchPapers } from "../hooks/useSearchPapers"
-import type { components } from "@/shared/api/openapi.gen"
 
-type Paper = components["schemas"]["Paper"]
+import { PaperDetailModal, SearchForm, SearchResultCard } from "../components"
+import { useSearchPapers } from "../hooks/useSearchPapers"
+
+import type { Paper } from "@/shared/api"
 
 const SearchPage = () => {
   const { search, results, loading } = useSearchPapers()

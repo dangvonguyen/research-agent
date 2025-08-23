@@ -1,21 +1,19 @@
-import type { components } from "@/shared/api/openapi.gen"
-
-type Paper = components["schemas"]["Paper"];       
+import type { Paper } from "@/shared/api"
 
 interface SearchResultCardProps {
-  paper: Paper;
-  onClick?: () => void;
+  paper: Paper
+  onClick?: () => void
 }
 
-const SearchResultCard = ({ paper, onClick }: SearchResultCardProps) => {
-  const { title, authors, year, sections } = paper;
+export const SearchResultCard = ({ paper, onClick }: SearchResultCardProps) => {
+  const { title, authors, year, sections } = paper
 
-  const abstract = sections?.abstract?.content;
+  const abstract = sections?.abstract?.content
 
-    // Cắt abstract lấy khoảng 10 từ đầu tiên
+  // Cắt abstract lấy khoảng 10 từ đầu tiên
   const truncatedAbstract = abstract
     ? abstract.split(/\s+/).slice(0, 15).join(" ") + "..."
-    : null;
+    : null
 
   return (
     <button
@@ -39,7 +37,5 @@ const SearchResultCard = ({ paper, onClick }: SearchResultCardProps) => {
         </p>
       )}
     </button>
-  );
-};
-
-export default SearchResultCard;
+  )
+}

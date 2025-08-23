@@ -1,5 +1,5 @@
-import MainLayout from "@/shared/components/layout/MainLayout"
 import SearchPage from "@/features/paperSearch/pages/searchPage"
+import { MainLayout } from "@/shared/components"
 
 function App() {
   return (

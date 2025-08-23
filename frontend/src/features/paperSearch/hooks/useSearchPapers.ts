@@ -1,8 +1,10 @@
 import { useState } from "react"
-import { searchPapers } from "@/features/paperSearch/api/searchApi"
-import type { components } from "@/shared/api/openapi.gen"
 
-type Paper = components["schemas"]["Paper"]
+import { searchPapers } from "../api/searchApi"
+
+import type { Paper } from "@/shared/api"
+
+
 
 export type SearchParams = {
   query?: string

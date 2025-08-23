@@ -1,17 +1,19 @@
 import { useState } from "react"
 
+import type { PaperSource } from "@/shared/api"
+
 interface Props {
   onSearch: (params: {
     query?: string
     url?: string
-    source: "acl_anthology" | "arxiv"
+    source: PaperSource
   }) => void
 }
 
-const SearchForm = ({ onSearch }: Props) => {
+export const SearchForm = ({ onSearch }: Props) => {
   const [query, setQuery] = useState("")
   const [url, setUrl] = useState("")
-  const [source, setSource] = useState<"acl_anthology" | "arxiv">("acl_anthology")
+  const [source, setSource] = useState<PaperSource>("acl_anthology")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,7 +38,7 @@ const SearchForm = ({ onSearch }: Props) => {
           id="query"
           type="text"
           value={query}
-          onChange={e => setQuery(e.target.value)}
+          onChange={(e) => setQuery(e.target.value)}
           placeholder="e.g., Large Language Models"
           className="border border-gray-300 rounded-lg px-4 py-3 text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
@@ -51,7 +53,7 @@ const SearchForm = ({ onSearch }: Props) => {
           id="url"
           type="url"
           value={url}
-          onChange={e => setUrl(e.target.value)}
+          onChange={(e) => setUrl(e.target.value)}
           placeholder="e.g., https://aclanthology.org/2023.acl-long.1"
           className="border border-gray-300 rounded-lg px-4 py-3 text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
@@ -65,7 +67,7 @@ const SearchForm = ({ onSearch }: Props) => {
         <select
           id="source"
           value={source}
-          onChange={e => setSource(e.target.value as "acl_anthology" | "arxiv")}
+          onChange={(e) => setSource(e.target.value as PaperSource)}
           className="border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="acl_anthology">ACL Anthology</option>
@@ -79,9 +81,6 @@ const SearchForm = ({ onSearch }: Props) => {
       >
         Search
       </button>
-
     </form>
   )
 }
-
-export default SearchForm
