@@ -331,6 +331,8 @@ export interface components {
             query?: string | null;
             /** Urls */
             urls?: string[] | null;
+            /** Max Papers */
+            max_papers?: number | null;
             /** Id */
             _id: string;
             /**
@@ -363,6 +365,8 @@ export interface components {
             query?: string | null;
             /** Urls */
             urls?: string[] | null;
+            /** Max Papers */
+            max_papers?: number | null;
         };
         /**
          * CrawlerJobUpdate
@@ -373,6 +377,8 @@ export interface components {
             query?: string | null;
             /** Urls */
             urls?: string[] | null;
+            /** Max Papers */
+            max_papers?: number | null;
         };
         /**
          * CreateResponse
