@@ -1,4 +1,4 @@
-import SearchPage from "@/features/paperSearch/pages/searchPage"
+import SearchPage from "@/features/paper-search/pages/SearchPage"
 import { MainLayout } from "@/shared/components"
 
 function App() {
