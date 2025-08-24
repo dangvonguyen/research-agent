@@ -16,6 +16,7 @@ services:
     env_file:
       - ./.env.dev
     environment:
+      - BACKEND_CORS_ORIGINS="${BACKEND_CORS_ORIGINS},http://localhost:3000,https://localhost:3000"
       - MONGODB_ROOT_USERNAME=${MONGODB_ROOT_USERNAME}
       - MONGODB_ROOT_PASSWORD=${MONGODB_ROOT_PASSWORD}
       - MONGODB_DATABASE=${MONGODB_DATABASE}

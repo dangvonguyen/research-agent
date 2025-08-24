@@ -1,11 +1,23 @@
 import logging
+from typing import Annotated, Any
 
-from pydantic import MongoDsn, computed_field
+from pydantic import AnyUrl, BeforeValidator, MongoDsn, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.logging import sanitize_mongodb_uri
 
 logger = logging.getLogger(__name__)
+
+
+def parse_cors(value: Any) -> list[str] | str:
+    """
+    Parse CORS origins from string or list.
+    """
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        return [origin.strip() for origin in value.split(",")]
+    raise ValueError(value)
 
 
 class Settings(BaseSettings):
@@ -21,6 +33,17 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Research Agent API"
     DEBUG: bool
+
+    # CORS settings
+    BACKEND_CORS_ORIGINS: Annotated[
+        list[AnyUrl] | str, BeforeValidator(parse_cors)
+    ] = []
+
+    @computed_field  # type: ignore
+    @property
+    def all_cors_origins(self) -> list[str]:
+        """Get normalized list of CORS origins."""
+        return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS]
 
     # Database settings
     MONGODB_SERVER: str

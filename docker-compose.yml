@@ -33,8 +33,6 @@ services:
       interval: 20s
       timeout: 5s
       retries: 5
-    ports:
-      - "8000:8000"
     depends_on:
       - mongodb
     networks:
