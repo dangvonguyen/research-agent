@@ -5,14 +5,16 @@ interface SearchResultCardProps {
   onClick?: () => void
 }
 
+const ABSTRACT_PREVIEW_WORDS = 15
+
 export const SearchResultCard = ({ paper, onClick }: SearchResultCardProps) => {
-  const { title, authors, year, sections } = paper
+  const { title, authors, sections } = paper
 
   const abstract = sections?.abstract?.content
 
-  // Cắt abstract lấy khoảng 10 từ đầu tiên
+  // Truncate abstract to show preview of first few words
   const truncatedAbstract = abstract
-    ? abstract.split(/\s+/).slice(0, 15).join(" ") + "..."
+    ? abstract.split(/\s+/).slice(0, ABSTRACT_PREVIEW_WORDS).join(" ") + "..."
     : null
 
   return (
@@ -23,12 +25,7 @@ export const SearchResultCard = ({ paper, onClick }: SearchResultCardProps) => {
       <h3 className="text-lg mb-2">{title}</h3>
 
       <p className="text-sm text-gray-600 mb-1">
-        <strong>Authors:</strong> {authors?.join(", ")}{" "}
-        {year && (
-          <>
-            | <strong>Year:</strong> {year}
-          </>
-        )}
+        <strong>Authors:</strong> {authors?.join(", ")}
       </p>
 
       {truncatedAbstract && (

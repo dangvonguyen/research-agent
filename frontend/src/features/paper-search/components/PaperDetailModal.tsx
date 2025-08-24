@@ -13,7 +13,7 @@ export const PaperDetailModal = ({ paper, onClose }: PaperDetailModalProps) => {
   return (
     <Modal isOpen={!!paper} onClose={onClose}>
       <div className="space-y-4">
-        {/* Tiêu đề và tác giả */}
+        {/* Title and Authors */}
         <div className="text-center mb-4">
           <h2 className="text-2xl font-bold">{paper.title}</h2>
           <p className="text-gray-600 text-sm mt-1">
@@ -21,7 +21,7 @@ export const PaperDetailModal = ({ paper, onClose }: PaperDetailModalProps) => {
           </p>
         </div>
 
-        {/* Năm, nguồn, venue */}
+        {/* Year, Source, and Venues */}
         <p>
           <strong>Year:</strong> {paper.year ?? "N/A"}
         </p>
@@ -42,7 +42,7 @@ export const PaperDetailModal = ({ paper, onClose }: PaperDetailModalProps) => {
           </div>
         )}
 
-        {/* Các section còn lại */}
+        {/* Other Sections */}
         {Object.entries(paper.sections ?? {})
           .filter(([key]) => key !== "abstract")
           .map(([key, section]) => (
@@ -52,7 +52,7 @@ export const PaperDetailModal = ({ paper, onClose }: PaperDetailModalProps) => {
             </div>
           ))}
 
-        {/* Link PDF */}
+        {/* PDF Link */}
         <div className="mt-6">
           {paper.url && (
             <a

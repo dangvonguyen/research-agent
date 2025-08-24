@@ -1,26 +1,23 @@
 import { useState } from "react"
 
+import type { SearchParams } from "../types"
 import type { PaperSource } from "@/shared/api"
 
-interface Props {
-  onSearch: (params: {
-    query?: string
-    url?: string
-    source: PaperSource
-  }) => void
+interface SearchFormProps {
+  onSearch: (params: SearchParams) => void
 }
 
-export const SearchForm = ({ onSearch }: Props) => {
+export const SearchForm = ({ onSearch }: SearchFormProps) => {
   const [query, setQuery] = useState("")
   const [url, setUrl] = useState("")
   const [source, setSource] = useState<PaperSource>("acl_anthology")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSearch({
-      ...(query ? { query } : {}),
-      ...(url ? { url } : {}),
-      source,
+    onSearch({ 
+      query: query.trim() || null, 
+      url: url.trim() || null, 
+      source 
     })
   }
 
