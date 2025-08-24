@@ -40,6 +40,18 @@ services:
     networks:
       - app_network
 
+  frontend:
+    image: "${DOCKER_IMAGE_FRONTEND}:${TAG:-latest}"
+    restart: always
+    build:
+      context: ./frontend
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
 volumes:
   mongodb_data:
 

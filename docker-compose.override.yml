@@ -29,3 +29,23 @@ services:
             - .venv
         - path: ./backend/pyproject.toml
           action: rebuild
+    ports:
+      - "8000:8000"
+
+  frontend:
+    restart: no
+    build:
+      context: ./frontend
+      target: builder
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+    develop:
+      watch:
+        - path: ./frontend/src
+          action: sync
+          target: /app/src
+        - path: ./frontend/package.json
+          action: rebuild
+        - path: ./frontend/package-lock.json
+          action: rebuild
+    ports:
+      - "3000:5173"
