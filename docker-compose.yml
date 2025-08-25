@@ -49,6 +49,8 @@ services:
       - backend
     ports:
       - "5173:80"
+    networks:
+      - app_network
 
 volumes:
   mongodb_data:

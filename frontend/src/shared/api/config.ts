@@ -27,8 +27,7 @@ export const getApiConfig = () => {
     case "production":
       return {
         ...apiConfig,
-        baseUrl:
-          import.meta.env.VITE_API_BASE_URL || "https://api.example.com",
+        baseUrl: "",
       }
     case "staging":
       return {
