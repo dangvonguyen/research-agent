@@ -1,3 +1,5 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components"
+
 import type { Paper } from "@/shared/api"
 
 interface SearchResultCardProps {
@@ -20,19 +22,22 @@ export const SearchResultCard = ({ paper, onClick }: SearchResultCardProps) => {
   return (
     <button
       onClick={onClick}
-      className="bg-white border-none text-left w-full p-4 cursor-pointer rounded-lg shadow-md hover:shadow-lg hover:-translate-y-1 transition-transform"
+      className="cursor-pointer hover:rounded-xl hover:shadow-md hover:-translate-y-0.5 transition-transform"
     >
-      <h3 className="text-lg mb-2">{title}</h3>
-
-      <p className="text-sm text-gray-600 mb-1">
-        <strong>Authors:</strong> {authors?.join(", ")}
-      </p>
-
-      {truncatedAbstract && (
-        <p className="text-sm text-gray-600">
-          <strong>Abstract:</strong> {truncatedAbstract}
-        </p>
-      )}
+      <Card className="w-full text-left gap-0 py-4">
+        <CardHeader>
+          <CardTitle className="leading-snug">{title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-600">
+            <strong>Authors:</strong> {authors?.join(", ")}
+          </p>
+          <p className="text-sm text-gray-600">
+            <strong>Abstract:</strong>{" "}
+            {truncatedAbstract ? truncatedAbstract : "N/A"}
+          </p>
+        </CardContent>
+      </Card>
     </button>
   )
 }
