@@ -1,5 +1,16 @@
 import { useState } from "react"
 
+import {
+  Button,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components"
+
 import type { SearchParams } from "../types"
 import type { PaperSource } from "@/shared/api"
 
@@ -14,70 +25,56 @@ export const SearchForm = ({ onSearch }: SearchFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSearch({ 
-      query: query.trim() || null, 
-      url: url.trim() || null, 
-      source 
+    onSearch({
+      query: query.trim() || null,
+      url: url.trim() || null,
+      source,
     })
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col gap-6 w-full max-w-md mx-auto"
-    >
+    <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto space-y-4">
       {/* Search Query */}
       <div className="flex flex-col gap-2">
-        <label htmlFor="query" className="text-base font-medium text-gray-800">
-          Search Query:
-        </label>
-        <input
+        <Label htmlFor="query">Search Query:</Label>
+        <Input
           id="query"
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="e.g., Large Language Models"
-          className="border border-gray-300 rounded-lg px-4 py-3 text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       {/* Paper URL */}
       <div className="flex flex-col gap-2">
-        <label htmlFor="url" className="text-base font-medium text-gray-800">
-          Paper URL:
-        </label>
-        <input
+        <Label htmlFor="url">Paper URL:</Label>
+        <Input
           id="url"
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="e.g., https://aclanthology.org/2023.acl-long.1"
-          className="border border-gray-300 rounded-lg px-4 py-3 text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       {/* Source Selector */}
       <div className="flex flex-col gap-2">
-        <label htmlFor="source" className="text-base font-medium text-gray-800">
-          Source:
-        </label>
-        <select
-          id="source"
+        <Label htmlFor="source">Source:</Label>
+        <Select
           value={source}
-          onChange={(e) => setSource(e.target.value as PaperSource)}
-          className="border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onValueChange={(source) => setSource(source as PaperSource)}
         >
-          <option value="acl_anthology">ACL Anthology</option>
-          <option value="arxiv">arXiv</option>
-        </select>
+          <SelectTrigger id="source" className="w-full">
+            <SelectValue placeholder="Select source" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="acl_anthology">ACL Anthology</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      <button
-        type="submit"
-        className="w-full !bg-blue-600 hover:bg-blue-700 !hover:bg-blue-700 text-white text-base font-semibold py-3 rounded-lg transition-colors border border-gray-300"
-      >
-        Search
-      </button>
+      <Button type="submit">Search</Button>
     </form>
   )
 }
