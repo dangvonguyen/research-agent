@@ -7,17 +7,10 @@ interface SearchResultCardProps {
   onClick?: () => void
 }
 
-const ABSTRACT_PREVIEW_WORDS = 15
-
 export const SearchResultCard = ({ paper, onClick }: SearchResultCardProps) => {
   const { title, authors, sections } = paper
 
   const abstract = sections?.abstract?.content
-
-  // Truncate abstract to show preview of first few words
-  const truncatedAbstract = abstract
-    ? abstract.split(/\s+/).slice(0, ABSTRACT_PREVIEW_WORDS).join(" ") + "..."
-    : null
 
   return (
     <button
@@ -29,12 +22,11 @@ export const SearchResultCard = ({ paper, onClick }: SearchResultCardProps) => {
           <CardTitle className="leading-snug">{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 truncate">
             <strong>Authors:</strong> {authors?.join(", ")}
           </p>
-          <p className="text-sm text-gray-600">
-            <strong>Abstract:</strong>{" "}
-            {truncatedAbstract ? truncatedAbstract : "N/A"}
+          <p className="text-sm text-gray-600 truncate">
+            <strong>Abstract:</strong> {abstract ? abstract : "N/A"}
           </p>
         </CardContent>
       </Card>
