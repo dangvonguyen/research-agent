@@ -35,14 +35,23 @@ export const searchPapers = async ({
     // Step 3: Poll job status
     let status: JobStatus = "pending"
     let retryCount = 0
-    while (status !== "completed" && retryCount < 3) {
-      await new Promise((res) => setTimeout(res, 3000))
+    const TIMEOUT = 3000 // 3 seconds
+    const MAX_RETRIES = 4 // Allow up to 3 seconds * 40 = 2 minutes of polling
+
+    while (status !== "completed" && retryCount < MAX_RETRIES) {
+      await new Promise((res) => setTimeout(res, TIMEOUT))
 
       const job = await apiClient.crawlerJobs.getById(jobId)
       status = job.status
 
       if (status === "failed") throw new Error("Crawler job failed")
       retryCount++
+    }
+
+    if (status !== "completed") {
+      const error_msg = "Job timed out - paper retrieval took too long"
+      alert(error_msg)
+      throw new Error(error_msg)
     }
 
     // Step 4: Fetch papers
