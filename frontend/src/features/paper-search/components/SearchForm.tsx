@@ -1,5 +1,3 @@
-import { useState } from "react"
-
 import {
   Button,
   Input,
@@ -9,6 +7,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Textarea,
 } from "@/shared/components"
 
 import type { SearchParams } from "../types"
@@ -19,16 +18,24 @@ interface SearchFormProps {
 }
 
 export const SearchForm = ({ onSearch }: SearchFormProps) => {
-  const [query, setQuery] = useState("")
-  const [url, setUrl] = useState("")
-  const [source, setSource] = useState<PaperSource>("acl_anthology")
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    const formData = new FormData(e.currentTarget as HTMLFormElement)
+    const values = Object.fromEntries(formData.entries())
+
+    const urlsText = String(values.urls).trim()
+    const urls = urlsText
+      ? urlsText
+          .split("\n")
+          .map((url) => url.trim())
+          .filter((url) => url.length > 0)
+      : null
+
     onSearch({
-      query: query.trim() || null,
-      url: url.trim() || null,
-      source,
+      query: String(values.query).trim() || null,
+      urls,
+      source: values.source as PaperSource,
+      maxPapers: values.maxPapers ? Number(values.maxPapers) : null,
     })
   }
 
@@ -40,31 +47,27 @@ export const SearchForm = ({ onSearch }: SearchFormProps) => {
         <Input
           id="query"
           type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          name="query"
           placeholder="e.g., Large Language Models"
         />
       </div>
 
-      {/* Paper URL */}
+      {/* Paper URLs */}
       <div className="flex flex-col gap-2">
-        <Label htmlFor="url">Paper URL:</Label>
-        <Input
-          id="url"
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
+        <Label htmlFor="urls">Paper URLs (one per line):</Label>
+        <Textarea
+          id="urls"
+          name="urls"
           placeholder="e.g., https://aclanthology.org/2023.acl-long.1"
+          rows={1}
+          className="min-h-0 max-h-32"
         />
       </div>
 
       {/* Source Selector */}
       <div className="flex flex-col gap-2">
         <Label htmlFor="source">Source:</Label>
-        <Select
-          value={source}
-          onValueChange={(source) => setSource(source as PaperSource)}
-        >
+        <Select name="source" defaultValue="acl_anthology">
           <SelectTrigger id="source" className="w-full">
             <SelectValue placeholder="Select source" />
           </SelectTrigger>
@@ -72,6 +75,12 @@ export const SearchForm = ({ onSearch }: SearchFormProps) => {
             <SelectItem value="acl_anthology">ACL Anthology</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+
+      {/* Max Papers */}
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="maxPapers">Max Papers:</Label>
+        <Input id="maxPapers" type="number" name="maxPapers" />
       </div>
 
       <Button type="submit">Search</Button>

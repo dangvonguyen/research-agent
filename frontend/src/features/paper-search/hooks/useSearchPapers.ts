@@ -9,10 +9,10 @@ export const useSearchPapers = () => {
   const [results, setResults] = useState<Paper[]>([])
   const [loading, setLoading] = useState(false)
 
-  const search = async ({ query, url, source }: SearchParams) => {
+  const search = async ({ query, urls, source, maxPapers }: SearchParams) => {
     setLoading(true)
     try {
-      const data = await searchPapers({ query, url, source })
+      const data = await searchPapers({ query, urls, source, maxPapers })
       setResults(data)
     } catch (error) {
       console.error("Search error:", error)

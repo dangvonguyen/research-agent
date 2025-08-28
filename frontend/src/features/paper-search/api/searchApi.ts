@@ -8,8 +8,9 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true"
 
 export const searchPapers = async ({
   query,
-  url,
+  urls,
   source,
+  maxPapers,
 }: SearchParams): Promise<Paper[]> => {
   if (USE_MOCK) {
     return mockSearchPapers()
@@ -27,8 +28,9 @@ export const searchPapers = async ({
     // Step 2: Submit crawl job
     const jobRes = await apiClient.crawlerJobs.create({
       config_name: matchedConfig.name,
-      query: query || null,
-      urls: url ? [url] : null,
+      query: query,
+      urls: urls,
+      max_papers: maxPapers,
     })
     const jobId = jobRes.created_ids[0]
 
@@ -36,7 +38,7 @@ export const searchPapers = async ({
     let status: JobStatus = "pending"
     let retryCount = 0
     const TIMEOUT = 3000 // 3 seconds
-    const MAX_RETRIES = 4 // Allow up to 3 seconds * 40 = 2 minutes of polling
+    const MAX_RETRIES = 40 // Allow up to 3 seconds * 40 = 2 minutes of polling
 
     while (status !== "completed" && retryCount < MAX_RETRIES) {
       await new Promise((res) => setTimeout(res, TIMEOUT))
