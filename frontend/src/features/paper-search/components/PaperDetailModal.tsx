@@ -4,9 +4,9 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/shared/components"
+} from "@/components/ui"
 
-import type { Paper } from "@/shared/api"
+import type { Paper } from "@/api"
 
 interface PaperDetailModalProps {
   paper: Paper | null
@@ -20,8 +20,12 @@ export const PaperDetailModal = ({ paper, onClose }: PaperDetailModalProps) => {
     <Dialog open={!!paper} onOpenChange={onClose}>
       <DialogContent className="max-w-[500px] sm:w-max md:min-w-4/5 lg:min-w-1/2 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-center text-xl">{paper.title}</DialogTitle>
-          <DialogDescription className="text-center">{paper.authors.join(", ")}</DialogDescription>
+          <DialogTitle className="text-center text-xl">
+            {paper.title}
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            {paper.authors.join(", ")}
+          </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2">
           <p>

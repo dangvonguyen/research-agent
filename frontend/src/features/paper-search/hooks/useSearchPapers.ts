@@ -3,7 +3,7 @@ import { useState } from "react"
 import { searchPapers } from "../api/searchApi"
 
 import type { SearchParams } from "../types"
-import type { Paper } from "@/shared/api"
+import type { Paper } from "@/api"
 
 export const useSearchPapers = () => {
   const [results, setResults] = useState<Paper[]>([])

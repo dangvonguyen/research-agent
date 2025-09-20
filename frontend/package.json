@@ -10,7 +10,7 @@
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "lint:import": "eslint . --fix --rule 'import/order: error'",
-    "generate:openapi": "npx openapi-typescript http://localhost:8000/api/v1/openapi.json -o src/shared/api/openapi.gen.ts",
+    "generate:openapi": "npx openapi-typescript http://localhost:8000/api/v1/openapi.json -o src/api/openapi.gen.ts",
     "generate:models": "tsx scripts/generate-models.ts",
     "generate:all": "npm run generate:openapi && npm run generate:models"
   },

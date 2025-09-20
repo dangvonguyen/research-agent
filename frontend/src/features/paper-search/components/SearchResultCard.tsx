@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
 
-import type { Paper } from "@/shared/api"
+import type { Paper } from "@/api"
 
 interface SearchResultCardProps {
   paper: Paper

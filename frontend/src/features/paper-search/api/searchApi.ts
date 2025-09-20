@@ -1,8 +1,7 @@
+import { apiClient, type JobStatus, type Paper } from "@/api"
 import { mockSearchPapers } from "@/mocks/searchPapers.mock"
-import { apiClient } from "@/shared/api"
 
 import type { SearchParams } from "../types"
-import type { JobStatus, Paper } from "@/shared/api"
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true"
 
@@ -20,7 +19,7 @@ export const searchPapers = async ({
     // Step 1: Fetch configs
     const configs = await apiClient.crawlerConfigs.list()
 
-    const matchedConfig = configs.find((c) => c.source === source.toLowerCase())
+    const matchedConfig = configs.find(c => c.source === source.toLowerCase())
     if (!matchedConfig) {
       throw new Error(`No config found for source: ${source}`)
     }
@@ -41,7 +40,7 @@ export const searchPapers = async ({
     const MAX_RETRIES = 40 // Allow up to 3 seconds * 40 = 2 minutes of polling
 
     while (status !== "completed" && retryCount < MAX_RETRIES) {
-      await new Promise((res) => setTimeout(res, TIMEOUT))
+      await new Promise(res => setTimeout(res, TIMEOUT))
 
       const job = await apiClient.crawlerJobs.getById(jobId)
       status = job.status
@@ -59,7 +58,7 @@ export const searchPapers = async ({
     // Step 4: Fetch papers
     const papers = await apiClient.papers.list()
 
-    return papers.filter((p) => p.job_id === jobId)
+    return papers.filter(p => p.job_id === jobId)
   } catch (error) {
     console.error("Search failed:", error)
     return []

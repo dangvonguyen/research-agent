@@ -3,7 +3,7 @@ import { useState } from "react"
 import { PaperDetailModal, SearchForm, SearchResultCard } from "../components"
 import { useSearchPapers } from "../hooks/useSearchPapers"
 
-import type { Paper } from "@/shared/api"
+import type { Paper } from "@/api"
 
 export function SearchPage() {
   const { search, results, loading } = useSearchPapers()
@@ -17,7 +17,7 @@ export function SearchPage() {
         {loading ? (
           <div className="text-center text-gray-600">Loading...</div>
         ) : (
-          results.map((paper) => (
+          results.map(paper => (
             <SearchResultCard
               key={paper._id}
               paper={paper}

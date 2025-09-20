@@ -1,5 +1,5 @@
+import { MainLayout } from "@/components/MainLayout"
 import { SearchPage } from "@/features"
-import { MainLayout } from "@/shared/components"
 
 function App() {
   return (

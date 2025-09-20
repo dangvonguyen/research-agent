@@ -8,10 +8,10 @@ import {
   SelectTrigger,
   SelectValue,
   Textarea,
-} from "@/shared/components"
+} from "@/components/ui"
 
 import type { SearchParams } from "../types"
-import type { PaperSource } from "@/shared/api"
+import type { PaperSource } from "@/api"
 
 interface SearchFormProps {
   onSearch: (params: SearchParams) => void
@@ -27,8 +27,8 @@ export const SearchForm = ({ onSearch }: SearchFormProps) => {
     const urls = urlsText
       ? urlsText
           .split("\n")
-          .map((url) => url.trim())
-          .filter((url) => url.length > 0)
+          .map(url => url.trim())
+          .filter(url => url.length > 0)
       : null
 
     onSearch({

@@ -1,4 +1,4 @@
-import type { Paper } from "@/shared/api"
+import type { Paper } from "@/api"
 
 export const mockSearchPapers = async (): Promise<Paper[]> => {
   console.log("Using MOCK search API")

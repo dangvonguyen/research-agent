@@ -1,4 +1,4 @@
-import type { PaperSource } from "@/shared/api"
+import type { PaperSource } from "@/api"
 
 export interface SearchParams {
   query: string | null
