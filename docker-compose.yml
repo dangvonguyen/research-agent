@@ -33,10 +33,22 @@ services:
       interval: 20s
       timeout: 5s
       retries: 5
-    ports:
-      - "8000:8000"
     depends_on:
       - mongodb
+    networks:
+      - app_network
+
+  frontend:
+    image: "${DOCKER_IMAGE_FRONTEND}:${TAG:-latest}"
+    restart: always
+    build:
+      context: ./frontend
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
     networks:
       - app_network
 
