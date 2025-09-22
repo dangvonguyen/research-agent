@@ -6,8 +6,8 @@ from typing import Any, TypeVar
 from bson import ObjectId
 from pymongo import IndexModel
 
-from app.core.db import mongodb
-from app.models import (
+from app.core.mongodb import mongodb
+from app.types import (
     BaseCreate,
     BaseDocument,
     BaseUpdate,

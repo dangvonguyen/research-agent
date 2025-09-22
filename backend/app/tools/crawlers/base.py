@@ -8,7 +8,7 @@ from typing import Literal, Self, cast
 import aiofiles
 import aiohttp
 
-from app.models import PaperCreate, PaperSource
+from app.types import PaperCreate, PaperSource
 
 logger = logging.getLogger(__name__)
 

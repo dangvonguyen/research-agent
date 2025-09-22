@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import api_router
 from app.core.config import settings
-from app.core.db import mongodb
+from app.core.mongodb import mongodb
 from app.logging import setup_logging
 from app.repos import create_indexes
 

@@ -14,7 +14,7 @@ from pymongo.results import (
     UpdateResult,
 )
 
-from app.core.db import MongoDBManger, mongodb
+from app.core.mongodb import MongoDBManger, mongodb
 
 
 @pytest.fixture

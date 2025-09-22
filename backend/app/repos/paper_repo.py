@@ -2,7 +2,7 @@ import logging
 
 from pymongo import IndexModel
 
-from app.models import Paper, PaperCreate, PaperUpdate
+from app.types import Paper, PaperCreate, PaperUpdate
 
 from .base_repo import BaseRepository
 

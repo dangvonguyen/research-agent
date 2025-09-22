@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from app.core.db import MongoDBManger
+from app.core.mongodb import MongoDBManger
 
 
 class TestMongoDBManger:

@@ -2,7 +2,7 @@ import logging
 
 from pymongo import IndexModel
 
-from app.models import (
+from app.types import (
     CrawlerConfig,
     CrawlerConfigCreate,
     CrawlerConfigUpdate,

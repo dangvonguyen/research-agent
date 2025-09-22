@@ -4,9 +4,9 @@ from datetime import UTC, datetime
 import pytest
 from bson import ObjectId
 
-from app.core.db import mongodb
-from app.models import BaseCreate, BaseDocument, BaseUpdate
+from app.core.mongodb import mongodb
 from app.repos import BaseRepository
+from app.types import BaseCreate, BaseDocument, BaseUpdate
 
 
 # Define test models that inherit from BaseCreate, BaseUpdate, and BaseDocument

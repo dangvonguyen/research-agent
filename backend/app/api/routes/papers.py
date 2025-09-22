@@ -3,7 +3,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
-from app.models import (
+from app.repos import PaperRepository
+from app.types import (
     CreateResponse,
     DeleteResponse,
     Paper,
@@ -11,7 +12,6 @@ from app.models import (
     PaperUpdate,
     UpdateResponse,
 )
-from app.repos import PaperRepository
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

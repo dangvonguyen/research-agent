@@ -4,7 +4,10 @@ from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 
-from app.models import (
+from app.repos import CrawlerConfigRepository, CrawlerJobRepository, PaperRepository
+from app.tools.crawlers import ACLAnthologyCrawler
+from app.tools.parsers import PDFParser
+from app.types import (
     CrawlerConfig,
     CrawlerConfigCreate,
     CrawlerConfigUpdate,
@@ -17,9 +20,6 @@ from app.models import (
     PaperSource,
     UpdateResponse,
 )
-from app.repos import CrawlerConfigRepository, CrawlerJobRepository, PaperRepository
-from app.tools.crawlers import ACLAnthologyCrawler
-from app.tools.parsers import PDFParser
 from app.utils import bulk_run
 
 logger = logging.getLogger(__name__)

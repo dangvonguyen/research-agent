@@ -3,7 +3,7 @@ import re
 
 from pypdf import PdfReader
 
-from app.models import PaperCreate, PaperSection
+from app.types import PaperCreate, PaperSection
 
 logger = logging.getLogger(__name__)
 

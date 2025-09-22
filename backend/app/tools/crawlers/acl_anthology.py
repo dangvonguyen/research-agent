@@ -4,7 +4,7 @@ from typing import Any, cast
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
 
-from app.models import PaperCreate, PaperSource
+from app.types import PaperCreate, PaperSource
 from app.utils import bulk_run
 
 from .base import BaseCrawler
