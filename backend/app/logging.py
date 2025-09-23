@@ -6,9 +6,9 @@ from pathlib import Path
 from urllib.parse import urlparse, urlunparse
 
 
-def sanitize_mongodb_uri(uri: str, mask: str = "***") -> str:
+def sanitize_db_uri(uri: str, mask: str = "***") -> str:
     """
-    Sanitize MongoDB URI by masking credentials.
+    Sanitize database URI by masking credentials.
     """
     parsed_uri = urlparse(uri)
 

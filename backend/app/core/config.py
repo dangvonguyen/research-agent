@@ -1,10 +1,10 @@
 import logging
 from typing import Annotated, Any
 
-from pydantic import AnyUrl, BeforeValidator, MongoDsn, computed_field
+from pydantic import AnyUrl, BeforeValidator, MongoDsn, PostgresDsn, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.logging import sanitize_mongodb_uri
+from app.logging import sanitize_db_uri
 
 logger = logging.getLogger(__name__)
 
@@ -74,8 +74,31 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def MONGODB_URI_SAFE(self) -> str:
-        return sanitize_mongodb_uri(self.MONGODB_URI)
+        return sanitize_db_uri(self.MONGODB_URI)
 
+    # Postgres settings
+    POSTGRES_SERVER: str
+    POSTGRES_PORT: int
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def POSTGRES_URI(self) -> str:
+        return PostgresDsn.build(
+            scheme="postgresql+asyncpg",
+            username=self.POSTGRES_USER,
+            password=self.POSTGRES_PASSWORD,
+            host=self.POSTGRES_SERVER,
+            port=self.POSTGRES_PORT,
+            path=self.POSTGRES_DB,
+        ).encoded_string()
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def POSTGRES_URI_SAFE(self) -> str:
+        return sanitize_db_uri(self.POSTGRES_URI)
 
 # Load settings from environment
 settings = Settings()  # type: ignore
@@ -87,4 +110,8 @@ logger.debug(
 logger.debug(
     "MongoDB settings: database=%s, URI=%s",
     settings.MONGODB_DATABASE, settings.MONGODB_URI_SAFE,
+)
+logger.error(
+    "Postgres settings: database=%s, URI=%s",
+    settings.POSTGRES_DB, settings.POSTGRES_URI_SAFE,
 )

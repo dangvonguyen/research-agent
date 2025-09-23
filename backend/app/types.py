@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -8,6 +9,13 @@ class PaperSource(Enum):
     """Source of a paper."""
 
     ACL_ANTHOLOGY = "acl_anthology"
+
+
+class Role(str, Enum):
+    """Role of a message sender."""
+
+    USER = "user"
+    ASSISTANT = "assistant"
 
 
 class JobStatus(Enum):
@@ -190,3 +198,102 @@ class DeleteResponse(OperationResponse):
     """Response model for delete operations."""
 
     deleted_count: int
+
+
+class ConversationBase(BaseModel):
+    """Base model for conversations."""
+
+    name: str
+
+
+class ConversationCreate(ConversationBase):
+    """Model for creating a new conversation."""
+
+    pass
+
+
+class ConversationUpdate(BaseModel):
+    """Model for updating an existing conversation."""
+
+    name: str | None = None
+
+
+class ConversationDB(ConversationBase):
+    """Model for conversation stored in database."""
+
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {
+        "from_attributes": True,
+    }
+
+
+class MessageBase(BaseModel):
+    """Base model for messages."""
+
+    content: str
+    role: Role
+    conversation_id: UUID
+
+
+class MessageCreate(MessageBase):
+    """Model for creating a new message."""
+
+    attachments: list["AttachmentCreate"] = Field(default_factory=list)
+
+
+class MessageUpdate(BaseModel):
+    """Model for updating an existing message."""
+
+    content: str | None = None
+    role: Role | None = None
+
+
+class MessageDB(MessageBase):
+    """Model for message stored in database."""
+
+    id: UUID
+    created_at: datetime
+    attachments: list["AttachmentDB"] = Field(default_factory=list)
+
+    model_config = {
+        "from_attributes": True,
+    }
+
+
+class AttachmentBase(BaseModel):
+    """Base model for attachments."""
+
+    filename: str
+    content_type: str
+    path: str
+    size: int
+
+
+class AttachmentCreate(AttachmentBase):
+    """Model for creating a new attachment."""
+
+    pass
+
+
+class AttachmentUpdate(BaseModel):
+    """Model for updating an existing attachment."""
+
+    filename: str | None = None
+    content_type: str | None = None
+    path: str | None = None
+    size: int | None = None
+
+
+class AttachmentDB(AttachmentBase):
+    """Model for attachment stored in database."""
+
+    id: UUID
+    message_id: UUID
+    created_at: datetime
+
+    model_config = {
+        "from_attributes": True,
+    }
