@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
+import { apiClient } from "@/api"
+import { useStreamChat } from "@/hooks/useStreamChat"
 import { cn } from "@/lib/utils"
 
 import ChatComposer from "./ChatComposer"
@@ -11,28 +13,55 @@ interface ChatProps {
   setActiveConversation: React.Dispatch<React.SetStateAction<string | null>>
   conversations: Conversation[]
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>
-  onUpdateConversation: (conversationId: string, messages: Message[]) => void
-  onCreateNewConversation: () => Conversation
 }
 
 function Chat({
   activeConversation,
   setActiveConversation,
-  conversations,
   setConversations,
-  onUpdateConversation,
-  onCreateNewConversation,
 }: ChatProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [messages, setMessages] = useState<Message[]>([])
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
-  const currentConversation = conversations.find(
-    c => c.id === activeConversation
-  )
-  const messages = useMemo(
-    () => currentConversation?.messages || [],
-    [currentConversation?.messages]
-  )
+  const {
+    isStreaming,
+    streamingMessageId,
+    streamedContent,
+    startStream,
+    resetStream,
+  } = useStreamChat()
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (activeConversation) {
+        try {
+          const currentMessages = await apiClient.conversations
+            .getMessages(activeConversation)
+            .then(res => res.data)
+          setMessages(currentMessages)
+        } catch (error) {
+          console.error("Failed to fetch messages:", error)
+        }
+      } else {
+        setMessages([])
+      }
+    }
+
+    fetchMessages()
+  }, [activeConversation, messages.length])
+
+  useEffect(() => {
+    if (streamingMessageId) {
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === streamingMessageId
+            ? { ...msg, content: streamedContent }
+            : msg
+        )
+      )
+    }
+  }, [streamingMessageId, streamedContent])
 
   // Scroll on conversation change (instant jump)
   useEffect(() => {
@@ -55,43 +84,32 @@ function Chat({
 
     let conversationId = activeConversation
 
-    // If there's no active conversation, create a new one
+    // Create user message and also create new conversation if none is active
+    const userMessage = await apiClient.conversations
+      .createMessage(conversationId, { content, role: "user" })
+      .then(res => res.data)
+
+    setMessages(prev => [...prev, userMessage])
+
     if (conversationId == null) {
-      const newConversation = onCreateNewConversation()
-      conversationId = newConversation.id
+      conversationId = userMessage.conversation_id
+
+      const newConversation = await apiClient.conversations
+        .getById(userMessage.conversation_id)
+        .then(res => res.data)
 
       setConversations(prev => [newConversation, ...prev])
       setActiveConversation(conversationId)
     }
 
-    const userMessage: Message = {
-      id: `msg-${Date.now()}`,
-      content,
-      role: "user",
-      createdAt: new Date(),
-    }
-
-    const updatedMessages = [...messages, userMessage]
-    onUpdateConversation(conversationId, updatedMessages)
-
-    // Simulate AI response
     setIsLoading(true)
     try {
-      // TODO: Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await startStream({
+        conversation_id: conversationId,
+        message_id: userMessage.id,
+      })
 
-      const assistantMessage: Message = {
-        id: `msg-${Date.now()}-assistant`,
-        content:
-          "This is a simulated AI response. You'll need to integrate with your actual AI service.",
-        role: "assistant",
-        createdAt: new Date(),
-      }
-
-      onUpdateConversation(conversationId, [
-        ...updatedMessages,
-        assistantMessage,
-      ])
+      resetStream()
     } catch (error) {
       console.error("Error sending message:", error)
     } finally {
@@ -154,7 +172,7 @@ function Chat({
             <ChatComposer
               onSend={handleSendMessage}
               placeholder="Ask anything"
-              disabled={isLoading}
+              disabled={isLoading || isStreaming}
             />
             {messages.length > 0 && (
               <div className="flex justify-center">

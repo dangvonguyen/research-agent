@@ -1,4 +1,8 @@
+import { useState } from "react"
+
 import { Edit3, MoreHorizontal, Search, SquarePen, Trash2 } from "lucide-react"
+
+import { apiClient } from "@/api"
 
 import {
   Button,
@@ -23,39 +27,63 @@ import {
 import type { Conversation } from "@/types"
 
 interface AppSidebarProps {
-  searchQuery?: string
-  setSearchQuery: (q: string) => void
   conversations: Conversation[]
+  setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>
   activeConversation: string | null
   setActiveConversation: React.Dispatch<React.SetStateAction<string | null>>
-  onSelectConversation: (conversationId: string) => void
-  onDeleteConversation: (conversationId: string) => void
-  onRenameConversation: (conversationId: string, newTitle: string) => void
 }
 
 function AppSidebar({
-  searchQuery = "",
-  setSearchQuery,
-  conversations = [],
+  conversations,
+  setConversations,
   activeConversation,
   setActiveConversation,
-  onSelectConversation,
-  onDeleteConversation,
-  onRenameConversation,
 }: AppSidebarProps) {
+  const [searchQuery, setSearchQuery] = useState("")
+
   const filteredConversations = conversations.filter(conversation =>
-    conversation.title.toLowerCase().includes(searchQuery.toLowerCase())
+    conversation.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleRename = (conversationId: string) => {
-    const conversation = conversations.find(c => c.id === conversationId)
-    if (!conversation) return
+  const handleDelete = async (conversation: Conversation) => {
+    try {
+      await apiClient.conversations.delete(conversation.id)
 
-    console.log("hi")
+      setConversations(prev => prev.filter(conv => conv.id !== conversation.id))
 
-    const newTitle = prompt("Enter new conversation title:", conversation.title)
-    if (newTitle && newTitle.trim() && newTitle !== conversation.title) {
-      onRenameConversation(conversationId, newTitle.trim())
+      if (activeConversation === conversation.id) {
+        setActiveConversation(null)
+      }
+    } catch (error) {
+      console.error("Failed to delete conversation:", error)
+    }
+  }
+
+  const onSelectConversation = (conversationId: string) => {
+    setActiveConversation(conversationId)
+  }
+
+  const handleRename = async (conversation: Conversation) => {
+    const newTitle = prompt("Enter new conversation title:", conversation.name)
+
+    if (!newTitle || newTitle.trim() === "" || newTitle === conversation.name) {
+      return
+    }
+
+    try {
+      await apiClient.conversations.update(conversation.id, {
+        name: newTitle.trim(),
+      })
+
+      setConversations(prev =>
+        prev.map(conv =>
+          conv.id === conversation.id
+            ? { ...conv, name: newTitle.trim() }
+            : conv
+        )
+      )
+    } catch (error) {
+      console.error("Failed to rename conversation:", error)
     }
   }
 
@@ -116,7 +144,7 @@ function AppSidebar({
                       onClick={() => onSelectConversation(conversation.id)}
                       className="cursor-pointer font-medium text-sm truncate"
                     >
-                      {conversation.title}
+                      {conversation.name}
                     </SidebarMenuButton>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -136,11 +164,8 @@ function AppSidebar({
                       <DropdownMenuContent side="bottom" align="end">
                         <DropdownMenuItem
                           onClick={e => {
-                            console.log(conversation.id)
                             e.stopPropagation()
-                            console.log("foo")
-                            handleRename(conversation.id)
-                            console.log("hmm")
+                            handleRename(conversation)
                           }}
                         >
                           <Edit3 className="h-4 w-4 mr-1" />
@@ -151,7 +176,7 @@ function AppSidebar({
                           onClick={e => {
                             e.stopPropagation()
                             if (confirm("Delete chat?")) {
-                              onDeleteConversation(conversation.id)
+                              handleDelete(conversation)
                             }
                           }}
                         >

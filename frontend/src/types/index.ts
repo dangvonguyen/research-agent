@@ -1,13 +1,3 @@
-export interface Message {
-  id: string
-  content: string
-  role: "user" | "assistant"
-  createdAt: Date
-}
-
-export interface Conversation {
-  id: string
-  title: string
-  messages: Message[]
-  lastMessageAt: Date
-}
+export type { ConversationDB as Conversation } from "@/api/models"
+export type { MessageDB as Message } from "@/api/models"
+export type { AttachmentDB as Attachment } from "@/api/models"
