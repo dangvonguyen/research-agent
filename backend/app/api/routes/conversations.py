@@ -1,54 +1,121 @@
 import logging
-from typing import Any
+from datetime import UTC, datetime
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from app.api.deps import SessionDep
 from app.db.queries import conversation as conv_db
+from app.services.db_service import (
+    get_or_create_conversation,
+    update_conversation_updated_at,
+)
 from app.types import (
     ConversationCreate,
     ConversationDB,
     ConversationUpdate,
     MessageCreate,
     MessageDB,
+    Response,
 )
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("", response_model=ConversationDB)
+@router.post("", response_model=Response[ConversationDB])
 async def create_conversation(
     session: SessionDep, conversation: ConversationCreate
 ) -> Any:
     """
     Create a new conversation.
     """
-    logger.info("Creating new conversation '%s'", conversation.name)
+    logger.debug("Creating new conversation '%s'", conversation.name)
     result = await conv_db.create_conversation(session, conversation)
-    logger.info(
+    logger.debug(
         "Successfully created conversation '%s' with ID '%s'",
-        conversation.name, result.id,
+        conversation.name,
+        result.id,
     )
-    return result
+    return {
+        "data": result,
+        "metadata": {"timestamp": datetime.now(UTC).isoformat()},
+    }
 
 
-@router.get("", response_model=list[ConversationDB])
+@router.get("", response_model=Response[list[ConversationDB]])
 async def get_conversations(
     session: SessionDep, skip: int = 0, limit: int = 100
 ) -> Any:
     """
     List all conversations.
     """
+    logger.debug("Retrieving conversations with skip=%d, limit=%d", skip, limit)
+    result = await conv_db.get_conversations(session, skip=skip, limit=limit)
+    return {
+        "data": result,
+        "metadata": {
+            "limit": limit,
+            "skip": skip,
+            "timestamp": datetime.now(UTC).isoformat(),
+        },
+    }
+
+
+@router.post("/messages", response_model=Response[MessageDB])
+async def create_message(
+    session: SessionDep,
+    message: MessageCreate,
+    conversation_id: Annotated[UUID | None, Query()] = None,
+) -> Any:
+    """
+    Create a new message in a new or existing conversation.
+    """
+    conversation = await get_or_create_conversation(session, conversation_id)
+    conversation_id = conversation.id
+
+    result = await conv_db.create_message(session, conversation_id, message)
     logger.debug(
-        "Retrieving conversations with skip=%d, limit=%d", skip, limit
+        "Successfully created message '%s' in conversation '%s'",
+        result.id,
+        conversation_id,
     )
-    return await conv_db.get_conversations(session, skip=skip, limit=limit)
+
+    await update_conversation_updated_at(session, conversation_id)
+
+    return {
+        "data": result,
+        "metadata": {
+            "timestamp": datetime.now(UTC).isoformat(),
+            "message_id": result.id,
+            "conversation_id": conversation_id,
+        },
+    }
 
 
-@router.get("/messages/{message_id}", response_model=MessageDB)
-async def get_message(session: SessionDep, message_id: str) -> Any:
+@router.get("/messages/last", response_model=Response[MessageDB])
+async def get_last_message(session: SessionDep, conversation_id: UUID) -> Any:
+    """
+    Get the latest message in a conversation.
+    """
+    logger.debug("Retrieving latest message in conversation '%s'", conversation_id)
+    message = await conv_db.get_last_message_by_conversation_id(
+        session, conversation_id
+    )
+    if not message:
+        raise HTTPException(status_code=404, detail="No messages found in conversation")
+    return {
+        "data": message,
+        "metadata": {
+            "conversation_id": conversation_id,
+            "timestamp": datetime.now(UTC).isoformat(),
+        },
+    }
+
+
+@router.get("/messages/{message_id}", response_model=Response[MessageDB])
+async def get_message(session: SessionDep, message_id: UUID) -> Any:
     """
     Get a specific message by ID.
     """
@@ -57,11 +124,17 @@ async def get_message(session: SessionDep, message_id: str) -> Any:
     if not message:
         logger.warning("Message '%s' not found", message_id)
         raise HTTPException(status_code=404, detail="Message not found")
-    return message
+    return {
+        "data": message,
+        "metadata": {
+            "conversation_id": message.conversation_id,
+            "timestamp": datetime.now(UTC).isoformat(),
+        },
+    }
 
 
-@router.get("/{conversation_id}", response_model=ConversationDB)
-async def get_conversation(session: SessionDep, conversation_id: str) -> Any:
+@router.get("/{conversation_id}", response_model=Response[ConversationDB])
+async def get_conversation(session: SessionDep, conversation_id: UUID) -> Any:
     """
     Get a specific conversation.
     """
@@ -70,12 +143,15 @@ async def get_conversation(session: SessionDep, conversation_id: str) -> Any:
     if not conv:
         logger.warning("Conversation '%s' not found", conversation_id)
         raise HTTPException(status_code=404, detail="Conversation not found")
-    return conv
+    return {
+        "data": conv,
+        "metadata": {"timestamp": datetime.now(UTC).isoformat()},
+    }
 
 
-@router.patch("/{conversation_id}", response_model=ConversationDB)
+@router.patch("/{conversation_id}", response_model=Response[ConversationDB])
 async def update_conversation(
-    session: SessionDep, conversation_id: str, conversation: ConversationUpdate
+    session: SessionDep, conversation_id: UUID, conversation: ConversationUpdate
 ) -> Any:
     """
     Update a conversation.
@@ -85,13 +161,14 @@ async def update_conversation(
     if not result:
         logger.warning("Conversation '%s' not found", conversation_id)
         raise HTTPException(status_code=404, detail="Conversation not found")
-    return result
+    return {
+        "data": result,
+        "metadata": {"timestamp": datetime.now(UTC).isoformat()},
+    }
 
 
-@router.delete("/{conversation_id}")
-async def delete_conversation(
-    session: SessionDep, conversation_id: str
-) -> dict[str, str]:
+@router.delete("/{conversation_id}", response_model=Response[None])
+async def delete_conversation(session: SessionDep, conversation_id: UUID) -> Any:
     """
     Delete a conversation.
     """
@@ -100,37 +177,19 @@ async def delete_conversation(
     if not success:
         logger.warning("Conversation '%s' not found", conversation_id)
         raise HTTPException(status_code=404, detail="Conversation not found")
-    return {"message": "Conversation deleted successfully"}
+    return {
+        "data": None,
+        "metadata": {
+            "deleted": True,
+            "conversation_id": str(conversation_id),
+            "timestamp": datetime.now(UTC).isoformat(),
+        },
+    }
 
 
-@router.post("/{conversation_id}/messages", response_model=MessageDB)
-async def create_message(
-    session: SessionDep, conversation_id: UUID, message: MessageCreate
-) -> Any:
-    """
-    Create a new message in a conversation.
-    """
-    # Verify conversation exists
-    conversation = await conv_db.get_conversation_by_id(session, conversation_id)
-    if not conversation:
-        logger.warning("Conversation '%s' not found", conversation_id)
-        raise HTTPException(status_code=404, detail="Conversation not found")
-
-    logger.info(
-        "Creating new message in conversation '%s' with role '%s'",
-        conversation_id, message.role.value,
-    )
-    result = await conv_db.create_message(session, message)
-    logger.info(
-        "Successfully created message '%s' in conversation '%s'",
-        result.id, conversation_id,
-    )
-    return result
-
-
-@router.get("/{conversation_id}/messages", response_model=list[MessageDB])
+@router.get("/{conversation_id}/messages", response_model=Response[list[MessageDB]])
 async def get_messages(
-    session: SessionDep, conversation_id: str, skip: int = 0, limit: int = 100
+    session: SessionDep, conversation_id: UUID, skip: int = 0, limit: int = 100
 ) -> Any:
     """
     List all messages in a conversation.
@@ -143,8 +202,19 @@ async def get_messages(
 
     logger.debug(
         "Retrieving messages for conversation '%s' with skip=%d, limit=%d",
-        conversation_id, skip, limit
+        conversation_id,
+        skip,
+        limit,
     )
-    return await conv_db.get_messages_by_conversation_id(
+    result = await conv_db.get_messages_by_conversation_id(
         session, conversation_id, skip=skip, limit=limit
     )
+    return {
+        "data": result,
+        "metadata": {
+            "limit": limit,
+            "skip": skip,
+            "conversation_id": conversation_id,
+            "timestamp": datetime.now(UTC).isoformat(),
+        },
+    }

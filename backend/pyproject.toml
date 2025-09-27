@@ -11,6 +11,7 @@ dependencies = [
     "asyncpg>=0.30.0",
     "bs4>=0.0.2",
     "fastapi[standard]>=0.116.1",
+    "llama-index>=0.14.2",
     "playwright>=1.54.0",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",

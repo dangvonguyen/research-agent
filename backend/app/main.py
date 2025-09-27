@@ -22,32 +22,32 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa
     setup_logging()
     logger = logging.getLogger(__name__)
 
-    start_time = time.time()
-    logger.info(
-        "Starting application '%s' (version %s)",
-        settings.PROJECT_NAME, settings.API_V1_STR,
-    )
+    # start_time = time.time()
+    # logger.info(
+    #     "Starting application '%s' (version %s)",
+    #     settings.PROJECT_NAME, settings.API_V1_STR,
+    # )
 
-    # Connect to MongoDB
-    logger.info("Establishing connection to MongoDB at %s", settings.MONGODB_URI_SAFE)
-    await mongodb.connect()
+    # # Connect to MongoDB
+    # logger.info("Establishing connection to MongoDB at %s", settings.MONGODB_URI_SAFE)
+    # await mongodb.connect()
 
-    # Create database indexes
-    logger.info("Creating database indexes")
-    await create_indexes()
-    logger.info("Successfully created database indexes")
+    # # Create database indexes
+    # logger.info("Creating database indexes")
+    # await create_indexes()
+    # logger.info("Successfully created database indexes")
 
-    startup_time = time.time() - start_time
-    logger.info(
-        "Application startup completed successfully in %.2f seconds", startup_time
-    )
+    # startup_time = time.time() - start_time
+    # logger.info(
+    #     "Application startup completed successfully in %.2f seconds", startup_time
+    # )
 
     yield
 
-    # Shutdown process
-    logger.info("Beginning application shutdown process")
-    await mongodb.disconnect()
-    logger.info("Application '%s' shutdown completed", settings.PROJECT_NAME)
+    # # Shutdown process
+    # logger.info("Beginning application shutdown process")
+    # await mongodb.disconnect()
+    # logger.info("Application '%s' shutdown completed", settings.PROJECT_NAME)
 
 
 app = FastAPI(
@@ -60,7 +60,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.all_cors_origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -87,13 +87,13 @@ async def health_check() -> dict[str, str]:
     """
     Health check endpoints.
     """
-    logger = logging.getLogger(__name__)
-    db_status = await mongodb.health_check()
-    status = "healthy" if db_status else "database_error"
+    # logger = logging.getLogger(__name__)
+    # db_status = await mongodb.health_check()
+    # status = "healthy" if db_status else "database_error"
 
-    if db_status:
-        logger.debug("Health check passed: API and database connection OK")
-    else:
-        logger.warning("Health check detected: database connection issue")
+    # if db_status:
+    #     logger.debug("Health check passed: API and database connection OK")
+    # else:
+    #     logger.warning("Health check detected: database connection issue")
 
-    return {"status": status}
+    return {"status": "healthy"}

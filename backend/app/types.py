@@ -1,5 +1,6 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, HttpUrl
@@ -235,7 +236,6 @@ class MessageBase(BaseModel):
 
     content: str
     role: Role
-    conversation_id: UUID
 
 
 class MessageCreate(MessageBase):
@@ -255,6 +255,7 @@ class MessageDB(MessageBase):
     """Model for message stored in database."""
 
     id: UUID
+    conversation_id: UUID
     created_at: datetime
     attachments: list["AttachmentDB"] = Field(default_factory=list)
 
@@ -297,3 +298,57 @@ class AttachmentDB(AttachmentBase):
     model_config = {
         "from_attributes": True,
     }
+
+
+# Chat-specific models for AI responses
+class ChatRequest(BaseModel):
+    """Model for chat request."""
+
+    conversation_id: UUID
+    message_id: UUID  # ID of the user message just created
+
+
+class Response[T](BaseModel):
+    """Base model for API responses."""
+
+    data: T
+    metadata: dict[str, Any]
+
+
+class ChatResponse(Response[MessageDB]):
+    """Model for chat response model."""
+
+    @classmethod
+    def create(
+        cls, assistant_data: "MessageDB", conversation_id: UUID
+    ) -> "ChatResponse":
+        return cls(
+            data=assistant_data,
+            metadata={
+                "conversation_id": conversation_id,
+                "message_id": assistant_data.id,
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+        )
+
+
+class StreamChatData(BaseModel):
+    chunk: str
+    is_final: bool
+
+
+class StreamChatChunk(Response[StreamChatData]):
+    """Model for streaming chat response chunks."""
+
+    @classmethod
+    def create(
+        cls, conversation_id: UUID, message_id: UUID, chunk: str, is_final: bool = False
+    ) -> "StreamChatChunk":
+        return cls(
+            data=StreamChatData(chunk=chunk, is_final=is_final),
+            metadata={
+                "conversation_id": conversation_id,
+                "message_id": message_id,
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+        )

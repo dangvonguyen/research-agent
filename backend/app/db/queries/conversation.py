@@ -11,6 +11,7 @@ from app.types import (
     ConversationUpdate,
     MessageCreate,
     MessageDB,
+    MessageUpdate,
 )
 
 
@@ -82,12 +83,14 @@ async def delete_conversation(session: AsyncSession, conversation_id: UUID) -> b
     return True
 
 
-async def create_message(session: AsyncSession, message: MessageCreate) -> MessageDB:
+async def create_message(
+    session: AsyncSession, conversation_id: UUID, message: MessageCreate
+) -> MessageDB:
     """Create a new message."""
     message_db = Message(
         content=message.content,
         role=message.role,
-        conversation_id=message.conversation_id,
+        conversation_id=conversation_id,
     )
     session.add(message_db)
     await session.flush()  # Flush to get the message ID without committing
@@ -114,17 +117,21 @@ async def create_message(session: AsyncSession, message: MessageCreate) -> Messa
 
 
 async def get_messages_by_conversation_id(
-    session: AsyncSession, conversation_id: UUID, skip: int = 0, limit: int = 100
+    session: AsyncSession,
+    conversation_id: UUID,
+    skip: int | None = 0,
+    limit: int | None = 100,
 ) -> list[MessageDB]:
     """Get messages for a conversation."""
     messages_stmt = (
         select(Message)
         .options(selectinload(Message.attachments))
         .where(Message.conversation_id == conversation_id)
-        .offset(skip)
-        .limit(limit)
         .order_by(Message.created_at.asc())
     )
+    if skip and limit:
+        messages_stmt = messages_stmt.offset(skip).limit(limit)
+
     result = await session.execute(messages_stmt)
     messages = result.scalars().all()
     return [MessageDB.model_validate(msg) for msg in messages]
@@ -145,4 +152,45 @@ async def get_message_by_id(
     if not message:
         return None
 
+    return MessageDB.model_validate(message)
+
+
+async def get_last_message_by_conversation_id(
+    session: AsyncSession, conversation_id: UUID
+) -> MessageDB | None:
+    """Get the latest message in a conversation."""
+    stmt = (
+        select(Message)
+        .options(selectinload(Message.attachments))
+        .where(Message.conversation_id == conversation_id)
+        .order_by(Message.created_at.desc())
+        .limit(1)
+    )
+    result = await session.execute(stmt)
+    message = result.scalar_one_or_none()
+    if not message:
+        return None
+
+    return MessageDB.model_validate(message)
+
+
+async def update_message(
+    session: AsyncSession, message_id: UUID, update_data: MessageUpdate
+) -> MessageDB | None:
+    """Update a message."""
+    stmt = select(Message).where(Message.id == message_id)
+    result = await session.execute(stmt)
+    message = result.scalar_one_or_none()
+
+    print("message:", message)  # Debugging line
+
+    if not message:
+        return None
+
+    update_dict = update_data.model_dump(exclude_unset=True, exclude={"attachments"})
+    for key, value in update_dict.items():
+        setattr(message, key, value)
+
+    await session.commit()
+    await session.refresh(message, ["attachments"])
     return MessageDB.model_validate(message)

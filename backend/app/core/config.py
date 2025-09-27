@@ -100,6 +100,8 @@ class Settings(BaseSettings):
     def POSTGRES_URI_SAFE(self) -> str:
         return sanitize_db_uri(self.POSTGRES_URI)
 
+    OPENAI_API_KEY: str
+
 # Load settings from environment
 settings = Settings()  # type: ignore
 logger.info("Settings loaded for project: %s", settings.PROJECT_NAME)
