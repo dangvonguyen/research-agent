@@ -8,14 +8,13 @@ from llama_index.core.chat_engine.types import (
     StreamingAgentChatResponse,
 )
 from llama_index.core.llms import ChatMessage, MessageRole
-from llama_index.llms.openai import OpenAI
 
-from app.core.config import settings
+from app.services.llm_service import create_openai_llm
 from app.types import MessageDB, Role
 
 
 class ChatService:
-    "Service for handling chat operations with LlamaIndex integration."
+    """Service for handling chat operations with LlamaIndex integration."""
 
     def __init__(
         self,
@@ -25,11 +24,10 @@ class ChatService:
         system_prompt: Optional[str] = None,
     ):
         # Configure LlamaIndex settings
-        self.llm = OpenAI(
-            model=model_name,
+        self.llm = create_openai_llm(
+            model_name=model_name,
             temperature=temperature,
             max_tokens=max_tokens,
-            api_key=settings.OPENAI_API_KEY,
         )
         Settings.llm = self.llm
 

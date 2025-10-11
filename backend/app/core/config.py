@@ -1,5 +1,5 @@
 import logging
-from typing import Annotated, Any
+from typing import Annotated, Any, Optional
 
 from pydantic import AnyUrl, BeforeValidator, MongoDsn, PostgresDsn, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -100,7 +100,9 @@ class Settings(BaseSettings):
     def POSTGRES_URI_SAFE(self) -> str:
         return sanitize_db_uri(self.POSTGRES_URI)
 
+    # LLM Provider API Keys
     OPENAI_API_KEY: str
+    ANTHROPIC_API_KEY: Optional[str] = None
 
 # Load settings from environment
 settings = Settings()  # type: ignore

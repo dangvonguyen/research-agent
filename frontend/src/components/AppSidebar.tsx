@@ -150,7 +150,7 @@ function AppSidebar() {
                       onClick={() => onSelectConversation(conversation.id)}
                       className="cursor-pointer font-medium text-sm truncate"
                     >
-                      {conversation.name}
+                      <span title={conversation.name}>{conversation.name}</span>
                     </SidebarMenuButton>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
