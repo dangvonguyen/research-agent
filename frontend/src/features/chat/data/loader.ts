@@ -33,7 +33,7 @@ export async function chatLoader({
       initialMessages: messages.data,
     };
   } catch (error) {
-    console.log("Failed to load conversation:", error);
+    console.error("Failed to load conversation:", error);
 
     sessionStorage.setItem("toastError", `Conversation not found ${chatId}`);
     throw redirect("/");

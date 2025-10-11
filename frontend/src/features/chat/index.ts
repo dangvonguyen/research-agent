@@ -1,6 +1,6 @@
 import type { RouteObject } from "react-router-dom";
-import Chat from "./components/Chat";
 import { chatLoader, homeLoader } from "./data/loader";
+import { ChatView } from "./routes/chat";
 
 export const chatRoutes: RouteObject[] = [
   {
@@ -8,12 +8,12 @@ export const chatRoutes: RouteObject[] = [
     children: [
       {
         index: true,
-        Component: Chat,
+        Component: ChatView,
         loader: homeLoader,
       },
       {
         path: "chat/:chatId",
-        Component: Chat,
+        Component: ChatView,
         loader: chatLoader,
       },
     ],

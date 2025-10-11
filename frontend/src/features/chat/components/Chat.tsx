@@ -1,16 +1,20 @@
 import { useEffect, useState } from "react";
-import { useLoaderData } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { cn } from "@/lib/utils";
 import { useStreamChat } from "../hooks/useStreamChat";
-import type { ChatLoaderData } from "../types";
+import type { Message } from "../types";
 import ChatComposer from "./ChatComposer";
 
-function Chat() {
-  const { id, initialMessages } = useLoaderData() as ChatLoaderData;
+interface ChatProps {
+  id: string;
+  initialMessages: Message[];
+}
 
+function Chat({ id, initialMessages }: ChatProps) {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState(initialMessages);
   const { isStreaming, streamingMessageId, streamedContent, startStream } =
     useStreamChat({ chunkDelay: 20 });
@@ -63,15 +67,17 @@ function Chat() {
 
     setMessages((prev) => [...prev, userMessage]);
 
-    if (window.location.pathname !== `/chat/${id}`) {
-      window.history.replaceState(null, "", `/chat/${id}`);
-    }
+    const shouldNavigate = window.location.pathname !== `/chat/${id}`;
 
     try {
       await startStream({
         conversation_id: id,
         message_id: userMessage.id,
       });
+
+      if (shouldNavigate) {
+        navigate(`/chat/${id}`);
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to send message. Please try again.");
