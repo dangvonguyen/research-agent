@@ -210,7 +210,7 @@ class ConversationBase(BaseModel):
 class ConversationCreate(ConversationBase):
     """Model for creating a new conversation."""
 
-    pass
+    id: UUID | None = None
 
 
 class ConversationUpdate(BaseModel):

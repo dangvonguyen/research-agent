@@ -23,8 +23,12 @@ async def get_or_create_conversation(
         )
 
     conversation = await conv_db.get_conversation_by_id(session, conversation_id)
+
     if not conversation:
-        raise ValueError("Conversation not found")
+        await conv_db.create_conversation(
+            session, ConversationCreate(id=conversation_id, name="New Chat")
+        )
+
     return conversation
 
 

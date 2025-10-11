@@ -19,7 +19,7 @@ async def create_conversation(
     session: AsyncSession, conversation: ConversationCreate
 ) -> ConversationDB:
     """Create a new conversation."""
-    conv_db = Conversation(name=conversation.name)
+    conv_db = Conversation(**conversation.model_dump(exclude_unset=True))
     session.add(conv_db)
     await session.commit()
     await session.refresh(conv_db)

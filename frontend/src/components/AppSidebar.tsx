@@ -1,9 +1,8 @@
-import { useState } from "react"
-
-import { Edit3, MoreHorizontal, Search, SquarePen, Trash2 } from "lucide-react"
-
-import { apiClient } from "@/api"
-
+import { Edit3, MoreHorizontal, Search, SquarePen, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { apiClient } from "@/api";
+import type { Conversation } from "@/types";
 import {
   Button,
   DropdownMenu,
@@ -22,70 +21,77 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "./ui"
+} from "./ui";
 
-import type { Conversation } from "@/types"
+function AppSidebar() {
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [conversations, setConversations] = useState<Conversation[]>([]);
 
-interface AppSidebarProps {
-  conversations: Conversation[]
-  setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>
-  activeConversation: string | null
-  setActiveConversation: React.Dispatch<React.SetStateAction<string | null>>
-}
+  const { chatId: conversationId } = useParams();
 
-function AppSidebar({
-  conversations,
-  setConversations,
-  activeConversation,
-  setActiveConversation,
-}: AppSidebarProps) {
-  const [searchQuery, setSearchQuery] = useState("")
-
-  const filteredConversations = conversations.filter(conversation =>
-    conversation.name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredConversations = conversations.filter((conversation) =>
+    conversation.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   const handleDelete = async (conversation: Conversation) => {
     try {
-      await apiClient.conversations.delete(conversation.id)
+      await apiClient.conversations.delete(conversation.id);
 
-      setConversations(prev => prev.filter(conv => conv.id !== conversation.id))
+      setConversations((prev) =>
+        prev.filter((conv) => conv.id !== conversation.id),
+      );
 
-      if (activeConversation === conversation.id) {
-        setActiveConversation(null)
+      if (conversationId === conversation.id) {
+        navigate("/");
       }
     } catch (error) {
-      console.error("Failed to delete conversation:", error)
+      console.error("Failed to delete conversation:", error);
     }
-  }
+  };
 
   const onSelectConversation = (conversationId: string) => {
-    setActiveConversation(conversationId)
-  }
+    navigate(`/chat/${conversationId}`);
+  };
 
   const handleRename = async (conversation: Conversation) => {
-    const newTitle = prompt("Enter new conversation title:", conversation.name)
+    const newTitle = prompt("Enter new conversation title:", conversation.name);
 
     if (!newTitle || newTitle.trim() === "" || newTitle === conversation.name) {
-      return
+      return;
     }
 
     try {
       await apiClient.conversations.update(conversation.id, {
         name: newTitle.trim(),
-      })
+      });
 
-      setConversations(prev =>
-        prev.map(conv =>
+      setConversations((prev) =>
+        prev.map((conv) =>
           conv.id === conversation.id
             ? { ...conv, name: newTitle.trim() }
-            : conv
-        )
-      )
+            : conv,
+        ),
+      );
     } catch (error) {
-      console.error("Failed to rename conversation:", error)
+      console.error("Failed to rename conversation:", error);
     }
-  }
+  };
+
+  useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        const convs = await apiClient.conversations
+          .list()
+          .then((res) => res.data);
+        setConversations(convs);
+      } catch (error) {
+        console.error("Failed to fetch conversations:", error);
+      }
+    };
+
+    fetchConversations();
+  }, []);
 
   return (
     <Sidebar collapsible="offcanvas" className="flex flex-col h-full">
@@ -93,7 +99,7 @@ function AppSidebar({
       <SidebarHeader className="flex-shrink-0">
         <div className="w-full">
           <Button
-            onClick={() => setActiveConversation(null)}
+            onClick={() => navigate("/")}
             size="lg"
             className="w-full justify-start cursor-pointer"
           >
@@ -112,7 +118,7 @@ function AppSidebar({
             id="chat-search"
             placeholder="Search chats"
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="h-10 pl-10 rounded-md focus-visible:ring-0"
           />
         </div>
@@ -131,11 +137,11 @@ function AppSidebar({
                     : "No conversations yet"}
                 </div>
               ) : (
-                filteredConversations.map(conversation => (
+                filteredConversations.map((conversation) => (
                   <SidebarMenuItem
                     key={conversation.id}
                     className={`group/actions rounded-md ${
-                      activeConversation === conversation.id
+                      conversationId === conversation.id
                         ? "bg-sidebar-accent text-sidebar-accent-foreground"
                         : "hover:bg-sidebar-accent/50"
                     }`}
@@ -163,9 +169,9 @@ function AppSidebar({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent side="bottom" align="end">
                         <DropdownMenuItem
-                          onClick={e => {
-                            e.stopPropagation()
-                            handleRename(conversation)
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRename(conversation);
                           }}
                         >
                           <Edit3 className="h-4 w-4 mr-1" />
@@ -173,10 +179,10 @@ function AppSidebar({
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           variant="destructive"
-                          onClick={e => {
-                            e.stopPropagation()
+                          onClick={(e) => {
+                            e.stopPropagation();
                             if (confirm("Delete chat?")) {
-                              handleDelete(conversation)
+                              handleDelete(conversation);
                             }
                           }}
                         >
@@ -193,7 +199,7 @@ function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
     </Sidebar>
-  )
+  );
 }
 
-export default AppSidebar
+export default AppSidebar;

@@ -67,13 +67,12 @@ async def get_conversations(
 async def create_message(
     session: SessionDep,
     message: MessageCreate,
-    conversation_id: Annotated[UUID | None, Query()] = None,
+    conversation_id: Annotated[UUID, Query()],
 ) -> Any:
     """
     Create a new message in a new or existing conversation.
     """
-    conversation = await get_or_create_conversation(session, conversation_id)
-    conversation_id = conversation.id
+    await get_or_create_conversation(session, conversation_id)
 
     result = await conv_db.create_message(session, conversation_id, message)
     logger.debug(
