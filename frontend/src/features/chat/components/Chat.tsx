@@ -102,7 +102,7 @@ function Chat() {
           </div>
         ) : (
           // TODO: implement files preview in user message
-          <div className="flex flex-col gap-10 pt-[7vh] pb-[10vh]">
+          <div className="flex flex-col gap-10 pt-[7vh] pb-[10vh] whitespace-pre-wrap">
             {messages.map((message) => (
               <div
                 key={message.id}

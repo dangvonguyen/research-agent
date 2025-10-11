@@ -1,12 +1,19 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.2.5/schema.json",
   "vcs": {
-    "enabled": false,
+    "enabled": true,
     "clientKind": "git",
     "defaultBranch": "main",
     "useIgnoreFile": true
   },
   "files": {
+    "includes": [
+      "**",
+      "!src/index.css",
+      "!src/components/ui",
+      "!src/api/openapi.gen.ts",
+      "!src/api/models.ts"
+    ],
     "ignoreUnknown": false
   },
   "formatter": {
@@ -22,7 +29,11 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "suspicious": {
+        "noArrayIndexKey": "warn"
+      },
       "correctness": {
+        "useJsxKeyInIterable": "off",
         "useUniqueElementIds": "off"
       }
     }

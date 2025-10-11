@@ -1,10 +1,10 @@
-import type { ComponentType, ReactNode } from "react"
+import type { ComponentType, ReactNode } from "react";
 
-type ProviderConfig = readonly [ComponentType<object>, object?]
+type ProviderConfig = readonly [ComponentType<object>, object?];
 
 interface ProviderWrapperProps {
-  providers: readonly ProviderConfig[]
-  children: ReactNode
+  providers: readonly ProviderConfig[];
+  children: ReactNode;
 }
 
 export default function ProviderWrapper({
@@ -13,6 +13,6 @@ export default function ProviderWrapper({
 }: ProviderWrapperProps) {
   return providers.reduceRight(
     (acc, [Provider, props]) => <Provider {...props}>{acc}</Provider>,
-    children
-  )
+    children,
+  );
 }

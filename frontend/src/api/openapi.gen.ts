@@ -88,26 +88,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/conversations/messages/{message_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Message
-         * @description Get a specific message by ID.
-         */
-        get: operations["get_message_api_v1_conversations_messages__message_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/conversations/messages/last": {
         parameters: {
             query?: never;
@@ -120,6 +100,26 @@ export interface paths {
          * @description Get the latest message in a conversation.
          */
         get: operations["get_last_message_api_v1_conversations_messages_last_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/messages/{message_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Message
+         * @description Get a specific message by ID.
+         */
+        get: operations["get_message_api_v1_conversations_messages__message_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -470,6 +470,8 @@ export interface components {
         ConversationCreate: {
             /** Name */
             name: string;
+            /** Id */
+            id?: string | null;
         };
         /**
          * ConversationDB
@@ -1069,8 +1071,8 @@ export interface operations {
     };
     create_message_api_v1_conversations_messages_post: {
         parameters: {
-            query?: {
-                conversation_id?: string | null;
+            query: {
+                conversation_id: string;
             };
             header?: never;
             path?: never;
@@ -1102,13 +1104,13 @@ export interface operations {
             };
         };
     };
-    get_message_api_v1_conversations_messages__message_id__get: {
+    get_last_message_api_v1_conversations_messages_last_get: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                message_id: string;
+            query: {
+                conversation_id: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -1133,13 +1135,13 @@ export interface operations {
             };
         };
     };
-    get_last_message_api_v1_conversations_messages_last_get: {
+    get_message_api_v1_conversations_messages__message_id__get: {
         parameters: {
-            query: {
-                conversation_id: string;
-            };
+            query?: never;
             header?: never;
-            path?: never;
+            path: {
+                message_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;

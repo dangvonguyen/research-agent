@@ -1,6 +1,6 @@
-import createClient from "openapi-fetch"
+import createClient from "openapi-fetch";
 
-import { getApiConfig } from "./config"
+import { getApiConfig } from "./config";
 
 import type {
   ChatRequest,
@@ -26,44 +26,44 @@ import type {
   Response_MessageDB_,
   Response_NoneType_,
   UpdateResponse,
-} from "./models"
-import type { paths } from "./openapi.gen"
+} from "./models";
+import type { paths } from "./openapi.gen";
 
 // Define StreamChatChunk interface based on backend response
 interface StreamChatChunk {
   data: {
-    chunk: string
-    is_final: boolean
-  }
+    chunk: string;
+    is_final: boolean;
+  };
   metadata: {
-    conversation_id: string
-    message_id: string
-    timestamp: string
-  }
+    conversation_id: string;
+    message_id: string;
+    timestamp: string;
+  };
 }
 
-const config = getApiConfig()
+const config = getApiConfig();
 const client = createClient<paths>({
   baseUrl: config.baseUrl,
   headers: config.defaultHeaders,
-})
+});
 
 async function apiCall<
   Path extends keyof paths,
-  Method extends Exclude<keyof paths[Path] & string, "parameters">
+  Method extends Exclude<keyof paths[Path] & string, "parameters">,
 >(
   path: Path,
   method: Uppercase<Method>,
   errorMessage: string,
   options?: {
-    params?: Record<string, unknown>
-    body?: Record<string, unknown>
-  }
+    params?: Record<string, unknown>;
+    body?: Record<string, unknown>;
+  },
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (client as any)[method](path, options)
-  if (error) throw new Error(`${errorMessage}: ${JSON.stringify(error)}`)
-  return data
+  // biome-ignore lint: false
+  const { data, error } = await (client as any)[method](path, options);
+  if (error) throw new Error(`${errorMessage}: ${JSON.stringify(error)}`);
+  return data;
 }
 
 export const apiClient = {
@@ -76,7 +76,7 @@ export const apiClient = {
       body: ChatRequest,
       onChunk: (chunk: StreamChatChunk) => void,
       onError?: (error: Error) => void,
-      onComplete?: () => void
+      onComplete?: () => void,
     ): Promise<void> => {
       try {
         const response = await fetch(`${config.baseUrl}/api/v1/chat/stream`, {
@@ -86,65 +86,65 @@ export const apiClient = {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(body),
-        })
+        });
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const reader = response.body?.getReader()
+        const reader = response.body?.getReader();
         if (!reader) {
-          throw new Error("Response body is not readable")
+          throw new Error("Response body is not readable");
         }
 
-        const decoder = new TextDecoder()
-        let buffer = ""
+        const decoder = new TextDecoder();
+        let buffer = "";
 
         try {
           while (true) {
-            const { done, value } = await reader.read()
+            const { done, value } = await reader.read();
 
-            if (done) break
+            if (done) break;
 
             // Decode the chunk and add to buffer
-            buffer += decoder.decode(value, { stream: true })
+            buffer += decoder.decode(value, { stream: true });
 
             // Process complete SSE messages
-            const lines = buffer.split("\n")
-            buffer = lines.pop() || "" // Keep incomplete line in buffer
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || ""; // Keep incomplete line in buffer
 
             for (const line of lines) {
               if (line.startsWith("data: ")) {
-                const jsonData = line.slice(6) // Remove "data: " prefix
+                const jsonData = line.slice(6); // Remove "data: " prefix
                 if (jsonData.trim()) {
                   try {
-                    const parsed = JSON.parse(jsonData)
-                    onChunk(parsed)
+                    const parsed = JSON.parse(jsonData);
+                    onChunk(parsed);
 
                     // Check if this is the final chunk
                     if (parsed.is_final) {
-                      onComplete?.()
-                      return
+                      onComplete?.();
+                      return;
                     }
                   } catch (parseError) {
                     console.warn(
                       "Failed to parse SSE data:",
                       jsonData,
-                      parseError
-                    )
+                      parseError,
+                    );
                   }
                 }
               }
             }
           }
         } finally {
-          reader.releaseLock()
+          reader.releaseLock();
         }
 
-        onComplete?.()
+        onComplete?.();
       } catch (error) {
-        console.error("Stream error:", error)
-        onError?.(error instanceof Error ? error : new Error(String(error)))
+        console.error("Stream error:", error);
+        onError?.(error instanceof Error ? error : new Error(String(error)));
       }
     },
   },
@@ -152,7 +152,7 @@ export const apiClient = {
   conversations: {
     list: (
       skip?: number,
-      limit?: number
+      limit?: number,
     ): Promise<Response_list_ConversationDB__> =>
       apiCall("/api/v1/conversations", "GET", "Failed to fetch conversations", {
         params: { query: { skip, limit } },
@@ -163,7 +163,7 @@ export const apiClient = {
         "/api/v1/conversations",
         "POST",
         "Failed to create conversation",
-        { body }
+        { body },
       ),
 
     getById: (conversationId: string): Promise<Response_ConversationDB_> =>
@@ -171,18 +171,18 @@ export const apiClient = {
         "/api/v1/conversations/{conversation_id}",
         "GET",
         "Failed to fetch conversation",
-        { params: { path: { conversation_id: conversationId } } }
+        { params: { path: { conversation_id: conversationId } } },
       ),
 
     update: (
       conversationId: string,
-      body: ConversationUpdate
+      body: ConversationUpdate,
     ): Promise<Response_ConversationDB_> =>
       apiCall(
         "/api/v1/conversations/{conversation_id}",
         "PATCH",
         "Failed to update conversation",
-        { params: { path: { conversation_id: conversationId } }, body }
+        { params: { path: { conversation_id: conversationId } }, body },
       ),
 
     delete: (conversationId: string): Promise<Response_NoneType_> =>
@@ -190,13 +190,13 @@ export const apiClient = {
         "/api/v1/conversations/{conversation_id}",
         "DELETE",
         "Failed to delete conversation",
-        { params: { path: { conversation_id: conversationId } } }
+        { params: { path: { conversation_id: conversationId } } },
       ),
 
     getMessages: (
       conversationId: string,
       skip?: number,
-      limit?: number
+      limit?: number,
     ): Promise<Response_list_MessageDB__> =>
       apiCall(
         "/api/v1/conversations/{conversation_id}/messages",
@@ -207,7 +207,7 @@ export const apiClient = {
             path: { conversation_id: conversationId },
             query: { skip, limit },
           },
-        }
+        },
       ),
 
     getMessageById: (messageId: string): Promise<Response_MessageDB_> =>
@@ -215,7 +215,7 @@ export const apiClient = {
         "/api/v1/conversations/messages/{message_id}",
         "GET",
         "Failed to fetch message",
-        { params: { path: { message_id: messageId } } }
+        { params: { path: { message_id: messageId } } },
       ),
 
     getLastMessage: (conversationId: string): Promise<Response_MessageDB_> =>
@@ -223,18 +223,18 @@ export const apiClient = {
         "/api/v1/conversations/messages/last",
         "GET",
         "Failed to fetch last message",
-        { params: { query: { conversation_id: conversationId } } }
+        { params: { query: { conversation_id: conversationId } } },
       ),
 
     createMessage: (
       conversationId: string | null,
-      body: MessageCreate
+      body: MessageCreate,
     ): Promise<Response_MessageDB_> =>
       apiCall(
         "/api/v1/conversations/messages",
         "POST",
         "Failed to create message",
-        { params: { query: { conversation_id: conversationId } }, body }
+        { params: { query: { conversation_id: conversationId } }, body },
       ),
   },
 
@@ -245,7 +245,7 @@ export const apiClient = {
         "/api/v1/crawlers/configs",
         "GET",
         "Failed to fetch crawler configs",
-        { params: { query: { skip, limit } } }
+        { params: { query: { skip, limit } } },
       ),
 
     create: (body: CrawlerConfigCreate): Promise<CreateResponse> =>
@@ -253,7 +253,7 @@ export const apiClient = {
         "/api/v1/crawlers/configs",
         "POST",
         "Failed to create crawler config",
-        { body }
+        { body },
       ),
 
     getById: (configId: string): Promise<CrawlerConfig> =>
@@ -261,7 +261,7 @@ export const apiClient = {
         "/api/v1/crawlers/configs/{config_id}",
         "GET",
         "Failed to fetch crawler config",
-        { params: { path: { config_id: configId } } }
+        { params: { path: { config_id: configId } } },
       ),
 
     getByName: (name: string): Promise<CrawlerConfig> =>
@@ -269,18 +269,18 @@ export const apiClient = {
         "/api/v1/crawlers/configs/name/{name}",
         "GET",
         "Failed to fetch crawler config by name",
-        { params: { path: { name } } }
+        { params: { path: { name } } },
       ),
 
     update: (
       configId: string,
-      body: CrawlerConfigUpdate
+      body: CrawlerConfigUpdate,
     ): Promise<UpdateResponse> =>
       apiCall(
         "/api/v1/crawlers/configs/{config_id}",
         "PATCH",
         "Failed to update crawler config",
-        { params: { path: { config_id: configId } }, body }
+        { params: { path: { config_id: configId } }, body },
       ),
 
     delete: (configId: string): Promise<DeleteResponse> =>
@@ -288,7 +288,7 @@ export const apiClient = {
         "/api/v1/crawlers/configs/{config_id}",
         "DELETE",
         "Failed to delete crawler config",
-        { params: { path: { config_id: configId } } }
+        { params: { path: { config_id: configId } } },
       ),
   },
 
@@ -297,7 +297,7 @@ export const apiClient = {
     list: (
       skip?: number,
       limit?: number,
-      status?: JobStatus
+      status?: JobStatus,
     ): Promise<CrawlerJob[]> =>
       apiCall("/api/v1/crawlers/jobs", "GET", "Failed to fetch crawler jobs", {
         params: { query: { skip, limit, status } },
@@ -313,7 +313,7 @@ export const apiClient = {
         "/api/v1/crawlers/jobs/{job_id}",
         "GET",
         "Failed to fetch crawler job",
-        { params: { path: { job_id: jobId } } }
+        { params: { path: { job_id: jobId } } },
       ),
 
     update: (jobId: string, body: CrawlerJobUpdate): Promise<UpdateResponse> =>
@@ -321,7 +321,7 @@ export const apiClient = {
         "/api/v1/crawlers/jobs/{job_id}",
         "PATCH",
         "Failed to update crawler job",
-        { params: { path: { job_id: jobId } }, body }
+        { params: { path: { job_id: jobId } }, body },
       ),
 
     delete: (jobId: string): Promise<DeleteResponse> =>
@@ -329,7 +329,7 @@ export const apiClient = {
         "/api/v1/crawlers/jobs/{job_id}",
         "DELETE",
         "Failed to delete crawler job",
-        { params: { path: { job_id: jobId } } }
+        { params: { path: { job_id: jobId } } },
       ),
   },
 
@@ -338,7 +338,7 @@ export const apiClient = {
     list: (
       skip?: number,
       limit?: number,
-      status?: JobStatus
+      status?: JobStatus,
     ): Promise<Paper[]> =>
       apiCall("/api/v1/papers", "GET", "Failed to fetch papers", {
         params: { query: { skip, limit, status } },
@@ -373,6 +373,6 @@ export const apiClient = {
     get: (): Promise<{ [key: string]: string }> =>
       apiCall("/", "GET", "Root endpoint failed"),
   },
-}
+};
 
-export default apiClient
+export default apiClient;
