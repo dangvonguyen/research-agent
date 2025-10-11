@@ -1,4 +1,4 @@
-import { useCallback, useReducer } from "react";
+import { useCallback, useReducer, useRef } from "react";
 import { apiClient, type ChatRequest } from "@/api";
 import type { ChatError, StreamChatChunk } from "../types";
 
@@ -61,34 +61,51 @@ interface StreamChatOptions {
   onChunk?: (chunk: StreamChatChunk) => void;
   onError?: (error: Error) => void;
   onComplete?: () => void;
+  chunkDelay?: number;
 }
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function useStreamChat(options: StreamChatOptions = {}) {
   const [state, dispatch] = useReducer(StreamChatReducer, initialState);
+  const processingPromiseRef = useRef<Promise<void>>(Promise.resolve());
 
   const startStream = useCallback(
     async (chatRequest: ChatRequest) => {
       dispatch({ type: "START_STREAMING" });
+      processingPromiseRef.current = Promise.resolve();
+
+      const delay = options.chunkDelay ?? 0;
 
       try {
         await apiClient.chat.stream_respond(
           chatRequest,
           (chunk: StreamChatChunk) => {
-            dispatch({
-              type: "ADD_CHUNK",
-              payload: {
-                content: chunk.data.chunk,
-                messageId: chunk.metadata.message_id,
+            processingPromiseRef.current = processingPromiseRef.current.then(
+              async () => {
+                dispatch({
+                  type: "ADD_CHUNK",
+                  payload: {
+                    content: chunk.data.chunk,
+                    messageId: chunk.metadata.message_id,
+                  },
+                });
+                options.onChunk?.(chunk);
+
+                if (delay > 0) {
+                  await sleep(delay);
+                }
               },
-            });
-            options.onChunk?.(chunk);
+            );
           },
           (streamError: Error) => {
             const chatError: ChatError = streamError;
             chatError.conversationId = chatRequest.conversation_id;
             dispatch({ type: "SET_ERROR", payload: chatError });
           },
-          () => {
+          async () => {
+            // Wait for all chunks to finish processing
+            await processingPromiseRef.current;
             dispatch({ type: "COMPLETE_STREAMING" });
             options.onComplete?.();
           },
@@ -104,6 +121,7 @@ export function useStreamChat(options: StreamChatOptions = {}) {
   );
 
   const resetStream = useCallback(() => {
+    processingPromiseRef.current = Promise.resolve();
     dispatch({ type: "RESET" });
   }, []);
 

@@ -12,13 +12,8 @@ function Chat() {
   const { id, initialMessages } = useLoaderData() as ChatLoaderData;
 
   const [messages, setMessages] = useState(initialMessages);
-  const {
-    isStreaming,
-    streamingMessageId,
-    streamedContent,
-    startStream,
-    resetStream,
-  } = useStreamChat();
+  const { isStreaming, streamingMessageId, streamedContent, startStream } =
+    useStreamChat({ chunkDelay: 20 });
 
   const bottomRef = useAutoScroll({
     deps: messages,
@@ -77,8 +72,6 @@ function Chat() {
         conversation_id: id,
         message_id: userMessage.id,
       });
-
-      resetStream();
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to send message. Please try again.");
