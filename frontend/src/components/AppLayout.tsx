@@ -9,7 +9,7 @@ export function AppLayout() {
       <Toaster position="top-center" />
 
       <AppSidebar />
-      <SidebarInset className="flex flex-col relative">
+      <SidebarInset>
         <Outlet />
       </SidebarInset>
     </AppProviders>
