@@ -104,6 +104,11 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str
     ANTHROPIC_API_KEY: Optional[str] = None
 
+    # File upload settings
+    UPLOAD_DIR: str = "uploads"
+    MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024  # 50MB
+
+
 # Load settings from environment
 settings = Settings()  # type: ignore
 logger.info("Settings loaded for project: %s", settings.PROJECT_NAME)

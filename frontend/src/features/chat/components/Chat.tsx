@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
+import { Response } from "@/components/ai-elements/response";
+import { PreviewAttachment } from "@/components/preview-attachment";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { cn } from "@/lib/utils";
 import { useStreamChat } from "../hooks/useStreamChat";
@@ -58,18 +60,36 @@ function Chat({ id, initialMessages }: ChatProps) {
     }
   }, []);
 
-  const handleSendMessage = async (content: string) => {
-    if (!content.trim()) return;
-
-    const userMessage = await apiClient.conversations
-      .createMessage(id, { content, role: "user" })
-      .then((res) => res.data);
-
-    setMessages((prev) => [...prev, userMessage]);
-
-    const shouldNavigate = window.location.pathname !== `/chat/${id}`;
+  const handleSendMessage = async (content: string, files?: File[]) => {
+    if (!content.trim() && (!files || files.length === 0)) return
 
     try {
+      // Upload files if any
+      let attachments: {
+        filename: string
+        content_type: string
+        path: string
+        size: number
+      }[] = []
+      if (files && files.length > 0) {
+        const uploadResponse = await apiClient.uploads.uploadFiles(files)
+        attachments = uploadResponse.data
+      }
+
+      // Create message with content and attachments
+      const messageContent = content.trim() || "Sent files"
+      const userMessage = await apiClient.conversations
+        .createMessage(id, {
+          content: messageContent,
+          role: "user",
+          attachments: attachments,
+        })
+        .then((res) => res.data)
+
+      setMessages((prev) => [...prev, userMessage])
+
+      const shouldNavigate = window.location.pathname !== `/chat/${id}`
+
       await startStream({
         conversation_id: id,
         message_id: userMessage.id,
@@ -88,10 +108,10 @@ function Chat({ id, initialMessages }: ChatProps) {
     <div className="w-full h-screen overflow-y-auto scrollbar-thin">
       <div
         className={cn(
-          "grid w-full h-screen mx-auto px-8 max-w-[52rem]",
+          "grid w-full h-screen mx-auto px-8 max-w-208",
           messages.length === 0
             ? "grid-rows-[40vh_auto]"
-            : "grid-rows-[1fr_auto]",
+            : "grid-rows-[1fr_auto]"
         )}
       >
         {/* Messages Container */}
@@ -100,18 +120,35 @@ function Chat({ id, initialMessages }: ChatProps) {
             <h1 className="text-3xl">What's on your mind today?</h1>
           </div>
         ) : (
-          // TODO: implement files preview in user message
           <div className="flex flex-col gap-10 pt-[7vh] pb-[10vh] whitespace-pre-wrap">
             {messages.map((message) => (
               <div
-                key={message.id}
-                className={
-                  message.role === "user"
-                    ? "self-end bg-secondary text-secondary-foreground rounded-3xl px-4 py-2 max-w-[70%] shadow"
-                    : "self-stretch bg-background text-foreground"
-                }
+                className={cn(
+                  "flex flex-col gap-2",
+                  message.role === "user" ? "items-end" : "items-start"
+                )}
               >
-                {message.content}
+                {message.attachments && message.attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {message.attachments.map((attachment) => (
+                      <PreviewAttachment
+                        key={attachment.id}
+                        attachment={attachment}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                <div
+                  key={message.id}
+                  className={
+                    message.role === "user"
+                      ? "bg-secondary text-secondary-foreground rounded-3xl px-4 py-2 max-w-[70%] shadow"
+                      : "bg-background text-foreground"
+                  }
+                >
+                  {message.content && <Response>{message.content}</Response>}
+                </div>
               </div>
             ))}
 
@@ -152,7 +189,7 @@ function Chat({ id, initialMessages }: ChatProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 export default Chat;

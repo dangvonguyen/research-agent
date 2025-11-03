@@ -349,6 +349,26 @@ export interface paths {
         patch: operations["update_paper_api_v1_papers__paper_id__patch"];
         trace?: never;
     };
+    "/api/v1/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Files
+         * @description Upload files and return attachment metadata.
+         */
+        post: operations["upload_files_api_v1_uploads_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -435,6 +455,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** Body_upload_files_api_v1_uploads_post */
+        Body_upload_files_api_v1_uploads_post: {
+            /** Files */
+            files: string[];
         };
         /**
          * ChatRequest
@@ -877,6 +902,15 @@ export interface components {
         Response_NoneType_: {
             /** Data */
             data: null;
+            /** Metadata */
+            metadata: {
+                [key: string]: unknown;
+            };
+        };
+        /** Response[list[AttachmentCreate]] */
+        Response_list_AttachmentCreate__: {
+            /** Data */
+            data: components["schemas"]["AttachmentCreate"][];
             /** Metadata */
             metadata: {
                 [key: string]: unknown;
@@ -1802,6 +1836,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UpdateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_files_api_v1_uploads_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_files_api_v1_uploads_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Response_list_AttachmentCreate__"];
                 };
             };
             /** @description Validation Error */

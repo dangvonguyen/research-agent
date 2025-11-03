@@ -138,6 +138,7 @@ function ChatComposer({
               <DropdownMenuItem
                 onClick={handleFileUpload}
                 className="cursor-pointer rounded-lg"
+                disabled // TODO: not supported yet
               >
                 <span>
                   <Paperclip />

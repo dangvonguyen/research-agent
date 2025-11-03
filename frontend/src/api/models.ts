@@ -6,6 +6,7 @@ import type { components } from "./openapi.gen";
 
 export type AttachmentCreate = components["schemas"]["AttachmentCreate"];
 export type AttachmentDB = components["schemas"]["AttachmentDB"];
+export type Body_upload_files_api_v1_uploads_post = components["schemas"]["Body_upload_files_api_v1_uploads_post"];
 export type ChatRequest = components["schemas"]["ChatRequest"];
 export type ChatResponse = components["schemas"]["ChatResponse"];
 export type ConversationCreate = components["schemas"]["ConversationCreate"];
@@ -31,6 +32,7 @@ export type PaperUpdate = components["schemas"]["PaperUpdate"];
 export type Response_ConversationDB_ = components["schemas"]["Response_ConversationDB_"];
 export type Response_MessageDB_ = components["schemas"]["Response_MessageDB_"];
 export type Response_NoneType_ = components["schemas"]["Response_NoneType_"];
+export type Response_list_AttachmentCreate__ = components["schemas"]["Response_list_AttachmentCreate__"];
 export type Response_list_ConversationDB__ = components["schemas"]["Response_list_ConversationDB__"];
 export type Response_list_MessageDB__ = components["schemas"]["Response_list_MessageDB__"];
 export type Role = components["schemas"]["Role"];

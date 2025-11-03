@@ -2,9 +2,11 @@ import logging
 import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api import api_router
 from app.core.config import settings
@@ -67,6 +69,15 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Mount static files for uploaded files
+upload_dir = Path(settings.UPLOAD_DIR)
+upload_dir.mkdir(parents=True, exist_ok=True)
+app.mount(
+    f"{settings.API_V1_STR}/uploads",
+    StaticFiles(directory=str(upload_dir)),
+    name="uploads",
+)
 
 
 @app.get("/")
