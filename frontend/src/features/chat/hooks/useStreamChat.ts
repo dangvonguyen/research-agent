@@ -32,6 +32,9 @@ function StreamChatReducer(
       return {
         ...state,
         isStreaming: true,
+        streamedContent: "",
+        streamingMessageId: null,
+        error: null,
       };
     case "ADD_CHUNK":
       return {
