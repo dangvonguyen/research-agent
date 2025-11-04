@@ -118,7 +118,7 @@ function ChatComposer({
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className="min-h-[0vh] max-h-[25vh] md:text-base font-normal resize-none border-0 rounded-none p-0 pt-4 shadow-none focus-visible:ring-0 scrollbar-thin"
+            className="min-h-[0vh] max-h-[25vh] md:text-base font-normal resize-none border-0 rounded-none p-0 pt-4 shadow-none focus-visible:ring-0 scrollbar-thin dark:bg-inherit"
           />
         </CardContent>
 

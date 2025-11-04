@@ -1,10 +1,11 @@
 import { SidebarProvider } from "@/components/ui";
 import ProviderWrapper from "@/context/provider-wrapper";
+import { ThemeProvider } from "@/context/theme-provider";
 
 function AppProviders({ children }: { children: React.ReactNode }) {
   const providers = [
-    // May add more providers here in the future
     [SidebarProvider, {}],
+    [ThemeProvider, {}],
   ] as const;
   return <ProviderWrapper providers={providers}>{children}</ProviderWrapper>;
 }

@@ -119,6 +119,11 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Improve contrast for dark mode text */
+  .dark {
+    color-scheme: dark;
+  }
 }
 
 @plugin "tailwind-scrollbar";

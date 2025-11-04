@@ -5,6 +5,7 @@ import { apiClient } from "@/api";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -16,6 +17,7 @@ import type { Conversation } from "@/types";
 import {
   RecentChatsSection,
   SearchChatsDialog,
+  SidebarSettings,
   SidebarButton,
   SidebarLogo,
   useSidebarActions,
@@ -130,6 +132,10 @@ function AppSidebar() {
           onRenameChat={handleRenameChat}
         />
       </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarSettings />
+      </SidebarFooter>
 
       <SearchChatsDialog
         open={searchDialogOpen}
