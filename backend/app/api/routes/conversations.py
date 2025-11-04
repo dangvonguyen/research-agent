@@ -109,7 +109,7 @@ async def create_message(
 
 
 @router.get("/messages/last", response_model=Response[MessageDB])
-async def get_last_message(session: SessionDep, conversation_id: UUID) -> Any:
+async def get_last_message(session: SessionDep, conversation_id: Annotated[UUID, Query()]) -> Any:
     """
     Get the latest message in a conversation.
     """

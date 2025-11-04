@@ -120,7 +120,7 @@ logger.debug(
     "MongoDB settings: database=%s, URI=%s",
     settings.MONGODB_DATABASE, settings.MONGODB_URI_SAFE,
 )
-logger.error(
+logger.debug(
     "Postgres settings: database=%s, URI=%s",
     settings.POSTGRES_DB, settings.POSTGRES_URI_SAFE,
 )

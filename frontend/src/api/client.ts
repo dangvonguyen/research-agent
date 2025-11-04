@@ -123,7 +123,7 @@ export const apiClient = {
                     onChunk(parsed);
 
                     // Check if this is the final chunk
-                    if (parsed.is_final) {
+                    if (parsed.data.is_final) {
                       onComplete?.();
                       return;
                     }

@@ -60,7 +60,7 @@ class LLMFactory:
                 raise ValueError(f"Unsupported provider: {model.provider}")
 
         except Exception as e:
-            logger.error(f"Failed to create LLM {model.name} ({model.provider}): {e}")
+            logger.error(f"Failed to create LLM {model.model_name} ({model.provider}): {e}")
             raise
 
     @staticmethod
