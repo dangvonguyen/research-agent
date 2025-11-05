@@ -1,3 +1,4 @@
+import type { PaperSource } from "@/api";
 import {
   Button,
   Input,
@@ -8,36 +9,34 @@ import {
   SelectTrigger,
   SelectValue,
   Textarea,
-} from "@/components/ui"
-
-import type { SearchParams } from "../types"
-import type { PaperSource } from "@/api"
+} from "@/components/ui";
+import type { SearchParams } from "../types";
 
 interface SearchFormProps {
-  onSearch: (params: SearchParams) => void
+  onSearch: (params: SearchParams) => void;
 }
 
 export const SearchForm = ({ onSearch }: SearchFormProps) => {
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget as HTMLFormElement)
-    const values = Object.fromEntries(formData.entries())
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const values = Object.fromEntries(formData.entries());
 
-    const urlsText = String(values.urls).trim()
+    const urlsText = String(values.urls).trim();
     const urls = urlsText
       ? urlsText
           .split("\n")
-          .map(url => url.trim())
-          .filter(url => url.length > 0)
-      : null
+          .map((url) => url.trim())
+          .filter((url) => url.length > 0)
+      : null;
 
     onSearch({
       query: String(values.query).trim() || null,
       urls,
       source: values.source as PaperSource,
       maxPapers: values.maxPapers ? Number(values.maxPapers) : null,
-    })
-  }
+    });
+  };
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto space-y-4">
@@ -85,5 +84,5 @@ export const SearchForm = ({ onSearch }: SearchFormProps) => {
 
       <Button type="submit">Search</Button>
     </form>
-  )
-}
+  );
+};

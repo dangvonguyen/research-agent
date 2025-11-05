@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.queries import conversation as conv_db
+from app.lib.ai.actions import generate_title_from_message
 from app.types import (
     ConversationCreate,
     ConversationDB,
@@ -15,16 +16,15 @@ from app.types import (
 
 
 async def get_or_create_conversation(
-    session: AsyncSession, conversation_id: UUID | None
+    session: AsyncSession, conversation_id: UUID
 ) -> ConversationDB:
-    if not conversation_id:
-        return await conv_db.create_conversation(
-            session, ConversationCreate(name="New Chat")
+    conversation = await conv_db.get_conversation_by_id(session, conversation_id)
+
+    if not conversation:
+        conversation = await conv_db.create_conversation(
+            session, ConversationCreate(id=conversation_id, name="New Chat")
         )
 
-    conversation = await conv_db.get_conversation_by_id(session, conversation_id)
-    if not conversation:
-        raise ValueError("Conversation not found")
     return conversation
 
 
@@ -104,3 +104,20 @@ async def load_history(session: AsyncSession, conversation_id: UUID) -> list[Mes
     if not history:
         raise ValueError("Conversation has no messages")
     return await history
+
+
+async def generate_conversation_name_from_message(
+    session: AsyncSession, conversation_id: UUID, message: str
+) -> ConversationDB:
+    conversation = await conv_db.get_conversation_by_id(session, conversation_id)
+    if not conversation:
+        raise ValueError("Conversation not found")
+
+    new_title = await generate_title_from_message(message)
+
+    updated_conversation = await conv_db.update_conversation(
+        session, conversation_id, ConversationUpdate(name=new_title)
+    )
+    if not updated_conversation:
+        raise ValueError("Failed to update conversation name")
+    return updated_conversation

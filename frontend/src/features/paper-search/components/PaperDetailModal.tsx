@@ -1,20 +1,19 @@
+import type { Paper } from "@/api";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui"
-
-import type { Paper } from "@/api"
+} from "@/components/ui";
 
 interface PaperDetailModalProps {
-  paper: Paper | null
-  onClose: () => void
+  paper: Paper | null;
+  onClose: () => void;
 }
 
 export const PaperDetailModal = ({ paper, onClose }: PaperDetailModalProps) => {
-  if (!paper) return <></>
+  if (!paper) return null;
 
   return (
     <Dialog open={!!paper} onOpenChange={onClose}>
@@ -71,5 +70,5 @@ export const PaperDetailModal = ({ paper, onClose }: PaperDetailModalProps) => {
         </div>
       </DialogContent>
     </Dialog>
-  )
-}
+  );
+};

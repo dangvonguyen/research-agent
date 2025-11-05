@@ -3,11 +3,12 @@ from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
 from app.api.deps import SessionDep
 from app.db.queries import conversation as conv_db
 from app.services.db_service import (
+    generate_conversation_name_from_message,
     get_or_create_conversation,
     update_conversation_updated_at,
 )
@@ -67,13 +68,18 @@ async def get_conversations(
 async def create_message(
     session: SessionDep,
     message: MessageCreate,
-    conversation_id: Annotated[UUID | None, Query()] = None,
+    conversation_id: Annotated[UUID, Query()],
+    background_tasks: BackgroundTasks
 ) -> Any:
     """
     Create a new message in a new or existing conversation.
     """
-    conversation = await get_or_create_conversation(session, conversation_id)
-    conversation_id = conversation.id
+    conversation = await conv_db.get_conversation_by_id(session, conversation_id)
+
+    is_new = False
+    if not conversation:
+        is_new = True
+        conversation = await get_or_create_conversation(session, conversation_id)
 
     result = await conv_db.create_message(session, conversation_id, message)
     logger.debug(
@@ -83,6 +89,14 @@ async def create_message(
     )
 
     await update_conversation_updated_at(session, conversation_id)
+
+    if is_new and message.role == "user":
+        background_tasks.add_task(
+            generate_conversation_name_from_message,
+            session,
+            conversation_id,
+            message.content,
+        )
 
     return {
         "data": result,
@@ -95,7 +109,7 @@ async def create_message(
 
 
 @router.get("/messages/last", response_model=Response[MessageDB])
-async def get_last_message(session: SessionDep, conversation_id: UUID) -> Any:
+async def get_last_message(session: SessionDep, conversation_id: Annotated[UUID, Query()]) -> Any:
     """
     Get the latest message in a conversation.
     """

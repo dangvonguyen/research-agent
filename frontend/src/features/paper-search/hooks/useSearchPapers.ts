@@ -1,26 +1,24 @@
-import { useState } from "react"
-
-import { searchPapers } from "../api/searchApi"
-
-import type { SearchParams } from "../types"
-import type { Paper } from "@/api"
+import { useState } from "react";
+import type { Paper } from "@/api";
+import { searchPapers } from "../api/searchApi";
+import type { SearchParams } from "../types";
 
 export const useSearchPapers = () => {
-  const [results, setResults] = useState<Paper[]>([])
-  const [loading, setLoading] = useState(false)
+  const [results, setResults] = useState<Paper[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const search = async ({ query, urls, source, maxPapers }: SearchParams) => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const data = await searchPapers({ query, urls, source, maxPapers })
-      setResults(data)
+      const data = await searchPapers({ query, urls, source, maxPapers });
+      setResults(data);
     } catch (error) {
-      console.error("Search error:", error)
-      setResults([])
+      console.error("Search error:", error);
+      setResults([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  return { results, loading, search }
-}
+  return { results, loading, search };
+};

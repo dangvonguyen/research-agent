@@ -1,7 +1,6 @@
-import React, { useRef, useState } from "react"
-
-import { ArrowUp, FileText, Paperclip, Plus, X } from "lucide-react"
-
+import { ArrowUp, FileText, Paperclip, Plus, X } from "lucide-react";
+import type React from "react";
+import { useRef, useState } from "react";
 import {
   Button,
   Card,
@@ -14,12 +13,12 @@ import {
   DropdownMenuTrigger,
   Label,
   Textarea,
-} from "./ui"
+} from "@/components/ui";
 
 interface ChatComposerProps {
-  onSend: (message: string, files?: File[]) => void
-  placeholder: string
-  disabled: boolean
+  onSend: (message: string, files?: File[]) => void;
+  placeholder: string;
+  disabled: boolean;
 }
 
 function ChatComposer({
@@ -27,54 +26,54 @@ function ChatComposer({
   placeholder = "Ask anything",
   disabled,
 }: ChatComposerProps) {
-  const [message, setMessage] = useState("")
-  const [files, setFiles] = useState<File[]>([])
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [message, setMessage] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const canSendMessage = (message.trim() || files.length) && !disabled
+  const canSendMessage = (message.trim() || files.length) && !disabled;
 
   const handleSend = () => {
-    if (!canSendMessage) return
+    if (!canSendMessage) return;
 
-    onSend(message, files)
-    setMessage("")
-    setFiles([])
-  }
+    onSend(message, files);
+    setMessage("");
+    setFiles([]);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
+      e.preventDefault();
+      handleSend();
     }
-  }
+  };
 
   const handleFileUpload = () => {
-    fileInputRef.current?.click()
-  }
+    fileInputRef.current?.click();
+  };
 
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newFiles = e.target.files ? Array.from(e.target.files) : []
+    const newFiles = e.target.files ? Array.from(e.target.files) : [];
 
-    if (!newFiles.length) return
+    if (!newFiles.length) return;
 
-    setFiles(prev => {
+    setFiles((prev) => {
       const uniqueNewFiles = newFiles.filter(
-        newFile =>
+        (newFile) =>
           newFile.size > 0 &&
           !prev.some(
-            existingFile =>
+            (existingFile) =>
               existingFile.name === newFile.name &&
-              existingFile.size === newFile.size
-          )
-      )
-      return [...prev, ...uniqueNewFiles]
-    })
-    e.target.value = ""
-  }
+              existingFile.size === newFile.size,
+          ),
+      );
+      return [...prev, ...uniqueNewFiles];
+    });
+    e.target.value = "";
+  };
 
   const handleRemoveFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index))
-  }
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
   return (
     <Label htmlFor="chat-composer-input" className="w-full cursor-text">
@@ -116,10 +115,10 @@ function ChatComposer({
           <Textarea
             id="chat-composer-input"
             value={message}
-            onChange={e => setMessage(e.target.value)}
+            onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className="min-h-[0vh] max-h-[25vh] md:text-base font-normal resize-none border-0 rounded-none p-0 pt-4 shadow-none focus-visible:ring-0 scrollbar-thin"
+            className="min-h-[0vh] max-h-[25vh] md:text-base font-normal resize-none border-0 rounded-none p-0 pt-4 shadow-none focus-visible:ring-0 scrollbar-thin dark:bg-inherit"
           />
         </CardContent>
 
@@ -139,6 +138,7 @@ function ChatComposer({
               <DropdownMenuItem
                 onClick={handleFileUpload}
                 className="cursor-pointer rounded-lg"
+                disabled // TODO: not supported yet
               >
                 <span>
                   <Paperclip />
@@ -171,7 +171,7 @@ function ChatComposer({
         onChange={handleFilesSelected}
       />
     </Label>
-  )
+  );
 }
 
-export default ChatComposer
+export default ChatComposer;

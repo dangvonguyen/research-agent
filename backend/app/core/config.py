@@ -1,5 +1,5 @@
 import logging
-from typing import Annotated, Any
+from typing import Annotated, Any, Optional
 
 from pydantic import AnyUrl, BeforeValidator, MongoDsn, PostgresDsn, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -100,7 +100,14 @@ class Settings(BaseSettings):
     def POSTGRES_URI_SAFE(self) -> str:
         return sanitize_db_uri(self.POSTGRES_URI)
 
+    # LLM Provider API Keys
     OPENAI_API_KEY: str
+    ANTHROPIC_API_KEY: Optional[str] = None
+
+    # File upload settings
+    UPLOAD_DIR: str = "uploads"
+    MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024  # 50MB
+
 
 # Load settings from environment
 settings = Settings()  # type: ignore
@@ -113,7 +120,7 @@ logger.debug(
     "MongoDB settings: database=%s, URI=%s",
     settings.MONGODB_DATABASE, settings.MONGODB_URI_SAFE,
 )
-logger.error(
+logger.debug(
     "Postgres settings: database=%s, URI=%s",
     settings.POSTGRES_DB, settings.POSTGRES_URI_SAFE,
 )

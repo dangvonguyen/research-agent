@@ -88,26 +88,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/conversations/messages/{message_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Message
-         * @description Get a specific message by ID.
-         */
-        get: operations["get_message_api_v1_conversations_messages__message_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/conversations/messages/last": {
         parameters: {
             query?: never;
@@ -120,6 +100,26 @@ export interface paths {
          * @description Get the latest message in a conversation.
          */
         get: operations["get_last_message_api_v1_conversations_messages_last_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/messages/{message_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Message
+         * @description Get a specific message by ID.
+         */
+        get: operations["get_message_api_v1_conversations_messages__message_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -349,6 +349,26 @@ export interface paths {
         patch: operations["update_paper_api_v1_papers__paper_id__patch"];
         trace?: never;
     };
+    "/api/v1/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Files
+         * @description Upload files and return attachment metadata.
+         */
+        post: operations["upload_files_api_v1_uploads_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -436,6 +456,11 @@ export interface components {
              */
             created_at: string;
         };
+        /** Body_upload_files_api_v1_uploads_post */
+        Body_upload_files_api_v1_uploads_post: {
+            /** Files */
+            files: string[];
+        };
         /**
          * ChatRequest
          * @description Model for chat request.
@@ -470,6 +495,8 @@ export interface components {
         ConversationCreate: {
             /** Name */
             name: string;
+            /** Id */
+            id?: string | null;
         };
         /**
          * ConversationDB
@@ -880,6 +907,15 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** Response[list[AttachmentCreate]] */
+        Response_list_AttachmentCreate__: {
+            /** Data */
+            data: components["schemas"]["AttachmentCreate"][];
+            /** Metadata */
+            metadata: {
+                [key: string]: unknown;
+            };
+        };
         /** Response[list[ConversationDB]] */
         Response_list_ConversationDB__: {
             /** Data */
@@ -1069,8 +1105,8 @@ export interface operations {
     };
     create_message_api_v1_conversations_messages_post: {
         parameters: {
-            query?: {
-                conversation_id?: string | null;
+            query: {
+                conversation_id: string;
             };
             header?: never;
             path?: never;
@@ -1102,13 +1138,13 @@ export interface operations {
             };
         };
     };
-    get_message_api_v1_conversations_messages__message_id__get: {
+    get_last_message_api_v1_conversations_messages_last_get: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                message_id: string;
+            query: {
+                conversation_id: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -1133,13 +1169,13 @@ export interface operations {
             };
         };
     };
-    get_last_message_api_v1_conversations_messages_last_get: {
+    get_message_api_v1_conversations_messages__message_id__get: {
         parameters: {
-            query: {
-                conversation_id: string;
-            };
+            query?: never;
             header?: never;
-            path?: never;
+            path: {
+                message_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -1800,6 +1836,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UpdateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_files_api_v1_uploads_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_files_api_v1_uploads_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Response_list_AttachmentCreate__"];
                 };
             };
             /** @description Validation Error */

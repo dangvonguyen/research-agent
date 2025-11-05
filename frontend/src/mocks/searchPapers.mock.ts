@@ -1,7 +1,7 @@
-import type { Paper } from "@/api"
+import type { Paper } from "@/api";
 
 export const mockSearchPapers = async (): Promise<Paper[]> => {
-  console.log("Using MOCK search API")
+  console.log("Using MOCK search API");
 
   return Promise.resolve([
     {
@@ -72,5 +72,5 @@ export const mockSearchPapers = async (): Promise<Paper[]> => {
       created_at: "2022-07-01T10:00:00.000Z",
       updated_at: "2022-07-02T10:00:00.000Z",
     },
-  ])
-}
+  ]);
+};

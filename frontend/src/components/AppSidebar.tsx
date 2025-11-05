@@ -1,199 +1,148 @@
-import { useState } from "react"
-
-import { Edit3, MoreHorizontal, Search, SquarePen, Trash2 } from "lucide-react"
-
-import { apiClient } from "@/api"
-
+import { MessagesSquare, SquarePen } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { apiClient } from "@/api";
 import {
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  Input,
-  Label,
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "./ui"
+  SidebarTrigger,
+} from "@/components/ui";
+import { cn } from "@/lib/utils";
+import type { Conversation } from "@/types";
+import {
+  RecentChatsSection,
+  SearchChatsDialog,
+  SidebarSettings,
+  SidebarButton,
+  SidebarLogo,
+  useSidebarActions,
+  useSidebarInteractions,
+} from "./sidebar";
 
-import type { Conversation } from "@/types"
+function AppSidebar() {
+  const { chatId } = useParams();
 
-interface AppSidebarProps {
-  conversations: Conversation[]
-  setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>
-  activeConversation: string | null
-  setActiveConversation: React.Dispatch<React.SetStateAction<string | null>>
-}
+  const [chatData, setChatData] = useState<Conversation[]>([]);
 
-function AppSidebar({
-  conversations,
-  setConversations,
-  activeConversation,
-  setActiveConversation,
-}: AppSidebarProps) {
-  const [searchQuery, setSearchQuery] = useState("")
+  const {
+    searchDialogOpen,
+    setSearchDialogOpen,
+    handleNewChat,
+    handleSelectChat,
+    handleDeleteChat: deleteChat,
+    handleRenameChat: renameChat,
+    handleSearchChats,
+  } = useSidebarActions();
 
-  const filteredConversations = conversations.filter(conversation =>
-    conversation.name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const { open, showLogo, showTrigger, headerHandlers, handleEmptySpaceClick } =
+    useSidebarInteractions();
 
-  const handleDelete = async (conversation: Conversation) => {
-    try {
-      await apiClient.conversations.delete(conversation.id)
-
-      setConversations(prev => prev.filter(conv => conv.id !== conversation.id))
-
-      if (activeConversation === conversation.id) {
-        setActiveConversation(null)
+  useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        const chats = await apiClient.conversations
+          .list()
+          .then((res) => res.data);
+        setChatData(chats);
+      } catch (error) {
+        console.error("Failed to fetch conversations:", error);
       }
-    } catch (error) {
-      console.error("Failed to delete conversation:", error)
-    }
-  }
+    };
 
-  const onSelectConversation = (conversationId: string) => {
-    setActiveConversation(conversationId)
-  }
+    fetchConversations();
+  }, []);
 
-  const handleRename = async (conversation: Conversation) => {
-    const newTitle = prompt("Enter new conversation title:", conversation.name)
+  const handleDeleteChat = useCallback(
+    async (conversation: Conversation) => {
+      const deleted = await deleteChat(conversation.id, chatId);
 
-    if (!newTitle || newTitle.trim() === "" || newTitle === conversation.name) {
-      return
-    }
+      if (deleted) {
+        setChatData((prev) =>
+          prev.filter((chat) => chat.id !== conversation.id),
+        );
+      }
+    },
+    [chatId, deleteChat],
+  );
 
-    try {
-      await apiClient.conversations.update(conversation.id, {
-        name: newTitle.trim(),
-      })
+  const handleRenameChat = useCallback(
+    async (conversation: Conversation) => {
+      const newName = await renameChat(conversation);
 
-      setConversations(prev =>
-        prev.map(conv =>
-          conv.id === conversation.id
-            ? { ...conv, name: newTitle.trim() }
-            : conv
-        )
-      )
-    } catch (error) {
-      console.error("Failed to rename conversation:", error)
-    }
-  }
+      if (newName) {
+        setChatData((prev) =>
+          prev.map((chat) =>
+            chat.id === conversation.id ? { ...chat, name: newName } : chat,
+          ),
+        );
+      }
+    },
+    [renameChat],
+  );
 
   return (
-    <Sidebar collapsible="offcanvas" className="flex flex-col h-full">
-      {/* Fixed header */}
-      <SidebarHeader className="flex-shrink-0">
-        <div className="w-full">
-          <Button
-            onClick={() => setActiveConversation(null)}
-            size="lg"
-            className="w-full justify-start cursor-pointer"
-          >
-            <SquarePen />
-            New chat
-          </Button>
-        </div>
-        <div className="relative w-full">
-          <Label
-            htmlFor="chat-search"
-            className="absolute left-3 top-1/4 cursor-text text-muted-foreground"
-          >
-            <Search className="h-5 w-5" />
-          </Label>
-          <Input
-            id="chat-search"
-            placeholder="Search chats"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="h-10 pl-10 rounded-md focus-visible:ring-0"
-          />
-        </div>
-      </SidebarHeader>
-
-      {/* Chat list */}
-      <SidebarContent className="scrollbar-thin">
-        <SidebarGroup>
-          <SidebarGroupLabel>Recent chats</SidebarGroupLabel>
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <SidebarGroup className="p-0">
           <SidebarGroupContent>
-            <SidebarMenu>
-              {filteredConversations.length === 0 ? (
-                <div className="text-sm text-muted-foreground text-center py-2">
-                  {searchQuery
-                    ? "No matching conversations"
-                    : "No conversations yet"}
-                </div>
-              ) : (
-                filteredConversations.map(conversation => (
-                  <SidebarMenuItem
-                    key={conversation.id}
-                    className={`group/actions rounded-md ${
-                      activeConversation === conversation.id
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : "hover:bg-sidebar-accent/50"
-                    }`}
-                  >
-                    <SidebarMenuButton
-                      onClick={() => onSelectConversation(conversation.id)}
-                      className="cursor-pointer font-medium text-sm truncate"
-                    >
-                      {conversation.name}
-                    </SidebarMenuButton>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <SidebarMenuAction
-                          className="
-                            cursor-pointer rounded-3xl
-                            focus-visible:ring-1 transition-opacity
-                            opacity-0 group-hover/actions:opacity-100
-                            pointer-events-none group-hover/actions:pointer-events-auto
-                            data-[state=open]:opacity-100
-                            data-[state=open]:pointer-events-auto
-                          "
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </SidebarMenuAction>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent side="bottom" align="end">
-                        <DropdownMenuItem
-                          onClick={e => {
-                            e.stopPropagation()
-                            handleRename(conversation)
-                          }}
-                        >
-                          <Edit3 className="h-4 w-4 mr-1" />
-                          Rename
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={e => {
-                            e.stopPropagation()
-                            if (confirm("Delete chat?")) {
-                              handleDelete(conversation)
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </SidebarMenuItem>
-                ))
+            <SidebarMenu
+              className={cn(
+                "flex flex-row items-center gap-2 transition-all duration-300",
+                open && "justify-between",
+              )}
+              {...headerHandlers}
+            >
+              {showLogo && <SidebarLogo size={20} />}
+              {showTrigger && (
+                <SidebarTrigger className="size-8 cursor-e-resize hover:bg-sidebar-accent transition-transform" />
               )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+      </SidebarHeader>
+
+      <SidebarContent
+        className={cn("gap-0", !open && "cursor-e-resize")}
+        onClick={handleEmptySpaceClick}
+      >
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarButton
+              icon={<SquarePen />}
+              label="New chat"
+              onClick={handleNewChat}
+            />
+            <SidebarButton
+              icon={<MessagesSquare />}
+              label="Search chats"
+              onClick={handleSearchChats}
+            />
+          </SidebarMenu>
+        </SidebarGroup>
+        <RecentChatsSection
+          chatData={chatData}
+          activeChatId={chatId}
+          onSelectChat={handleSelectChat}
+          onDeleteChat={handleDeleteChat}
+          onRenameChat={handleRenameChat}
+        />
       </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarSettings />
+      </SidebarFooter>
+
+      <SearchChatsDialog
+        open={searchDialogOpen}
+        onOpenChange={setSearchDialogOpen}
+      />
     </Sidebar>
-  )
+  );
 }
 
-export default AppSidebar
+export default AppSidebar;

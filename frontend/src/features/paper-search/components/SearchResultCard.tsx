@@ -1,19 +1,19 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui"
-
-import type { Paper } from "@/api"
+import type { Paper } from "@/api";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 
 interface SearchResultCardProps {
-  paper: Paper
-  onClick?: () => void
+  paper: Paper;
+  onClick?: () => void;
 }
 
 export const SearchResultCard = ({ paper, onClick }: SearchResultCardProps) => {
-  const { title, authors, sections } = paper
+  const { title, authors, sections } = paper;
 
-  const abstract = sections?.abstract?.content
+  const abstract = sections?.abstract?.content;
 
   return (
     <button
+      type="button"
       onClick={onClick}
       className="cursor-pointer hover:rounded-xl hover:shadow-md hover:-translate-y-0.5 transition-transform"
     >
@@ -31,5 +31,5 @@ export const SearchResultCard = ({ paper, onClick }: SearchResultCardProps) => {
         </CardContent>
       </Card>
     </button>
-  )
-}
+  );
+};

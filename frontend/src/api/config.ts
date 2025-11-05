@@ -17,25 +17,26 @@ export const apiConfig = {
     delay: 1000,
     backoffFactor: 2,
   },
-} as const
+} as const;
 
 // Environment-specific configurations
 export const getApiConfig = () => {
-  const env = import.meta.env.MODE || "development"
+  const env = import.meta.env.MODE || "development";
 
   switch (env) {
     case "production":
       return {
         ...apiConfig,
         baseUrl: "",
-      }
+      };
     case "staging":
       return {
         ...apiConfig,
         baseUrl:
-          import.meta.env.VITE_API_BASE_URL || "https://staging-api.example.com",
-      }
+          import.meta.env.VITE_API_BASE_URL ||
+          "https://staging-api.example.com",
+      };
     default:
-      return apiConfig
+      return apiConfig;
   }
-}
+};
