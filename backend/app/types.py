@@ -91,8 +91,7 @@ class CrawlerConfig(BaseDocument, CrawlerConfigBase):
 class CrawlerJobBase(BaseModel):
     """Base model for crawler jobs."""
 
-    config_name: str
-    query: str | None = None
+    config_name: str = Field(default="default_acl_anthology")
     urls: list[HttpUrl] | None = None
     max_papers: int | None = Field(default=None, ge=0)
 
@@ -106,7 +105,6 @@ class CrawlerJobCreate(BaseCreate, CrawlerJobBase):
 class CrawlerJobUpdate(BaseUpdate):
     """Model for updating an existing crawler job."""
 
-    query: str | None = None
     urls: list[HttpUrl] | None = None
     max_papers: int | None = Field(default=None, ge=0)
 
