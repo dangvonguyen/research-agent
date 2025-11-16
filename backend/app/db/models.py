@@ -126,6 +126,14 @@ class Paper(Base):
 
     file_path: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Optional reference to the crawler job that produced this paper
+    job_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("crawler_job.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     parsed: Mapped[bool] = mapped_column(Boolean, default=False)
 
     created_at: Mapped[datetime] = mapped_column(
