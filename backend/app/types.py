@@ -172,6 +172,47 @@ class Paper(BaseDocument, PaperBase):
     pass
 
 
+class PaperContentDB(BaseModel):
+    """ORM-backed model for paper content stored in Postgres."""
+
+    id: UUID
+    paper_id: UUID
+    section_name: str
+    section_index: int | None = None
+    chunk_index: int | None = None
+    content: str
+    token_count: int | None = None
+    embedding_vector: list[float] | None = None
+    extra_metadata: dict | None = None
+    created_at: datetime
+
+    model_config = {
+        "from_attributes": True,
+    }
+
+
+class PaperDB(BaseModel):
+    """ORM-backed model for paper stored in Postgres."""
+
+    id: UUID
+    title: str
+    authors: list[str] | None = None
+    year: int | None = None
+    venue: str | None = None
+    abstract: str | None = None
+    source_type: str
+    source_url: str | None = None
+    file_path: str | None = None
+    job_id: UUID | None = None
+    parsed: bool
+    created_at: datetime
+    updated_at: datetime
+    contents: list[PaperContentDB] = Field(default_factory=list)
+
+    model_config = {
+        "from_attributes": True,
+    }
+
 class OperationResponse(BaseModel):
     """Base response model for database operations."""
 

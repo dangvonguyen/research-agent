@@ -1,19 +1,9 @@
-from .base_repo import BaseRepository
-from .crawler_repo import CrawlerConfigRepository, CrawlerJobRepository
-from .paper_repo import PaperRepository
+"""
+Legacy MongoDB repository package.
 
-__all__ = [
-    "BaseRepository",
-    "CrawlerConfigRepository",
-    "CrawlerJobRepository",
-    "PaperRepository",
-]
+All application data (papers, crawlers, conversations) now uses Postgres via
+SQLAlchemy models and ``app.db.queries.*`` helpers. This package is kept only
+so that old imports like ``import app.repos`` do not fail.
+"""
 
-
-async def create_indexes() -> None:
-    """
-    Create indexes for the database.
-    """
-    await CrawlerConfigRepository._create_indexes()
-    await CrawlerJobRepository._create_indexes()
-    await PaperRepository._create_indexes()
+__all__: list[str] = []

@@ -1,14 +1,16 @@
 import logging
 from typing import Any
+from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 
-from app.repos import PaperRepository
+from app.api.deps import SessionDep
+from app.db.queries import paper as paper_db
 from app.types import (
     CreateResponse,
     DeleteResponse,
-    Paper,
     PaperCreate,
+    PaperDB,
     PaperUpdate,
     UpdateResponse,
 )
@@ -18,40 +20,54 @@ router = APIRouter()
 
 
 @router.post("", response_model=CreateResponse)
-async def create_paper(paper: PaperCreate) -> Any:
+async def create_paper(session: SessionDep, paper: PaperCreate) -> Any:
     """
-    Create a new paper.
+    Create a new paper stored in Postgres.
     """
     logger.info(
         "Creating new paper '%s' for source '%s'",
-        paper.source_id, paper.source.value,
+        paper.source_id,
+        paper.source.value,
     )
-    result = await PaperRepository.create_one(paper)
+    result = await paper_db.create_paper(session, paper)
     logger.info(
         "Successfully created paper '%s' with ID '%s'",
-        paper.source_id, result.created_ids[0],
+        paper.source_id,
+        result.id,
     )
-    return result
-
-
-@router.get("", response_model=list[Paper])
-async def get_papers(skip: int = 0, limit: int = 100) -> Any:
-    """
-    List all papers.
-    """
-    logger.debug(
-        "Retrieving papers with skip=%d, limit=%d", skip, limit
+    return CreateResponse(
+        success=True,
+        message="Paper successfully created",
+        created_count=1,
+        created_ids=[str(result.id)],
     )
-    return await PaperRepository.get_many(skip=skip, limit=limit)
 
 
-@router.get("/{paper_id}", response_model=Paper)
-async def get_paper(paper_id: str) -> Any:
+@router.get("", response_model=list[PaperDB])
+async def get_papers(
+    session: SessionDep,
+    skip: int = 0,
+    limit: int = 100,
+) -> Any:
     """
-    Get a specific paper.
+    List all papers from Postgres.
+    """
+    logger.debug("Retrieving papers with skip=%d, limit=%d", skip, limit)
+    return await paper_db.get_papers(session, skip=skip, limit=limit)
+
+
+@router.get("/{paper_id}", response_model=PaperDB)
+async def get_paper(session: SessionDep, paper_id: str) -> Any:
+    """
+    Get a specific paper from Postgres.
     """
     logger.debug("Retrieving paper with ID '%s'", paper_id)
-    paper = await PaperRepository.get_by_id(paper_id)
+    try:
+        paper_uuid = UUID(paper_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid paper ID format")
+
+    paper = await paper_db.get_paper_by_id(session, paper_uuid)
     if not paper:
         logger.warning("Paper '%s' not found", paper_id)
         raise HTTPException(status_code=404, detail="Paper not found")
@@ -59,18 +75,49 @@ async def get_paper(paper_id: str) -> Any:
 
 
 @router.patch("/{paper_id}", response_model=UpdateResponse)
-async def update_paper(paper_id: str, paper: PaperUpdate) -> Any:
+async def update_paper(
+    session: SessionDep,
+    paper_id: str,
+    paper: PaperUpdate,
+) -> Any:
     """
-    Update a paper.
+    Update a paper in Postgres.
     """
     logger.debug("Updating paper '%s'", paper_id)
-    return await PaperRepository.update_by_id(paper_id, paper)
+    try:
+        paper_uuid = UUID(paper_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid paper ID format")
+
+    updated = await paper_db.update_paper(session, paper_uuid, paper)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Paper not found")
+
+    return UpdateResponse(
+        success=True,
+        message="Paper successfully updated",
+        matched_count=1,
+        modified_count=1,
+    )
 
 
 @router.delete("/{paper_id}", response_model=DeleteResponse)
-async def delete_paper(paper_id: str) -> Any:
+async def delete_paper(session: SessionDep, paper_id: str) -> Any:
     """
-    Delete a paper.
+    Delete a paper from Postgres.
     """
     logger.debug("Deleting paper '%s'", paper_id)
-    return await PaperRepository.delete_by_id(paper_id)
+    try:
+        paper_uuid = UUID(paper_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid paper ID format")
+
+    deleted = await paper_db.delete_paper(session, paper_uuid)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Paper not found")
+
+    return DeleteResponse(
+        success=True,
+        message="Paper successfully deleted",
+        deleted_count=1,
+    )
