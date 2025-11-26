@@ -20,6 +20,7 @@ from app.types import (
     JobStatus,
     PaperSource,
     UpdateResponse,
+    PaperUpdate,
 )
 from app.utils.bulk_run import bulk_run
 
@@ -367,23 +368,32 @@ async def run_crawler_job(job_id: str) -> None:
                         )
                         return
 
+                    # Save papers immediately with job_id (so they appear in library)
+                    logger.info("Creating %d papers for job '%s' (initial save)", len(papers), job_id)
+                    created_papers = await paper_db.create_papers(session, papers, job_uuid)
+                    logger.info(
+                        "Successfully created %d papers for job '%s'", len(papers), job_id
+                    )
+                    
+                    # Commit so papers appear immediately
+                    await session.commit()
+
                     # Download PDFs
                     logger.info("Downloading %d PDFs for job '%s'", len(papers), job_id)
                     await bulk_run(crawler.download_pdf, papers)
 
-                # Parse papers
+                # Parse papers and update sections
                 parser = PDFParser()
                 logger.info("Parsing %d papers for job '%s'", len(papers), job_id)
                 section_types = ["abstract", "introduction", "conclusion"]
-                for paper in papers:
-                    sections = parser.parse_specific_sections(paper, section_types)
-                    paper.sections = sections
-
-                logger.info("Creating %d papers for job '%s'", len(papers), job_id)
-                await paper_db.create_papers(session, papers, job_uuid)
-                logger.info(
-                    "Successfully created %d papers for job '%s'", len(papers), job_id
-                )
+                for paper_create, paper_db_obj in zip(papers, created_papers):
+                    sections = parser.parse_specific_sections(paper_create, section_types)
+                    if sections:
+                        # Update paper with sections
+                        update_data = PaperUpdate(sections=sections)
+                        await paper_db.update_paper(session, paper_db_obj.id, update_data)
+                
+                await session.commit()
 
                 # Update job status
                 logger.info("Crawler completed successfully for job '%s'", job_id)

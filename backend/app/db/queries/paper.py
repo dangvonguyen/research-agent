@@ -33,6 +33,15 @@ async def create_paper(
     # Set parsed to False initially
     paper_dict["parsed"] = False
     
+    # Set job_id if provided (from crawler job or paper.job_id)
+    if job_id is not None:
+        paper_dict["job_id"] = job_id
+    elif paper.job_id:
+        try:
+            paper_dict["job_id"] = UUID(paper.job_id)
+        except (ValueError, TypeError):
+            pass
+    
     # Create the paper
     paper_db = Paper(**paper_dict)
     session.add(paper_db)
@@ -146,6 +155,51 @@ async def update_paper(
     
     for key, value in update_dict.items():
         setattr(paper, key, value)
+
+    # Update sections if provided
+    if update_data.sections:
+        # Delete existing contents
+        existing_contents = await get_paper_contents_by_paper_id(session, paper_id)
+        for content in existing_contents:
+            await session.delete(content)
+        await session.flush()
+
+        # Create new PaperContent entries from sections
+        content_objects = []
+        section_index = 0
+        for section_name, section_data in update_data.sections.items():
+            if isinstance(section_data, PaperSection):
+                content_objects.append(
+                    PaperContent(
+                        paper_id=paper_id,
+                        section_name=section_data.title or section_name,
+                        section_index=section_index,
+                        chunk_index=0,
+                        content=section_data.content,
+                        token_count=None,
+                        embedding_vector=None,
+                        extra_metadata={"level": section_data.level} if section_data.level else None,
+                    )
+                )
+                section_index += 1
+            elif isinstance(section_data, dict):
+                content_objects.append(
+                    PaperContent(
+                        paper_id=paper_id,
+                        section_name=section_data.get("title", section_name),
+                        section_index=section_index,
+                        chunk_index=0,
+                        content=section_data.get("content", ""),
+                        token_count=None,
+                        embedding_vector=None,
+                        extra_metadata={"level": section_data.get("level", 1)},
+                    )
+                )
+                section_index += 1
+        
+        if content_objects:
+            session.add_all(content_objects)
+            paper.parsed = True  # Mark as parsed when sections are added
 
     await session.commit()
     await session.refresh(paper, ["contents"])
