@@ -118,6 +118,44 @@ class CrawlerJob(BaseDocument, CrawlerJobBase):
     status: JobStatus = JobStatus.PENDING
 
 
+class CrawlerConfigResponse(BaseModel):
+    """Response model for crawler configuration from SQLAlchemy."""
+
+    id: UUID
+    name: str
+    source: PaperSource
+    rate_limit: int
+    max_delay: int
+    max_attempts: int
+    max_concurrent: int
+    output_dir: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {
+        "from_attributes": True,
+    }
+
+
+class CrawlerJobResponse(BaseModel):
+    """Response model for crawler job from SQLAlchemy."""
+
+    id: UUID
+    config_name: str
+    urls: list[str] | None = None
+    max_papers: int | None = None
+    status: JobStatus
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    error_message: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {
+        "from_attributes": True,
+    }
+
+
 class PaperSection(BaseModel):
     """
     Model for representing a section of a research paper.

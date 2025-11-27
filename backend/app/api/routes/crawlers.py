@@ -12,8 +12,10 @@ from app.tools.crawlers import ACLAnthologyCrawler
 from app.tools.parsers import PDFParser
 from app.types import (
     CrawlerConfigCreate,
+    CrawlerConfigResponse,
     CrawlerConfigUpdate,
     CrawlerJobCreate,
+    CrawlerJobResponse,
     CrawlerJobUpdate,
     CreateResponse,
     DeleteResponse,
@@ -26,15 +28,6 @@ from app.utils.bulk_run import bulk_run
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-
-def model_to_dict(model: Any) -> dict[str, Any]:
-    """Convert SQLAlchemy model to dict, excluding SQLAlchemy internals."""
-    return {
-        key: value
-        for key, value in model.__dict__.items()
-        if not key.startswith("_")
-    }
 
 
 @router.post("/configs", response_model=CreateResponse)
@@ -72,10 +65,10 @@ async def create_crawler_config(
     )
 
 
-@router.get("/configs")
+@router.get("/configs", response_model=list[CrawlerConfigResponse])
 async def get_crawler_configs(
     session: SessionDep, skip: int = 0, limit: int = 100
-) -> Any:
+) -> list[CrawlerConfigResponse]:
     """
     List all crawler configurations.
     """
@@ -83,12 +76,11 @@ async def get_crawler_configs(
         "Retrieving crawler configurations with skip=%d, limit=%d", skip, limit
     )
     configs = await crawler_db.get_crawler_configs(session, skip=skip, limit=limit)
-    # Convert to dict format for response
-    return [model_to_dict(config) for config in configs]
+    return [CrawlerConfigResponse.model_validate(config) for config in configs]
 
 
-@router.get("/configs/{config_id}")
-async def get_crawler_config(session: SessionDep, config_id: str) -> Any:
+@router.get("/configs/{config_id}", response_model=CrawlerConfigResponse)
+async def get_crawler_config(session: SessionDep, config_id: str) -> CrawlerConfigResponse:
     """
     Get a specific crawler configuration.
     """
@@ -102,11 +94,11 @@ async def get_crawler_config(session: SessionDep, config_id: str) -> Any:
     if not config:
         logger.warning("Crawler configuration '%s' not found", config_id)
         raise HTTPException(status_code=404, detail="Crawler configuration not found")
-    return model_to_dict(config)
+    return CrawlerConfigResponse.model_validate(config)
 
 
-@router.get("/configs/name/{name}")
-async def get_crawler_config_by_name(session: SessionDep, name: str) -> Any:
+@router.get("/configs/name/{name}", response_model=CrawlerConfigResponse)
+async def get_crawler_config_by_name(session: SessionDep, name: str) -> CrawlerConfigResponse:
     """
     Get a specific crawler configuration by name.
     """
@@ -115,7 +107,7 @@ async def get_crawler_config_by_name(session: SessionDep, name: str) -> Any:
     if not config:
         logger.warning("Crawler configuration with name '%s' not found", name)
         raise HTTPException(status_code=404, detail="Crawler configuration not found")
-    return model_to_dict(config)
+    return CrawlerConfigResponse.model_validate(config)
 
 
 @router.patch("/configs/{config_id}", response_model=UpdateResponse)
@@ -205,23 +197,23 @@ async def create_crawler_job(
     )
 
 
-@router.get("/jobs")
+@router.get("/jobs", response_model=list[CrawlerJobResponse])
 async def get_crawler_jobs(
     session: SessionDep,
     skip: int = 0,
     limit: int = 100,
     status: JobStatus | None = None,
-) -> Any:
+) -> list[CrawlerJobResponse]:
     logger.debug(
         "Retrieving crawler jobs with skip=%d, limit=%d, status=%s",
         skip, limit, status.value if status else "None",
     )
     jobs = await crawler_db.get_crawler_jobs(session, skip=skip, limit=limit, status=status)
-    return [model_to_dict(job) for job in jobs]
+    return [CrawlerJobResponse.model_validate(job) for job in jobs]
 
 
-@router.get("/jobs/{job_id}")
-async def get_crawler_job(session: SessionDep, job_id: str) -> Any:
+@router.get("/jobs/{job_id}", response_model=CrawlerJobResponse)
+async def get_crawler_job(session: SessionDep, job_id: str) -> CrawlerJobResponse:
     """
     Get a crawler job.
     """
@@ -235,7 +227,7 @@ async def get_crawler_job(session: SessionDep, job_id: str) -> Any:
     if not job:
         logger.warning("Crawler job '%s' not found", job_id)
         raise HTTPException(status_code=404, detail="Crawler job not found")
-    return model_to_dict(job)
+    return CrawlerJobResponse.model_validate(job)
 
 
 @router.patch("/jobs/{job_id}", response_model=UpdateResponse)
