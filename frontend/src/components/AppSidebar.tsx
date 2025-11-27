@@ -1,6 +1,6 @@
-import { MessagesSquare, SquarePen } from "lucide-react";
+import { LayoutDashboard, MessagesSquare, SquarePen } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { apiClient } from "@/api";
 import {
   Sidebar,
@@ -10,6 +10,8 @@ import {
   SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -26,6 +28,8 @@ import {
 
 function AppSidebar() {
   const { chatId } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [chatData, setChatData] = useState<Conversation[]>([]);
 
@@ -110,27 +114,62 @@ function AppSidebar() {
         className={cn("gap-0", !open && "cursor-e-resize")}
         onClick={handleEmptySpaceClick}
       >
+        {/* Navigation Section */}
         <SidebarGroup>
           <SidebarMenu>
-            <SidebarButton
-              icon={<SquarePen />}
-              label="New chat"
-              onClick={handleNewChat}
-            />
-            <SidebarButton
-              icon={<MessagesSquare />}
-              label="Search chats"
-              onClick={handleSearchChats}
-            />
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => navigate("/dashboard")}
+                isActive={location.pathname.startsWith("/dashboard")}
+                tooltip="Dashboard"
+                className="group/button cursor-pointer"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                <span className="text-sm">Dashboard</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => navigate("/")}
+                isActive={location.pathname === "/" || location.pathname.startsWith("/chat")}
+                tooltip="Chatbot"
+                className="group/button cursor-pointer"
+              >
+                <MessagesSquare className="h-4 w-4" />
+                <span className="text-sm">Chatbot</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
-        <RecentChatsSection
-          chatData={chatData}
-          activeChatId={chatId}
-          onSelectChat={handleSelectChat}
-          onDeleteChat={handleDeleteChat}
-          onRenameChat={handleRenameChat}
-        />
+
+        {/* Chat Actions - Only show in Chatbot view */}
+        {(location.pathname === "/" || location.pathname.startsWith("/chat")) && (
+          <SidebarGroup>
+            <SidebarMenu>
+              <SidebarButton
+                icon={<SquarePen />}
+                label="New chat"
+                onClick={handleNewChat}
+              />
+              <SidebarButton
+                icon={<MessagesSquare />}
+                label="Search chats"
+                onClick={handleSearchChats}
+              />
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
+
+        {/* Recent Chats - Only show in Chatbot view */}
+        {(location.pathname === "/" || location.pathname.startsWith("/chat")) && (
+          <RecentChatsSection
+            chatData={chatData}
+            activeChatId={chatId}
+            onSelectChat={handleSelectChat}
+            onDeleteChat={handleDeleteChat}
+            onRenameChat={handleRenameChat}
+          />
+        )}
       </SidebarContent>
 
       <SidebarFooter>
