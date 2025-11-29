@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { apiClient, type Paper } from "@/api";
+import { apiClient, type Paper, type JobStatus } from "@/api";
 import {
   SearchBar,
   AddPapersSection,
@@ -12,70 +12,111 @@ export function DashboardPage() {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  // Track job IDs for newly created jobs (only in current session)
+  const [newJobIds, setNewJobIds] = useState<Set<string>>(new Set());
+  const [jobStatuses, setJobStatuses] = useState<Record<string, JobStatus>>({});
   const addPapersRef = useRef<AddPapersSectionRef>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchPapers = async () => {
       try {
         const fetchedPapers = await apiClient.papers.list();
-        setPapers(fetchedPapers);
+        
+        if (isMounted) {
+          // Ensure we have an array
+          const papersArray = Array.isArray(fetchedPapers) ? fetchedPapers : [];
+          setPapers(papersArray);
+          setLoading(false);
+        }
       } catch (error) {
         console.error("Failed to fetch papers:", error);
-      } finally {
-        setLoading(false);
+        if (isMounted) {
+          setPapers([]);
+          setLoading(false);
+        }
       }
     };
 
     fetchPapers();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const handlePaperAdded = async () => {
-    try {
-      const fetchedPapers = await apiClient.papers.list();
-      setPapers(fetchedPapers);
-    } catch (error) {
-      console.error("Failed to refresh papers:", error);
-    }
+  const handleJobCreated = (jobId: string) => {
+    // Track new job ID - polling will start automatically
+    setNewJobIds((prev) => new Set(prev).add(jobId));
   };
 
-  // Poll for new papers if there are papers with job_id that are still processing
+  // Poll for job statuses and new papers for new jobs only
   useEffect(() => {
-    const papersWithActiveJobs = papers.filter(
-      (paper) => paper.job_id && paper.job_id.trim() !== ""
-    );
+    if (newJobIds.size === 0) {
+      setJobStatuses({});
+      return;
+    }
 
-    if (papersWithActiveJobs.length === 0) return;
-
-    const pollingInterval = setInterval(async () => {
+    const fetchJobStatusesAndPapers = async () => {
       try {
-        const fetchedPapers = await apiClient.papers.list();
-        // Check if we have new papers or updated papers
-        const hasNewPapers = fetchedPapers.length !== papers.length;
-        const hasUpdatedPapers = fetchedPapers.some((newPaper) => {
-          const oldPaper = papers.find((p) => p._id === newPaper._id);
-          return oldPaper && oldPaper.job_id && newPaper.job_id !== oldPaper.job_id;
+        const jobIdsArray = Array.from(newJobIds);
+        
+        // Fetch job statuses
+        const jobStatusPromises = jobIdsArray.map(async (jobId) => {
+          try {
+            const job = await apiClient.crawlerJobs.getById(jobId);
+            return { jobId, status: job.status };
+          } catch (error) {
+            console.error(`Failed to fetch job status for ${jobId}:`, error);
+            return null;
+          }
         });
 
-        if (hasNewPapers || hasUpdatedPapers) {
-          setPapers(fetchedPapers);
-        }
+        const results = await Promise.all(jobStatusPromises);
+        const newJobStatuses: Record<string, JobStatus> = {};
+        const stillActiveJobIds = new Set<string>();
 
-        // Stop polling if no papers with job_id exist anymore
-        const activeJobs = fetchedPapers.filter(
-          (paper) => paper.job_id && paper.job_id.trim() !== ""
-        );
-        if (activeJobs.length === 0) {
-          clearInterval(pollingInterval);
+        results.forEach((result) => {
+          if (result) {
+            newJobStatuses[result.jobId] = result.status;
+            // Only keep jobs that are still pending or running
+            if (result.status === "pending" || result.status === "running") {
+              stillActiveJobIds.add(result.jobId);
+            }
+          }
+        });
+
+        setJobStatuses((prev) => ({ ...prev, ...newJobStatuses }));
+        
+        // Fetch papers to check for new ones with the job_id
+        try {
+          const fetchedPapers = await apiClient.papers.list();
+          // Replace papers list to get latest state (including new papers)
+          setPapers(fetchedPapers);
+        } catch (error) {
+          console.error("Failed to fetch papers:", error);
+        }
+        
+        // Remove completed/failed jobs from tracking
+        if (stillActiveJobIds.size !== newJobIds.size) {
+          setNewJobIds(stillActiveJobIds);
         }
       } catch (error) {
-        console.error("Failed to poll for papers:", error);
+        console.error("Failed to fetch job statuses:", error);
       }
-    }, 3000); // Poll every 3 seconds
+    };
+
+    // Fetch immediately
+    fetchJobStatusesAndPapers();
+
+    // Poll every 3 seconds
+    const pollingInterval = setInterval(fetchJobStatusesAndPapers, 3000);
 
     return () => {
       clearInterval(pollingInterval);
     };
-  }, [papers]);
+  }, [newJobIds]);
 
   const filteredPapers = papers.filter((paper) => {
     if (!searchQuery.trim()) return true;
@@ -110,15 +151,25 @@ export function DashboardPage() {
       <div className="flex-1 overflow-y-auto p-6">
         {papers.length === 0 ? (
           <div className="max-w-4xl mx-auto space-y-8">
-            <AddPapersSection ref={addPapersRef} onPaperAdded={handlePaperAdded} />
+            <AddPapersSection 
+              ref={addPapersRef} 
+              onJobCreated={handleJobCreated}
+            />
             <EmptyState
               onUploadClick={() => addPapersRef.current?.triggerFileUpload()}
             />
           </div>
         ) : (
           <div className="max-w-7xl mx-auto space-y-8">
-            <AddPapersSection ref={addPapersRef} onPaperAdded={handlePaperAdded} />
-            <PaperLibrarySection papers={filteredPapers} />
+            <AddPapersSection 
+              ref={addPapersRef} 
+              onJobCreated={handleJobCreated}
+            />
+            <PaperLibrarySection 
+              papers={filteredPapers} 
+              jobStatuses={jobStatuses}
+              newJobIds={newJobIds}
+            />
           </div>
         )}
       </div>

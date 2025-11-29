@@ -11,7 +11,7 @@ import { apiClient } from "@/api";
 import { toast } from "sonner";
 
 interface AddPapersSectionProps {
-  onPaperAdded: () => void;
+  onJobCreated?: (jobId: string) => void;
 }
 
 export interface AddPapersSectionRef {
@@ -21,7 +21,7 @@ export interface AddPapersSectionRef {
 export const AddPapersSection = forwardRef<
   AddPapersSectionRef,
   AddPapersSectionProps
->(({ onPaperAdded }, ref) => {
+>(({ onJobCreated }, ref) => {
   const [paperUrl, setPaperUrl] = useState("");
   const [maxPapers, setMaxPapers] = useState<string>("5");
   const [uploading, setUploading] = useState(false);
@@ -47,7 +47,6 @@ export const AddPapersSection = forwardRef<
       // For now, we'll just show a toast since the backend might need specific handling
       toast.info("File upload functionality is being processed...");
       // TODO: Implement actual file upload to papers endpoint
-      onPaperAdded();
     } catch (error) {
       console.error("Failed to upload file:", error);
       toast.error("Failed to upload file. Please try again.");
@@ -99,19 +98,21 @@ export const AddPapersSection = forwardRef<
 
       const maxPapersValue = maxPapers.trim() === "" ? 5 : parseInt(maxPapers, 10);
       
-      await apiClient.crawlerJobs.create({
+      const response = await apiClient.crawlerJobs.create({
         config_name: matchedConfig.name,
         query: null,
         urls: urls,
         max_papers: maxPapersValue > 0 ? maxPapersValue : null,
       });
       
+      // Notify parent about the new job ID
+      if (response.created_ids && response.created_ids.length > 0 && onJobCreated) {
+        onJobCreated(response.created_ids[0]);
+      }
+      
       toast.success("Paper import started. Papers will appear in your library as they are processed.");
       setPaperUrl("");
       setMaxPapers("5");
-      
-      // Immediately refresh library to show papers as they appear
-      onPaperAdded();
     } catch (error) {
       console.error("Failed to import paper:", error);
       toast.error("Failed to import paper. Please try again.");

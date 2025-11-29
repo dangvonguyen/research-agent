@@ -4,17 +4,19 @@ import {
   List,
 } from "lucide-react";
 import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Card, CardContent } from "@/components/ui";
-import type { Paper } from "@/api";
+import type { Paper, JobStatus } from "@/api";
 import { PaperCard } from "./PaperCard";
 
 interface PaperLibrarySectionProps {
   papers: Paper[];
+  jobStatuses?: Record<string, JobStatus>;
+  newJobIds?: Set<string>;
 }
 
 type ViewMode = "grid" | "list";
 type SortOption = "newest" | "a-z";
 
-export function PaperLibrarySection({ papers }: PaperLibrarySectionProps) {
+export function PaperLibrarySection({ papers, jobStatuses = {}, newJobIds = new Set() }: PaperLibrarySectionProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [sortOption, setSortOption] = useState<SortOption>("newest");
 
@@ -88,9 +90,20 @@ export function PaperLibrarySection({ papers }: PaperLibrarySectionProps) {
               : "space-y-3"
           }
         >
-          {sortedPapers.map((paper) => (
-            <PaperCard key={paper._id} paper={paper} />
-          ))}
+          {sortedPapers.map((paper) => {
+            // Only show job status for papers with job_id that matches new jobs
+            const jobId = paper.job_id;
+            const shouldShowStatus = jobId && newJobIds.has(jobId);
+            const jobStatus = shouldShowStatus && jobId ? jobStatuses[jobId] : undefined;
+            
+            return (
+              <PaperCard 
+                key={paper._id} 
+                paper={paper} 
+                jobStatus={jobStatus}
+              />
+            );
+          })}
         </div>
         )}
         </div>

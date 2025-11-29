@@ -1,5 +1,5 @@
 import { LayoutDashboard, MessagesSquare, SquarePen } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { apiClient } from "@/api";
 import {
@@ -47,18 +47,33 @@ function AppSidebar() {
     useSidebarInteractions();
 
   useEffect(() => {
+    let isMounted = true;
+    let isFetching = false;
+
     const fetchConversations = async () => {
+      // Prevent duplicate concurrent calls
+      if (isFetching) return;
+      isFetching = true;
+
       try {
         const chats = await apiClient.conversations
           .list()
           .then((res) => res.data);
-        setChatData(chats);
+        if (isMounted) {
+          setChatData(chats);
+        }
       } catch (error) {
         console.error("Failed to fetch conversations:", error);
+      } finally {
+        isFetching = false;
       }
     };
 
     fetchConversations();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleDeleteChat = useCallback(
