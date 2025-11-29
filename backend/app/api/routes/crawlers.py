@@ -22,7 +22,6 @@ from app.types import (
     JobStatus,
     PaperSource,
     UpdateResponse,
-    PaperUpdate,
 )
 from app.utils import bulk_run
 
@@ -374,17 +373,17 @@ async def run_crawler_job(job_id: str) -> None:
                     logger.info("Downloading %d PDFs for job '%s'", len(papers), job_id)
                     await bulk_run(crawler.download_pdf, papers)
 
-                # Parse papers and update sections
+                # Parse papers and persist sections using ORM models
                 parser = PDFParser()
-                logger.info("Parsing %d papers for job '%s'", len(papers), job_id)
+                logger.info("Parsing %d papers for job '%s'", len(created_papers), job_id)
                 section_types = ["abstract", "introduction", "conclusion"]
-                for paper_create, paper_db_obj in zip(papers, created_papers):
-                    sections = parser.parse_specific_sections(paper_create, section_types)
-                    if sections:
-                        # Update paper with sections
-                        update_data = PaperUpdate(sections=sections)
-                        await paper_db.update_paper(session, paper_db_obj.id, update_data)
-                
+                for paper_db_obj in created_papers:
+                    contents = parser.parse_specific_sections(paper_db_obj, section_types)
+                    if contents:
+                        # Persist PaperContent rows and mark paper as parsed
+                        session.add_all(contents)
+                        paper_db_obj.parsed = True
+
                 await session.commit()
 
                 # Update job status

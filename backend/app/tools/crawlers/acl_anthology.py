@@ -4,7 +4,7 @@ from typing import Any, cast
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
 
-from app.types import PaperCreate, PaperSource
+from app.db.models import Paper
 from app.utils import bulk_run
 
 from .base import BaseCrawler
@@ -27,7 +27,7 @@ class ACLAnthologyCrawler(BaseCrawler):
 
         logger.debug("Initialized ACL Anthology crawler")
 
-    async def extract_paper_metadata(self, paper_id: str) -> PaperCreate | None:
+    async def extract_paper_metadata(self, paper_id: str) -> Paper | None:
         """
         Extract paper metadata from a paper page.
         """
@@ -41,16 +41,19 @@ class ACLAnthologyCrawler(BaseCrawler):
 
         paper = self.parser.parse_paper_page(html_content, paper_id)
         if paper:
-            paper.url = paper_url
-            paper.local_pdf_path = str(self.output_dir / f"{paper_id}.pdf")
+            paper.source_url = f"{paper_url}.pdf"
+            paper.file_path = str(self.output_dir / f"{paper_id}.pdf")
+
+            print("adfdslkf", paper.file_path)
+
             logger.debug(
-                "Successfully extracted metadata for paper '%s'", paper.source_id
+                "Successfully extracted metadata for paper '%s'", paper.title
             )
         else:
             logger.warning("Failed to parse paper page for paper '%s'", paper_id)
         return paper
 
-    async def process_paper_page(self, url: str) -> PaperCreate | None:
+    async def process_paper_page(self, url: str) -> Paper | None:
         """
         Process a single paper: extract metadata and prepare for download.
         """
@@ -60,14 +63,14 @@ class ACLAnthologyCrawler(BaseCrawler):
 
         paper = await self.extract_paper_metadata(paper_id)
         if paper:
-            logger.debug("Successfully processed paper '%s'", paper.source_id)
+            logger.debug("Successfully processed paper '%s'", paper.title)
         else:
             logger.warning("Failed to process paper page with URL %s", url)
         return paper
 
     async def process_conference_page(
         self, url: str, max_papers: int | None = None
-    ) -> list[PaperCreate]:
+    ) -> list[Paper]:
         """
         Process a conference page and extract papers.
         """
@@ -121,7 +124,7 @@ class ACLAnthologyCrawler(BaseCrawler):
 
     async def process_search_page(
         self, url: str, max_papers: int | None = None
-    ) -> list[PaperCreate]:
+    ) -> list[Paper]:
         """
         Process a search query page and extract papers.
         """
@@ -160,7 +163,7 @@ class ACLAnthologyCrawler(BaseCrawler):
 
     async def process_search_query(
         self, query: str, max_papers: int | None = None
-    ) -> list[PaperCreate]:
+    ) -> list[Paper]:
         """
         Process a search query and extract papers.
         """
@@ -259,7 +262,7 @@ class ACLAnthologyCrawler(BaseCrawler):
 
     async def process_url(
         self, url: str, max_papers: int | None = None
-    ) -> list[PaperCreate]:
+    ) -> list[Paper]:
         """
         Process a single URL and return extracted papers.
         """
@@ -281,12 +284,12 @@ class ACLAnthologyCrawler(BaseCrawler):
         query: str | None = None,
         urls: list[str] | None = None,
         max_papers: int | None = None,
-    ) -> list[PaperCreate]:
+    ) -> list[Paper]:
         """
         Crawl a list of ACL Anthology URLs and/or query and extract paper information.
         """
         urls = urls or []
-        papers: list[PaperCreate] = []
+        papers: list[Paper] = []
 
         logger.debug(
             "Starting crawl of %d URLs and query '%s' (max papers: %s)",
@@ -312,7 +315,7 @@ class ACLAnthologyCrawler(BaseCrawler):
         logger.info("Crawling completed, found %d papers", len(papers))
         return papers
 
-    def _should_stop_crawling(self, papers: list[PaperCreate], max_papers: int | None) -> bool:
+    def _should_stop_crawling(self, papers: list[Paper], max_papers: int | None) -> bool:
         """
         Check if we should stop crawling based current page count.
         """
@@ -323,7 +326,7 @@ class ACLAnthologyParser:
     """Parser for ACL Anthology HTML content."""
 
     @staticmethod
-    def parse_paper_page(html_content: str, paper_id: str) -> PaperCreate | None:
+    def parse_paper_page(html_content: str, paper_id: str) -> Paper | None:
         """
         Parse a paper page and extract metadata.
         """
@@ -376,14 +379,27 @@ class ACLAnthologyParser:
             venues = venue.split("|") if venue else []
             logger.debug("Found venues for paper '%s': %s", paper_id, venues)
 
-            paper = PaperCreate(
+            # Build download URL (PDF if available, otherwise paper page)
+            if pdf_url:
+                download_url = (
+                    pdf_url
+                    if pdf_url.startswith("http")
+                    else f"{ACLAnthologyCrawler.BASE_URL}{pdf_url}"
+                )
+            else:
+                download_url = f"{ACLAnthologyCrawler.BASE_URL}/{paper_id}"
+
+            paper = Paper(
                 title=title,
                 authors=authors,
-                source=PaperSource.ACL_ANTHOLOGY,
-                source_id=paper_id,
                 year=year,
-                pdf_url=pdf_url,
-                venues=venues,
+                venue=venues[0] if venues else None,
+                abstract=None,
+                source_type="url",
+                source_url=download_url,
+                file_path=None,
+                job_id=None,
+                parsed=False,
             )
 
             logger.debug("Successfully parsed paper '%s'", paper_id)

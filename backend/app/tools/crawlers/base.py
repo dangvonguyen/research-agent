@@ -8,7 +8,8 @@ from typing import Literal, Self, cast
 import aiofiles
 import aiohttp
 
-from app.types import PaperCreate, PaperSource
+from app.db.models import Paper
+from app.types import PaperSource
 
 logger = logging.getLogger(__name__)
 
@@ -210,8 +211,10 @@ class BaseCrawler(ABC):
             logger.debug("Skipping already visited URL %s", url)
             return None
 
-        # Mark as visited
-        self.visited_urls.add(url)
+        # Mark as visited if downloaded
+        if mode == "bytes":
+            self.visited_urls.add(url)
+        print(self.visited_urls)
 
         # Fetch with retry
         logger.debug("Fetching URL %s", url)
@@ -224,27 +227,32 @@ class BaseCrawler(ABC):
 
         return content
 
-    async def download_pdf(self, paper: PaperCreate) -> None:
+    async def download_pdf(self, paper: Paper) -> None:
         """
         Download a paper's PDF.
         """
-        if not paper.pdf_url or not paper.local_pdf_path:
-            logger.warning("No PDF URL available for paper '%s'", paper.source_id)
+        if not paper.source_url or not paper.file_path:
+            logger.warning("No PDF URL available for paper '%s'", paper.title)
             return
 
         # Get filepath for the PDF
-        filepath = Path(paper.local_pdf_path)
+        filepath = Path(paper.file_path)
+
+        print("paper fiadjkslfjd", paper.file_path)
+        print(filepath)
+        print(1, filepath.exists() )
 
         # Skip if already downloaded
         if filepath.exists():
-            logger.debug("PDF already exists for paper '%s': %s", paper.source_id, filepath)
+            logger.debug("PDF already exists for paper '%s': %s", paper.title, filepath)
             return
 
-        logger.debug("Downloading PDF for paper '%s'", paper.source_id)
-        pdf_content = cast(bytes | None, await self.fetch_url(paper.pdf_url, "bytes"))
+        logger.debug("Downloading PDF for paper '%s'", paper.title)
+        print("source_url", paper.source_url)
+        pdf_content = cast(bytes | None, await self.fetch_url(paper.source_url, "bytes"))
 
         if not pdf_content:
-            logger.warning("Failed to download PDF for paper '%s'", paper.source_id)
+            logger.warning("Failed to download PDF for paper '%s'", paper.title)
             return
 
         try:
@@ -253,10 +261,10 @@ class BaseCrawler(ABC):
 
             logger.info(
                 "Successfully downloaded PDF for paper '%s' to %s",
-                paper.source_id, filepath,
+                paper.title, filepath,
             )
         except Exception as e:
-            logger.error("Error saving PDF for paper '%s': %s", paper.source_id, str(e))
+            logger.error("Error saving PDF for paper '%s': %s", paper.title, str(e))
 
     @abstractmethod
     async def crawl(
@@ -264,7 +272,7 @@ class BaseCrawler(ABC):
         query: str | None = None,
         urls: list[str] | None = None,
         max_papers: int | None = None,
-    ) -> list[PaperCreate]:
+    ) -> list[Paper]:
         """
         Crawl the specified URLs and/or query and extract paper information.
         """
