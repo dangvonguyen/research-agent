@@ -3,7 +3,7 @@ import re
 
 from pypdf import PdfReader
 
-from app.types import PaperCreate, PaperSection
+from app.db.models import Paper, PaperContent
 
 logger = logging.getLogger(__name__)
 
@@ -52,20 +52,20 @@ class PDFParser:
             "references",
         ]
 
-    def parse_paper(self, paper: PaperCreate) -> dict[str, PaperSection]:
+    def parse_paper(self, paper: Paper) -> list[PaperContent]:
         """
         Parse a research paper text and extract sections.
         """
-        if not paper.pdf_url or not paper.local_pdf_path:
-            logger.warning("No PDF file provided for paper '%s'", paper.source_id)
+        if not paper.file_path:
+            logger.warning("No PDF file provided for paper '%s'", paper.title)
             return {}
 
         logger.debug(
             "Parsing PDF paper '%s' with path '%s'",
-            paper.source_id, paper.local_pdf_path,
+            paper.title, paper.file_path,
         )
         try:
-            reader = PdfReader(paper.local_pdf_path)
+            reader = PdfReader(paper.file_path)
             text = ""
             for page in reader.pages:
                 text += page.extract_text() + "\n"
@@ -76,16 +76,34 @@ class PDFParser:
             # Find all potential headings
             headings = self._find_headings(text)
 
-            # Classify headings into section types
+            # Classify headings into section types and build PaperContent objects
             sections = self._classify_sections(headings, text)
 
-            return sections
+            contents: list[PaperContent] = []
+            for idx, (section_type, heading_text, start_pos, level, content) in enumerate(sections):
+                contents.append(
+                    PaperContent(
+                        paper_id=paper.id,
+                        section_name=heading_text,
+                        section_index=idx,
+                        chunk_index=0,
+                        content=content,
+                        token_count=None,
+                        embedding_vector=None,
+                        extra_metadata={
+                            "level": level,
+                            "section_type": section_type,
+                        },
+                    )
+                )
+
+            return contents
 
         except Exception as e:
             logger.error(
-                "Error parsing PDF for paper '%s': %s", paper.source_id, str(e)
+                "Error parsing PDF for paper '%s': %s", paper.title, str(e)
             )
-            return {}
+            return []
 
     def _normalize_text(self, text: str) -> str:
         """
@@ -140,12 +158,15 @@ class PDFParser:
 
     def _classify_sections(
         self, headings: list[tuple[str, int, int]], text: str
-    ) -> dict[str, PaperSection]:
+    ) -> list[tuple[str, str, int, int, str]]:
         """
         Classify headings into section types and extract content.
+
+        Returns:
+            List of tuples (section_type, heading_text, start_pos, level, content)
         """
         logger.debug("Classifying sections from %d headings", len(headings))
-        sections = {}
+        sections: list[tuple[str, str, int, int, str]] = []
 
         for i, (heading_text, start_pos, level) in enumerate(headings):
             # Determine end position (start of next heading or end of text)
@@ -165,8 +186,7 @@ class PDFParser:
             # Classify section type
             section_type = self._classify_section_type(heading_text)
 
-            section = PaperSection(title=heading_text, content=content, level=level)
-            sections[section_type] = section
+            sections.append((section_type, heading_text, start_pos, level, content))
 
         return sections
 
@@ -186,24 +206,28 @@ class PDFParser:
         return re.sub(r"[^\w\s]", "_", heading_lower).lower().replace(" ", "_")
 
     def parse_specific_sections(
-        self, paper: PaperCreate, section_types: list[str]
-    ) -> dict[str, PaperSection]:
+        self, paper: Paper, section_types: list[str]
+    ) -> list[PaperContent]:
         """
         Extract only specific section types.
         """
         logger.debug(
             "Parsing specific sections for paper '%s': %s",
-            paper.source_id, section_types,
+            paper.title, section_types,
         )
 
-        all_sections = self.parse_paper(paper)
-        found_sections = {k: v for k, v in all_sections.items() if k in section_types}
-        missing_sections = [s for s in section_types if s not in found_sections]
+        all_contents = self.parse_paper(paper)
+        filtered = [
+            c
+            for c in all_contents
+            if c.extra_metadata and c.extra_metadata.get("section_type") in section_types
+        ]
+        missing_sections = [s for s in section_types if s not in {c.extra_metadata.get("section_type") for c in filtered if c.extra_metadata}]
 
         if missing_sections:
             logger.warning(
                 "Could not find sections %s for paper '%s'",
-                missing_sections, paper.source_id,
+                missing_sections, paper.title,
             )
 
-        return found_sections
+        return filtered

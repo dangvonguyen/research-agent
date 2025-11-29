@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 
-from app.api.deps import SessionDep, Session
+from app.api.deps import Session, SessionDep
 from app.db.queries import crawler as crawler_db
 from app.db.queries import paper as paper_db
 from app.tools.crawlers import ACLAnthologyCrawler
@@ -22,7 +22,6 @@ from app.types import (
     JobStatus,
     PaperSource,
     UpdateResponse,
-    PaperUpdate,
 )
 from app.utils.bulk_run import bulk_run
 
@@ -50,12 +49,14 @@ async def create_crawler_config(
 
     logger.info(
         "Creating new crawler configuration '%s' for source '%s'",
-        config.name, config.source.value,
+        config.name,
+        config.source.value,
     )
     result = await crawler_db.create_crawler_config(session, config)
     logger.info(
         "Successfully created crawler configuration '%s' (ID: '%s')",
-        config.name, result.id,
+        config.name,
+        result.id,
     )
     return CreateResponse(
         success=True,
@@ -65,7 +66,7 @@ async def create_crawler_config(
     )
 
 
-@router.get("/configs", response_model=list[CrawlerConfigResponse])
+@router.get("/configs")
 async def get_crawler_configs(
     session: SessionDep, skip: int = 0, limit: int = 100
 ) -> list[CrawlerConfigResponse]:
@@ -79,17 +80,19 @@ async def get_crawler_configs(
     return [CrawlerConfigResponse.model_validate(config) for config in configs]
 
 
-@router.get("/configs/{config_id}", response_model=CrawlerConfigResponse)
-async def get_crawler_config(session: SessionDep, config_id: str) -> CrawlerConfigResponse:
+@router.get("/configs/{config_id}")
+async def get_crawler_config(
+    session: SessionDep, config_id: str
+) -> CrawlerConfigResponse:
     """
     Get a specific crawler configuration.
     """
     logger.debug("Retrieving crawler configuration with ID '%s'", config_id)
     try:
         config_uuid = UUID(config_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid config ID format")
-    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid config ID format") from e
+
     config = await crawler_db.get_crawler_config_by_id(session, config_uuid)
     if not config:
         logger.warning("Crawler configuration '%s' not found", config_id)
@@ -97,8 +100,10 @@ async def get_crawler_config(session: SessionDep, config_id: str) -> CrawlerConf
     return CrawlerConfigResponse.model_validate(config)
 
 
-@router.get("/configs/name/{name}", response_model=CrawlerConfigResponse)
-async def get_crawler_config_by_name(session: SessionDep, name: str) -> CrawlerConfigResponse:
+@router.get("/configs/name/{name}")
+async def get_crawler_config_by_name(
+    session: SessionDep, name: str
+) -> CrawlerConfigResponse:
     """
     Get a specific crawler configuration by name.
     """
@@ -120,13 +125,13 @@ async def update_crawler_config(
     logger.debug("Updating crawler configuration '%s'", config_id)
     try:
         config_uuid = UUID(config_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid config ID format")
-    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid config ID format") from e
+
     updated = await crawler_db.update_crawler_config(session, config_uuid, config)
     if not updated:
         raise HTTPException(status_code=404, detail="Crawler configuration not found")
-    
+
     return UpdateResponse(
         success=True,
         message="Crawler configuration successfully updated",
@@ -143,13 +148,13 @@ async def delete_crawler_config(session: SessionDep, config_id: str) -> Any:
     logger.debug("Deleting crawler configuration '%s'", config_id)
     try:
         config_uuid = UUID(config_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid config ID format")
-    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid config ID format") from e
+
     deleted = await crawler_db.delete_crawler_config(session, config_uuid)
     if not deleted:
         raise HTTPException(status_code=404, detail="Crawler configuration not found")
-    
+
     return DeleteResponse(
         success=True,
         message="Crawler configuration successfully deleted",
@@ -166,7 +171,8 @@ async def create_crawler_job(
     """
     logger.info(
         "Creating new crawler job for config '%s' with %d URLs",
-        job.config_name, len(job.urls) if job.urls else 0,
+        job.config_name,
+        len(job.urls) if job.urls else 0,
     )
     if not job.urls:
         logger.warning("Job must have URLs")
@@ -197,7 +203,7 @@ async def create_crawler_job(
     )
 
 
-@router.get("/jobs", response_model=list[CrawlerJobResponse])
+@router.get("/jobs")
 async def get_crawler_jobs(
     session: SessionDep,
     skip: int = 0,
@@ -206,13 +212,17 @@ async def get_crawler_jobs(
 ) -> list[CrawlerJobResponse]:
     logger.debug(
         "Retrieving crawler jobs with skip=%d, limit=%d, status=%s",
-        skip, limit, status.value if status else "None",
+        skip,
+        limit,
+        status.value if status else "None",
     )
-    jobs = await crawler_db.get_crawler_jobs(session, skip=skip, limit=limit, status=status)
+    jobs = await crawler_db.get_crawler_jobs(
+        session, skip=skip, limit=limit, status=status
+    )
     return [CrawlerJobResponse.model_validate(job) for job in jobs]
 
 
-@router.get("/jobs/{job_id}", response_model=CrawlerJobResponse)
+@router.get("/jobs/{job_id}")
 async def get_crawler_job(session: SessionDep, job_id: str) -> CrawlerJobResponse:
     """
     Get a crawler job.
@@ -220,9 +230,9 @@ async def get_crawler_job(session: SessionDep, job_id: str) -> CrawlerJobRespons
     logger.debug("Retrieving crawler job '%s'", job_id)
     try:
         job_uuid = UUID(job_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid job ID format")
-    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from e
+
     job = await crawler_db.get_crawler_job_by_id(session, job_uuid)
     if not job:
         logger.warning("Crawler job '%s' not found", job_id)
@@ -240,13 +250,13 @@ async def update_crawler_job(
     logger.debug("Updating crawler job '%s'", job_id)
     try:
         job_uuid = UUID(job_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid job ID format")
-    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from e
+
     updated = await crawler_db.update_crawler_job(session, job_uuid, job)
     if not updated:
         raise HTTPException(status_code=404, detail="Crawler job not found")
-    
+
     return UpdateResponse(
         success=True,
         message="Crawler job successfully updated",
@@ -263,13 +273,13 @@ async def delete_crawler_job(session: SessionDep, job_id: str) -> Any:
     logger.debug("Deleting crawler job '%s'", job_id)
     try:
         job_uuid = UUID(job_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid job ID format")
-    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from e
+
     deleted = await crawler_db.delete_crawler_job(session, job_uuid)
     if not deleted:
         raise HTTPException(status_code=404, detail="Crawler job not found")
-    
+
     return DeleteResponse(
         success=True,
         message="Crawler job successfully deleted",
@@ -295,13 +305,19 @@ async def run_crawler_job(job_id: str) -> None:
 
             job = await crawler_db.get_crawler_job_by_id(session, job_uuid)
             if not job:
-                logger.error("Job '%s' not found when starting background execution", job_id)
+                logger.error(
+                    "Job '%s' not found when starting background execution", job_id
+                )
                 return
 
             logger.debug(
-                "Fetching configuration for job '%s' (config name: %s)", job_id, job.config_name
+                "Fetching configuration for job '%s' (config name: %s)",
+                job_id,
+                job.config_name,
             )
-            config = await crawler_db.get_crawler_config_by_name(session, job.config_name)
+            config = await crawler_db.get_crawler_config_by_name(
+                session, job.config_name
+            )
             if not config:
                 logger.error(
                     "Configuration '%s' not found for job '%s'", job.config_name, job_id
@@ -317,7 +333,9 @@ async def run_crawler_job(job_id: str) -> None:
 
             logger.info(
                 "Starting job '%s' for config '%s' (source: %s)",
-                job_id, job.config_name, config.source.value
+                job_id,
+                job.config_name,
+                config.source.value,
             )
 
             # Update job status
@@ -345,7 +363,8 @@ async def run_crawler_job(job_id: str) -> None:
                     urls = job.urls if job.urls else None
                     logger.info(
                         "Crawling %d URLs for job '%s'",
-                        len(urls) if urls else 0, job_id,
+                        len(urls) if urls else 0,
+                        job_id,
                     )
                     papers = await crawler.crawl(None, urls, job.max_papers)
 
@@ -361,12 +380,20 @@ async def run_crawler_job(job_id: str) -> None:
                         return
 
                     # Save papers immediately with job_id (so they appear in library)
-                    logger.info("Creating %d papers for job '%s' (initial save)", len(papers), job_id)
-                    created_papers = await paper_db.create_papers(session, papers, job_uuid)
                     logger.info(
-                        "Successfully created %d papers for job '%s'", len(papers), job_id
+                        "Creating %d papers for job '%s' (initial save)",
+                        len(papers),
+                        job_id,
                     )
-                    
+                    created_papers = await paper_db.create_papers(
+                        session, papers, job_uuid
+                    )
+                    logger.info(
+                        "Successfully created %d papers for job '%s'",
+                        len(papers),
+                        job_id,
+                    )
+
                     # Commit so papers appear immediately
                     await session.commit()
 
@@ -374,17 +401,21 @@ async def run_crawler_job(job_id: str) -> None:
                     logger.info("Downloading %d PDFs for job '%s'", len(papers), job_id)
                     await bulk_run(crawler.download_pdf, papers)
 
-                # Parse papers and update sections
+                # Parse papers and persist sections using ORM models
                 parser = PDFParser()
-                logger.info("Parsing %d papers for job '%s'", len(papers), job_id)
+                logger.info(
+                    "Parsing %d papers for job '%s'", len(created_papers), job_id
+                )
                 section_types = ["abstract", "introduction", "conclusion"]
-                for paper_create, paper_db_obj in zip(papers, created_papers):
-                    sections = parser.parse_specific_sections(paper_create, section_types)
-                    if sections:
-                        # Update paper with sections
-                        update_data = PaperUpdate(sections=sections)
-                        await paper_db.update_paper(session, paper_db_obj.id, update_data)
-                
+                for paper_db_obj in created_papers:
+                    contents = parser.parse_specific_sections(
+                        paper_db_obj, section_types
+                    )
+                    if contents:
+                        # Persist PaperContent rows and mark paper as parsed
+                        session.add_all(contents)
+                        paper_db_obj.parsed = True
+
                 await session.commit()
 
                 # Update job status
@@ -399,7 +430,8 @@ async def run_crawler_job(job_id: str) -> None:
             else:
                 logger.error(
                     "Unsupported crawler source '%s' for job '%s'",
-                    config.source.value, job_id,
+                    config.source.value,
+                    job_id,
                 )
                 await crawler_db.update_crawler_job(
                     session,
