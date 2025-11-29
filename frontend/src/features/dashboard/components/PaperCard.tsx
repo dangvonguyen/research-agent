@@ -2,24 +2,22 @@ import { useState, useRef, useEffect } from "react";
 import { FileText, ExternalLink, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { apiClient, type JobStatus } from "@/api";
-import type { Paper } from "@/api";
+import type { Paper, JobStatus } from "@/api";
 
 interface PaperCardProps {
   paper: Paper;
   onClick?: () => void;
+  jobStatus?: JobStatus;
 }
 
-export function PaperCard({ paper, onClick }: PaperCardProps) {
+export function PaperCard({ paper, onClick, jobStatus }: PaperCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [popupPosition, setPopupPosition] = useState<{
     side: "right" | "left";
     vertical: "top" | "bottom";
   }>({ side: "right", vertical: "top" });
-  const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { title, authors, year, venues, source, sections, url, pdf_url, job_id } = paper;
 
   const displayAuthors =
@@ -32,56 +30,6 @@ export function PaperCard({ paper, onClick }: PaperCardProps) {
   const displayVenue = venues && venues.length > 0 ? venues[0] : source;
   const abstract = sections?.abstract?.content;
   const allAuthors = authors && authors.length > 0 ? authors.join(", ") : "Unknown authors";
-
-  // Poll job status if paper has a job_id
-  useEffect(() => {
-    if (!job_id) return;
-
-    const fetchJobStatus = async () => {
-      try {
-        const job = await apiClient.crawlerJobs.getById(job_id);
-        const currentStatus = job.status;
-        setJobStatus(currentStatus);
-
-        // Stop polling if job is completed or failed
-        if (currentStatus === "completed" || currentStatus === "failed") {
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-          }
-          return false; // Indicate we should stop polling
-        }
-        return true; // Continue polling
-      } catch (error) {
-        console.error("Failed to fetch job status:", error);
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
-        }
-        return false; // Stop polling on error
-      }
-    };
-
-    // Fetch immediately
-    fetchJobStatus();
-
-    // Poll every 3 seconds
-    pollingIntervalRef.current = setInterval(async () => {
-      const shouldContinue = await fetchJobStatus();
-      if (!shouldContinue && pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
-    }, 3000);
-
-    // Cleanup on unmount
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
-    };
-  }, [job_id]);
 
   // Calculate popup position based on available space
   useEffect(() => {
