@@ -10,7 +10,7 @@ from app.types import (
     CreateResponse,
     DeleteResponse,
     PaperCreate,
-    PaperDB,
+    PaperResponse,
     PaperUpdate,
     UpdateResponse,
 )
@@ -43,7 +43,7 @@ async def create_paper(session: SessionDep, paper: PaperCreate) -> Any:
     )
 
 
-@router.get("", response_model=list[PaperDB])
+@router.get("", response_model=list[PaperResponse])
 async def get_papers(
     session: SessionDep,
     skip: int = 0,
@@ -53,10 +53,11 @@ async def get_papers(
     List all papers from Postgres.
     """
     logger.debug("Retrieving papers with skip=%d, limit=%d", skip, limit)
-    return await paper_db.get_papers(session, skip=skip, limit=limit)
+    papers_orm = await paper_db.get_papers(session, skip=skip, limit=limit)
+    return [PaperResponse.model_validate(paper) for paper in papers_orm]
 
 
-@router.get("/{paper_id}", response_model=PaperDB)
+@router.get("/{paper_id}", response_model=PaperResponse)
 async def get_paper(session: SessionDep, paper_id: str) -> Any:
     """
     Get a specific paper from Postgres.
@@ -64,14 +65,14 @@ async def get_paper(session: SessionDep, paper_id: str) -> Any:
     logger.debug("Retrieving paper with ID '%s'", paper_id)
     try:
         paper_uuid = UUID(paper_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid paper ID format")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid paper ID format") from e
 
-    paper = await paper_db.get_paper_by_id(session, paper_uuid)
-    if not paper:
+    paper_orm = await paper_db.get_paper_by_id(session, paper_uuid)
+    if not paper_orm:
         logger.warning("Paper '%s' not found", paper_id)
         raise HTTPException(status_code=404, detail="Paper not found")
-    return paper
+    return PaperResponse.model_validate(paper_orm)
 
 
 @router.patch("/{paper_id}", response_model=UpdateResponse)
@@ -86,8 +87,8 @@ async def update_paper(
     logger.debug("Updating paper '%s'", paper_id)
     try:
         paper_uuid = UUID(paper_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid paper ID format")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid paper ID format") from e
 
     updated = await paper_db.update_paper(session, paper_uuid, paper)
     if not updated:
@@ -109,8 +110,8 @@ async def delete_paper(session: SessionDep, paper_id: str) -> Any:
     logger.debug("Deleting paper '%s'", paper_id)
     try:
         paper_uuid = UUID(paper_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid paper ID format")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid paper ID format") from e
 
     deleted = await paper_db.delete_paper(session, paper_uuid)
     if not deleted:

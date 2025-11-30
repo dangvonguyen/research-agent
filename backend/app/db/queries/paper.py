@@ -4,8 +4,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.models import Paper, PaperContent
-from app.types import PaperCreate, PaperSection, PaperUpdate
+from app.db.models import Paper, PaperContent as PaperContentORM
+from app.types import PaperCreate, PaperContent, PaperUpdate
 
 
 async def create_paper(
@@ -26,34 +26,11 @@ async def create_paper(
         return paper
 
     # Otherwise handle the API schema PaperCreate and map it into the ORM Paper model
+    # PaperBase now matches database structure, so we can use it directly
     paper_dict = paper.model_dump(
         exclude_unset=True,
-        exclude={
-            "sections",
-            "source",
-            "source_id",
-            "url",
-            "pdf_url",
-            "local_pdf_path",
-            "venues",
-            "job_id",
-        },
+        exclude={"contents", "job_id"},
     )
-
-    # Map source and URLs
-    if paper.url or paper.pdf_url:
-        paper_dict["source_type"] = "url"
-        paper_dict["source_url"] = paper.url or paper.pdf_url
-    else:
-        paper_dict["source_type"] = "upload"
-        paper_dict["source_url"] = None
-
-    # Map file path
-    paper_dict["file_path"] = paper.local_pdf_path
-
-    # Map venue (take first venue if multiple)
-    if paper.venues:
-        paper_dict["venue"] = paper.venues[0] if paper.venues else None
 
     # Set parsed to False initially
     paper_dict["parsed"] = False
@@ -72,39 +49,37 @@ async def create_paper(
     session.add(paper_db)
     await session.flush()  # Flush to get the paper ID
 
-    # Create PaperContent entries from sections
-    if paper.sections:
+    # Create PaperContent entries from contents
+    if paper.contents:
         content_objects = []
         section_index = 0
-        for section_name, section_data in paper.sections.items():
-            if isinstance(section_data, PaperSection):
+        for content_data in paper.contents:
+            if isinstance(content_data, PaperContent):
                 content_objects.append(
-                    PaperContent(
+                    PaperContentORM(
                         paper_id=paper_db.id,
-                        section_name=section_data.title or section_name,
-                        section_index=section_index,
-                        chunk_index=0,  # Default to 0, can be updated later
-                        content=section_data.content,
-                        token_count=None,  # Can be calculated later
-                        embedding_vector=None,
-                        extra_metadata={"level": section_data.level}
-                        if section_data.level
-                        else None,
+                        section_name=content_data.section_name,
+                        section_index=content_data.section_index or section_index,
+                        chunk_index=content_data.chunk_index or 0,
+                        content=content_data.content,
+                        token_count=content_data.token_count,
+                        embedding_vector=content_data.embedding_vector,
+                        extra_metadata=content_data.extra_metadata,
                     )
                 )
                 section_index += 1
-            elif isinstance(section_data, dict):
+            elif isinstance(content_data, dict):
                 # Handle dict format
                 content_objects.append(
-                    PaperContent(
+                    PaperContentORM(
                         paper_id=paper_db.id,
-                        section_name=section_data.get("title", section_name),
-                        section_index=section_index,
-                        chunk_index=0,
-                        content=section_data.get("content", ""),
-                        token_count=None,
-                        embedding_vector=None,
-                        extra_metadata={"level": section_data.get("level", 1)},
+                        section_name=content_data.get("section_name", ""),
+                        section_index=content_data.get("section_index", section_index),
+                        chunk_index=content_data.get("chunk_index", 0),
+                        content=content_data.get("content", ""),
+                        token_count=content_data.get("token_count"),
+                        embedding_vector=content_data.get("embedding_vector"),
+                        extra_metadata=content_data.get("extra_metadata"),
                     )
                 )
                 section_index += 1
@@ -162,80 +137,56 @@ async def update_paper(
     if not paper:
         return None
 
-    update_dict = update_data.model_dump(
-        exclude_unset=True,
-        exclude={
-            "sections",
-            "source",
-            "source_id",
-            "url",
-            "pdf_url",
-            "local_pdf_path",
-            "venues",
-        },
-    )
-
-    # Map source and URLs if provided
-    if update_data.url or update_data.pdf_url:
-        update_dict["source_type"] = "url"
-        update_dict["source_url"] = update_data.url or update_data.pdf_url
-    elif update_data.local_pdf_path:
-        update_dict["source_type"] = "upload"
-        update_dict["file_path"] = update_data.local_pdf_path
-
-    # Map venue
-    if update_data.venues:
-        update_dict["venue"] = update_data.venues[0] if update_data.venues else None
+    # PaperUpdate now matches database structure, so we can use it directly
+    update_dict = update_data.model_dump(exclude_unset=True, exclude={"contents"})
 
     for key, value in update_dict.items():
         setattr(paper, key, value)
 
-    # Update sections if provided
-    if update_data.sections:
+    # Update contents if provided
+    if update_data.contents:
         # Delete existing contents
         existing_contents = await get_paper_contents_by_paper_id(session, paper_id)
         for content in existing_contents:
             await session.delete(content)
         await session.flush()
 
-        # Create new PaperContent entries from sections
+        # Create new PaperContent entries from contents
         content_objects = []
         section_index = 0
-        for section_name, section_data in update_data.sections.items():
-            if isinstance(section_data, PaperSection):
+        for content_data in update_data.contents:
+            if isinstance(content_data, PaperContent):
                 content_objects.append(
-                    PaperContent(
+                    PaperContentORM(
                         paper_id=paper_id,
-                        section_name=section_data.title or section_name,
-                        section_index=section_index,
-                        chunk_index=0,
-                        content=section_data.content,
-                        token_count=None,
-                        embedding_vector=None,
-                        extra_metadata={"level": section_data.level}
-                        if section_data.level
-                        else None,
+                        section_name=content_data.section_name,
+                        section_index=content_data.section_index or section_index,
+                        chunk_index=content_data.chunk_index or 0,
+                        content=content_data.content,
+                        token_count=content_data.token_count,
+                        embedding_vector=content_data.embedding_vector,
+                        extra_metadata=content_data.extra_metadata,
                     )
                 )
                 section_index += 1
-            elif isinstance(section_data, dict):
+            elif isinstance(content_data, dict):
                 content_objects.append(
-                    PaperContent(
+                    PaperContentORM(
                         paper_id=paper_id,
-                        section_name=section_data.get("title", section_name),
-                        section_index=section_index,
-                        chunk_index=0,
-                        content=section_data.get("content", ""),
-                        token_count=None,
-                        embedding_vector=None,
-                        extra_metadata={"level": section_data.get("level", 1)},
+                        section_name=content_data.get("section_name", ""),
+                        section_index=content_data.get("section_index", section_index),
+                        chunk_index=content_data.get("chunk_index", 0),
+                        content=content_data.get("content", ""),
+                        token_count=content_data.get("token_count"),
+                        embedding_vector=content_data.get("embedding_vector"),
+                        extra_metadata=content_data.get("extra_metadata"),
                     )
                 )
                 section_index += 1
 
         if content_objects:
             session.add_all(content_objects)
-            paper.parsed = True  # Mark as parsed when sections are added
+            paper.parsed = True  # Mark as parsed when contents are added
 
     await session.commit()
     await session.refresh(paper, ["contents"])

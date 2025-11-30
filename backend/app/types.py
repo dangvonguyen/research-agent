@@ -156,62 +156,8 @@ class CrawlerJobResponse(BaseModel):
     }
 
 
-class PaperSection(BaseModel):
-    """
-    Model for representing a section of a research paper.
-    """
-
-    title: str
-    content: str
-    level: int = 1
-
-
-class PaperBase(BaseModel):
-    """Base model for paper metadata."""
-
-    title: str
-    authors: list[str]
-    source: PaperSource
-    source_id: str
-    year: int | None = None
-    url: str | None = None
-    pdf_url: str | None = None
-    local_pdf_path: str | None = None
-    venues: list[str] = Field(default_factory=list)
-    sections: dict[str, PaperSection] = Field(default_factory=dict)
-    job_id: str | None = None
-
-
-class PaperCreate(BaseCreate, PaperBase):
-    """Model for creating a new paper."""
-
-    pass
-
-
-class PaperUpdate(BaseUpdate):
-    """Model for updating an existing paper."""
-
-    title: str | None = None
-    authors: list[str] | None = None
-    source: PaperSource | None = None
-    source_id: str | None = None
-    year: int | None = None
-    url: str | None = None
-    pdf_url: str | None = None
-    local_pdf_path: str | None = None
-    venues: list[str] | None = None
-    sections: dict[str, PaperSection] | None = None
-    job_id: str | None = None
-
-
-class Paper(BaseDocument, PaperBase):
-    """Model for paper stored in database."""
-
-    pass
-
-
-class PaperContentDB(BaseModel):
-    """ORM-backed model for paper content stored in Postgres."""
+class PaperContent(BaseModel):
+    """Model for paper content matching database PaperContent structure."""
 
     id: UUID
     paper_id: UUID
@@ -229,8 +175,44 @@ class PaperContentDB(BaseModel):
     }
 
 
-class PaperDB(BaseModel):
-    """ORM-backed model for paper stored in Postgres."""
+class PaperBase(BaseModel):
+    """Base model for paper matching database structure (for create/update operations)."""
+
+    title: str
+    authors: list[str] | None = None
+    year: int | None = None
+    venue: str | None = None
+    abstract: str | None = None
+    source_type: str  # "url" or "upload"
+    source_url: str | None = None
+    file_path: str | None = None
+    contents: list[PaperContent] = Field(default_factory=list)
+    job_id: UUID | None = None
+
+
+class PaperCreate(BaseCreate, PaperBase):
+    """Model for creating a new paper."""
+
+    pass
+
+
+class PaperUpdate(BaseUpdate):
+    """Model for updating an existing paper."""
+
+    title: str | None = None
+    authors: list[str] | None = None
+    year: int | None = None
+    venue: str | None = None
+    abstract: str | None = None
+    source_type: str | None = None
+    source_url: str | None = None
+    file_path: str | None = None
+    contents: list[PaperContent] | None = None
+    job_id: UUID | None = None
+
+
+class PaperResponse(BaseModel):
+    """Response model for paper matching ORM Paper structure (for API responses)."""
 
     id: UUID
     title: str
@@ -245,11 +227,17 @@ class PaperDB(BaseModel):
     parsed: bool
     created_at: datetime
     updated_at: datetime
-    contents: list[PaperContentDB] = Field(default_factory=list)
+    contents: list[PaperContent] = Field(default_factory=list)
 
     model_config = {
         "from_attributes": True,
     }
+
+
+class Paper(BaseDocument, PaperResponse):
+    """Model for paper stored in database (MongoDB)."""
+
+    pass
 
 class OperationResponse(BaseModel):
     """Base response model for database operations."""
