@@ -2,8 +2,8 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.actions.title_generator import generate_title
 from app.db.queries import conversation as conv_db
-from app.lib.ai.actions import generate_title_from_message
 from app.types import (
     ConversationCreate,
     ConversationDB,
@@ -113,7 +113,7 @@ async def generate_conversation_name_from_message(
     if not conversation:
         raise ValueError("Conversation not found")
 
-    new_title = await generate_title_from_message(message)
+    new_title = await generate_title(message)
 
     updated_conversation = await conv_db.update_conversation(
         session, conversation_id, ConversationUpdate(name=new_title)

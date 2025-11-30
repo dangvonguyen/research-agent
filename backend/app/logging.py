@@ -30,11 +30,11 @@ def setup_logging() -> None:
         log_dir.mkdir(exist_ok=True)
 
     except PermissionError:
-        print("ERROR: Permission denied when creating logs directory")
+        sys.stderr.write("ERROR: Permission denied when creating logs directory\n")
         sys.exit(1)
 
     except Exception as e:
-        print(f"ERROR: Failed to create logs directory: {e}")
+        sys.stderr.write(f"ERROR: Failed to create logs directory: {e}\n")
         sys.exit(1)
 
     # Load configuration from file

@@ -182,8 +182,6 @@ async def update_message(
     result = await session.execute(stmt)
     message = result.scalar_one_or_none()
 
-    print("message:", message)  # Debugging line
-
     if not message:
         return None
 

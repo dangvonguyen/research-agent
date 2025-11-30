@@ -9,26 +9,16 @@ from llama_index.core.chat_engine.types import (
 )
 from llama_index.core.llms import ChatMessage, MessageRole
 
-from app.services.llm_service import create_openai_llm
+from app.services.llm_service import llm_service
 from app.types import MessageDB, Role
 
 
 class ChatService:
     """Service for handling chat operations with LlamaIndex integration."""
 
-    def __init__(
-        self,
-        model_name: str = "gpt-5-nano",
-        temperature: float = 0.7,
-        max_tokens: Optional[int] = None,
-        system_prompt: Optional[str] = None,
-    ):
+    def __init__(self, system_prompt: Optional[str] = None):
         # Configure LlamaIndex settings
-        self.llm = create_openai_llm(
-            model_name=model_name,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
+        self.llm = llm_service.get_default_llm()
         Settings.llm = self.llm
 
         # Default system prompt
