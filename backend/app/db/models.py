@@ -47,8 +47,12 @@ class Message(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    content: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[Role] = mapped_column(Enum(Role), nullable=False)
+    content: Mapped[list[dict]] = mapped_column(
+        JSONB,
+        default=list,
+        nullable=False,
+    )
     attachments: Mapped[list[dict]] = mapped_column(
         JSONB,
         default=list,

@@ -87,8 +87,8 @@ async def create_message(
 ) -> MessageDB:
     """Create a new message."""
     message_db = Message(
-        content=message.content,
         role=message.role,
+        content=[cnt.model_dump() for cnt in message.content],
         conversation_id=conversation_id,
         attachments=[att.model_dump() for att in message.attachments],
     )

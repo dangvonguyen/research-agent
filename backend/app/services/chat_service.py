@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 from typing import Optional, cast
+from uuid import UUID
 
 from llama_index.core import Settings
 from llama_index.core.chat_engine import SimpleChatEngine
@@ -10,7 +11,17 @@ from llama_index.core.chat_engine.types import (
 from llama_index.core.llms import ChatMessage, MessageRole
 
 from app.services.llm_service import llm_service
-from app.types import MessageDB, Role
+from app.types import (
+    MessageContentPart,
+    MessageDB,
+    Role,
+    StreamContentDelta,
+    StreamContentEnd,
+    StreamContentStart,
+    StreamContentType,
+    StreamEvent,
+)
+from app.utils.content_util import extract_text_from_content
 
 
 class ChatService:
@@ -33,21 +44,34 @@ class ChatService:
             system_prompt=self.system_prompt,
         )
 
-    async def chat(self, user_message: str, history: list[MessageDB]) -> str:
+    async def chat(
+        self, user_message: list[MessageContentPart], history: list[MessageDB]
+    ) -> str:
+        # Extract text from content parts
+        user_text = extract_text_from_content(user_message)
+
         # Build conversation history
         chat_history = self._build_chat_history(history)
 
         # Reset chat engine to clear previous state
         self.chat_engine.reset()
         response = cast(
-            AgentChatResponse, await self.chat_engine.achat(user_message, chat_history)
+            AgentChatResponse, await self.chat_engine.achat(user_text, chat_history)
         )
 
         return str(response)
 
     async def stream_chat(
-        self, user_message: str, history: list[MessageDB]
-    ) -> AsyncGenerator[str, None]:
+        self,
+        user_message: list[MessageContentPart],
+        history: list[MessageDB],
+        conversation_id: UUID,
+        message_id: UUID,
+    ) -> AsyncGenerator[StreamEvent, None]:
+        """Stream chat response as typed events."""
+        # Extract text from content parts
+        user_text = extract_text_from_content(user_message)
+
         # Build conversation history
         chat_history = self._build_chat_history(history)
 
@@ -55,11 +79,32 @@ class ChatService:
         self.chat_engine.reset()
         response = cast(
             StreamingAgentChatResponse,
-            await self.chat_engine.astream_chat(user_message, chat_history),
+            await self.chat_engine.astream_chat(user_text, chat_history),
         )
 
+        # Announce text content starting
+        yield StreamContentStart(
+            conversation_id=conversation_id,
+            message_id=message_id,
+            content_type=StreamContentType.TEXT,
+            index=0,
+        )
+
+        # Stream text chunks as deltas
         async for chunk in response.async_response_gen():
-            yield chunk
+            yield StreamContentDelta(
+                conversation_id=conversation_id,
+                message_id=message_id,
+                index=0,
+                delta=chunk,
+            )
+
+        # Finalize text content
+        yield StreamContentEnd(
+            conversation_id=conversation_id,
+            message_id=message_id,
+            index=0,
+        )
 
     def _build_chat_history(
         self, messages: list[MessageDB]
@@ -76,7 +121,9 @@ class ChatService:
             else:
                 continue  # Skip other roles if any
 
-            chat_messages.append(ChatMessage(role=role, content=msg.content))
+            # Extract text content from content parts
+            content_text = extract_text_from_content(msg.content)
+            chat_messages.append(ChatMessage(role=role, content=content_text))
 
         return chat_messages
 

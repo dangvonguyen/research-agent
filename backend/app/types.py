@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, HttpUrl
@@ -231,6 +231,65 @@ class ConversationDB(ConversationBase):
     }
 
 
+# Message Content Part System
+class MessageTextPart(BaseModel):
+    """Text content part of a message."""
+
+    type: Literal["text"] = "text"
+    text: str
+
+
+class MessageReasoningPart(BaseModel):
+    """Reasoning content part of a message."""
+
+    type: Literal["reasoning"] = "reasoning"
+    text: str
+
+
+class MessageFilePart(BaseModel):
+    """File content part of a message."""
+
+    type: Literal["file"] = "file"
+    filename: str | None = None
+    data: str  # Base64 encoded or URL
+    media_type: str
+
+
+class MessageToolCallPart(BaseModel):
+    """Tool call content part of a message."""
+
+    type: Literal["tool-call"] = "tool-call"
+    tool_call_id: str
+    tool_name: str
+    input: dict[str, Any]
+
+
+class MessageToolResultPart(BaseModel):
+    """Tool result content part of a message."""
+
+    type: Literal["tool-result"] = "tool-result"
+    tool_call_id: str
+    tool_name: str
+    output: "ToolResultOutput"
+
+
+class ToolResultOutput(BaseModel):
+    """Result of a tool call. Supports multiple output types."""
+
+    type: Literal["text", "json", "error-text", "error-json", "content"]
+    value: Any
+
+
+# Discriminated union for all content parts
+MessageContentPart = (
+    MessageTextPart
+    | MessageFilePart
+    | MessageReasoningPart
+    | MessageToolCallPart
+    | MessageToolResultPart
+)
+
+
 class Attachment(BaseModel):
     """Model for attachments stored in JSONB."""
 
@@ -242,8 +301,8 @@ class Attachment(BaseModel):
 class MessageBase(BaseModel):
     """Base model for messages."""
 
-    content: str
-    role: Role
+    role: Role = Role.USER
+    content: list[MessageContentPart]
 
 
 class MessageCreate(MessageBase):
@@ -255,7 +314,7 @@ class MessageCreate(MessageBase):
 class MessageUpdate(BaseModel):
     """Model for updating an existing message."""
 
-    content: str | None = None
+    content: list[MessageContentPart] | None = None
     role: Role | None = None
 
 
@@ -270,6 +329,101 @@ class MessageDB(MessageBase):
     model_config = {
         "from_attributes": True,
     }
+
+
+class SendMessageRequest(BaseModel):
+    """Model for message request."""
+
+    conversation_id: UUID
+    message: str | None = None
+    attachments: list[dict[str, Any]] | None = None
+
+
+class StreamEventType(str, Enum):
+    """Types of streaming events."""
+
+    CONTENT_START = "content_start"  # New content part is starting
+    CONTENT_DELTA = "content_delta"  # Incremental update to content
+    CONTENT_END = "content_end"  # Content part is complete
+    MESSAGE_END = "message_end"  # Entire message is complete
+    ERROR = "error"  # Error occurred
+    ABORT = "abort"  # Stream was aborted
+
+
+class StreamContentType(str, Enum):
+    """Types of content that can be streamed."""
+
+    TEXT = "text"
+    REASONING = "reasoning"
+    TOOL_CALL = "tool-call"
+    TOOL_RESULT = "tool-result"
+
+
+# Base class with shared metadata
+class StreamEvent(BaseModel):
+    """Base streaming event with common metadata."""
+
+    conversation_id: UUID
+    message_id: UUID
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class StreamContentStart(StreamEvent):
+    """Signals the start of a new content part."""
+
+    type: Literal["content_start"] = "content_start"
+    content_type: StreamContentType
+    index: int  # Position in the content array
+
+    # Tool-specific metadata (only for tool_call/tool_result)
+    tool_call_id: str | None = None
+    tool_name: str | None = None
+
+
+class StreamContentDelta(StreamEvent):
+    """Incremental update to a content part."""
+
+    type: Literal["content_delta"] = "content_delta"
+    index: int  # Which content part this updates
+    delta: str | dict[str, Any]  # Text delta or partial structured data
+
+
+class StreamContentEnd(StreamEvent):
+    """Signals completion of a content part."""
+
+    type: Literal["content_end"] = "content_end"
+    index: int
+
+
+class StreamMessageEnd(StreamEvent):
+    """Signals completion of entire message."""
+
+    type: Literal["message_end"] = "message_end"
+
+
+class StreamError(StreamEvent):
+    """Error during streaming."""
+
+    type: Literal["error"] = "error"
+    error: str
+
+
+class StreamAbort(StreamEvent):
+    """Stream was cancelled."""
+
+    type: Literal["abort"] = "abort"
+    reason: str = "user_cancelled"
+
+
+# Discriminated union for all stream events
+StreamEvent = (
+    StreamContentStart
+    | StreamContentDelta
+    | StreamContentEnd
+    | StreamMessageEnd
+    | StreamError
+    | StreamAbort
+)
 
 
 # Chat-specific models for AI responses
@@ -304,23 +458,9 @@ class ChatResponse(Response[MessageDB]):
         )
 
 
-class StreamChatData(BaseModel):
-    chunk: str
-    is_final: bool
-
-
-class StreamChatChunk(Response[StreamChatData]):
-    """Model for streaming chat response chunks."""
+class StreamChatChunk(Response[StreamEvent]):
+    """Model for streaming chat response chunks with typed events."""
 
     @classmethod
-    def create(
-        cls, conversation_id: UUID, message_id: UUID, chunk: str, is_final: bool = False
-    ) -> "StreamChatChunk":
-        return cls(
-            data=StreamChatData(chunk=chunk, is_final=is_final),
-            metadata={
-                "conversation_id": conversation_id,
-                "message_id": message_id,
-                "timestamp": datetime.now(UTC).isoformat(),
-            },
-        )
+    def create(cls, event: StreamEvent) -> "StreamChatChunk":
+        return cls(data=event, metadata={})
