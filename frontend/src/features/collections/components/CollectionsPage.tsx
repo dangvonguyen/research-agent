@@ -1,0 +1,147 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/Button";
+import { Plus, LayoutGrid, List } from "lucide-react";
+import { toast } from "sonner";
+import { apiClient } from "@/api";
+import { CreateCollectionModal } from "./CreateCollectionModal";
+import { CollectionsGrid } from "./CollectionsGrid";
+import { CollectionsList } from "./CollectionsList";
+import { TopSearchBar } from "./TopSearchBar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
+import type { Collection } from "../types";
+
+export function CollectionsPage() {
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sortBy, setSortBy] = useState("recently-updated");
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCollections = async () => {
+      try {
+        setIsLoading(true);
+        const data = await apiClient.collections.list();
+        const formattedCollections: Collection[] = data.map((c) => ({
+          id: c.id,
+          name: c.name,
+          description: c.description || "",
+          paperCount: c.paper_count,
+          lastUpdated: c.updated_at,
+        }));
+        setCollections(formattedCollections);
+      } catch (error) {
+        console.error("Failed to fetch collections:", error);
+        toast.error("Failed to load collections");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCollections();
+  }, []);
+
+  const handleCollectionCreated = () => {
+    // Refresh collections after creation
+    const fetchCollections = async () => {
+      try {
+        const data = await apiClient.collections.list();
+        const formattedCollections: Collection[] = data.map((c) => ({
+          id: c.id,
+          name: c.name,
+          description: c.description || "",
+          paperCount: c.paper_count,
+          lastUpdated: c.updated_at,
+        }));
+        setCollections(formattedCollections);
+      } catch (error) {
+        console.error("Failed to fetch collections:", error);
+      }
+    };
+    fetchCollections();
+  };
+
+  return (
+    <div className="flex flex-col h-screen">
+      <TopSearchBar />
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Collections</h1>
+          <p className="text-muted-foreground">Organize your papers into categories</p>
+        </div>
+        <Button onClick={() => setIsCreateModalOpen(true)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Create Collection
+        </Button>
+      </div>
+
+      {/* Filters & Controls Row */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode("grid")}
+            className={`p-2 rounded-md transition-colors ${
+              viewMode === "grid"
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-secondary-foreground hover:bg-muted"
+            }`}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setViewMode("list")}
+            className={`p-2 rounded-md transition-colors ${
+              viewMode === "list"
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-secondary-foreground hover:bg-muted"
+            }`}
+          >
+            <List className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="w-full md:w-48">
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="a-z">A–Z</SelectItem>
+              <SelectItem value="z-a">Z–A</SelectItem>
+              <SelectItem value="most-papers">Most Papers</SelectItem>
+              <SelectItem value="recently-updated">Recently Updated</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Collections View */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <p className="text-muted-foreground">Loading collections...</p>
+        </div>
+      ) : collections.length === 0 ? (
+        <div className="flex items-center justify-center py-12">
+          <p className="text-muted-foreground">No collections yet. Create your first collection!</p>
+        </div>
+      ) : viewMode === "grid" ? (
+        <CollectionsGrid collections={collections} onCollectionDeleted={handleCollectionCreated} />
+      ) : (
+        <CollectionsList collections={collections} onCollectionDeleted={handleCollectionCreated} />
+      )}
+
+      {/* Create Collection Modal */}
+      <CreateCollectionModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreated={handleCollectionCreated}
+      />
+        </div>
+      </div>
+    </div>
+  );
+}
+
