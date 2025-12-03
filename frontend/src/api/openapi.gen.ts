@@ -699,9 +699,10 @@ export interface components {
          * @description Model for creating a new message.
          */
         MessageCreate: {
-            /** Content */
-            content: string;
+            /** @default user */
             role: components["schemas"]["Role"];
+            /** Content */
+            content: (components["schemas"]["MessageTextPart"] | components["schemas"]["MessageFilePart"] | components["schemas"]["MessageReasoningPart"] | components["schemas"]["MessageToolCallPart"] | components["schemas"]["MessageToolResultPart"])[];
             /** Attachments */
             attachments?: components["schemas"]["Attachment"][];
         };
@@ -710,9 +711,10 @@ export interface components {
          * @description Model for message stored in database.
          */
         MessageDB: {
-            /** Content */
-            content: string;
+            /** @default user */
             role: components["schemas"]["Role"];
+            /** Content */
+            content: (components["schemas"]["MessageTextPart"] | components["schemas"]["MessageFilePart"] | components["schemas"]["MessageReasoningPart"] | components["schemas"]["MessageToolCallPart"] | components["schemas"]["MessageToolResultPart"])[];
             /**
              * Id
              * Format: uuid
@@ -730,6 +732,89 @@ export interface components {
             created_at: string;
             /** Attachments */
             attachments?: components["schemas"]["Attachment"][];
+        };
+        /**
+         * MessageFilePart
+         * @description File content part of a message.
+         */
+        MessageFilePart: {
+            /**
+             * Type
+             * @default file
+             * @constant
+             */
+            type: "file";
+            /** Filename */
+            filename?: string | null;
+            /** Data */
+            data: string;
+            /** Media Type */
+            media_type: string;
+        };
+        /**
+         * MessageReasoningPart
+         * @description Reasoning content part of a message.
+         */
+        MessageReasoningPart: {
+            /**
+             * Type
+             * @default reasoning
+             * @constant
+             */
+            type: "reasoning";
+            /** Text */
+            text: string;
+        };
+        /**
+         * MessageTextPart
+         * @description Text content part of a message.
+         */
+        MessageTextPart: {
+            /**
+             * Type
+             * @default text
+             * @constant
+             */
+            type: "text";
+            /** Text */
+            text: string;
+        };
+        /**
+         * MessageToolCallPart
+         * @description Tool call content part of a message.
+         */
+        MessageToolCallPart: {
+            /**
+             * Type
+             * @default tool-call
+             * @constant
+             */
+            type: "tool-call";
+            /** Tool Call Id */
+            tool_call_id: string;
+            /** Tool Name */
+            tool_name: string;
+            /** Input */
+            input: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * MessageToolResultPart
+         * @description Tool result content part of a message.
+         */
+        MessageToolResultPart: {
+            /**
+             * Type
+             * @default tool-result
+             * @constant
+             */
+            type: "tool-result";
+            /** Tool Call Id */
+            tool_call_id: string;
+            /** Tool Name */
+            tool_name: string;
+            output: components["schemas"]["ToolResultOutput"];
         };
         /**
          * Paper
@@ -909,6 +994,19 @@ export interface components {
          * @enum {string}
          */
         Role: "user" | "assistant";
+        /**
+         * ToolResultOutput
+         * @description Result of a tool call. Supports multiple output types.
+         */
+        ToolResultOutput: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "text" | "json" | "error-text" | "error-json" | "content";
+            /** Value */
+            value: unknown;
+        };
         /**
          * UpdateResponse
          * @description Response model for update operations.

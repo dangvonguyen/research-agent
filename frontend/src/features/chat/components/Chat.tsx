@@ -6,7 +6,7 @@ import { Response } from "@/components/ai-elements/response";
 import { PreviewAttachment } from "@/components/preview-attachment";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { cn } from "@/lib/utils";
-import { useStreamChat } from "../hooks/useStreamChat";
+import { useChat } from "../hooks/useChat";
 import type { Attachment, Message } from "../types";
 import ChatComposer from "./ChatComposer";
 
@@ -18,8 +18,7 @@ interface ChatProps {
 function Chat({ id, initialMessages }: ChatProps) {
   const navigate = useNavigate();
   const [messages, setMessages] = useState(initialMessages);
-  const { isStreaming, streamingMessageId, streamedContent, startStream } =
-    useStreamChat({ chunkDelay: 20 });
+  const { isStreaming, messageId, startChat, contentParts } = useChat();
 
   const bottomRef = useAutoScroll({
     deps: messages,
@@ -27,21 +26,19 @@ function Chat({ id, initialMessages }: ChatProps) {
   });
 
   useEffect(() => {
-    if (!streamingMessageId) return;
+    if (!messageId) return;
 
     setMessages((prev) => {
-      if (prev.some((msg) => msg.id === streamingMessageId)) {
+      if (prev.some((msg) => msg.id === messageId)) {
         return prev.map((msg) =>
-          msg.id === streamingMessageId
-            ? { ...msg, content: streamedContent }
-            : msg,
+          msg.id === messageId ? { ...msg, content: contentParts } : msg,
         );
       } else {
         return [
           ...prev,
           {
-            id: streamingMessageId,
-            content: streamedContent,
+            id: messageId,
+            content: contentParts,
             role: "assistant",
             conversation_id: id,
             created_at: new Date().toISOString(),
@@ -49,7 +46,7 @@ function Chat({ id, initialMessages }: ChatProps) {
         ];
       }
     });
-  }, [streamingMessageId, streamedContent, id]);
+  }, [messageId, contentParts, id]);
 
   // Show toast error if any
   useEffect(() => {
@@ -75,7 +72,7 @@ function Chat({ id, initialMessages }: ChatProps) {
       const messageContent = content.trim() || "Sent files";
       const userMessage = await apiClient.conversations
         .createMessage(id, {
-          content: messageContent,
+          content: [{ type: "text", text: messageContent }],
           role: "user",
           attachments: attachments,
         })
@@ -85,7 +82,7 @@ function Chat({ id, initialMessages }: ChatProps) {
 
       const shouldNavigate = window.location.pathname !== `/chat/${id}`;
 
-      await startStream({
+      await startChat({
         conversation_id: id,
         message_id: userMessage.id,
       });
@@ -142,7 +139,13 @@ function Chat({ id, initialMessages }: ChatProps) {
                       : "bg-background text-foreground"
                   }
                 >
-                  {message.content && <Response>{message.content}</Response>}
+                  {message.content.map((part, index) =>
+                    part.type === "text" ? (
+                      <Response key={`${message.id}-${index}`}>
+                        {part.text}
+                      </Response>
+                    ) : null,
+                  )}
                 </div>
               </div>
             ))}

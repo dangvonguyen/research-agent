@@ -29,19 +29,7 @@ import type {
   UpdateResponse,
 } from "./models";
 import type { paths } from "./openapi.gen";
-
-// Define StreamChatChunk interface based on backend response
-interface StreamChatChunk {
-  data: {
-    chunk: string;
-    is_final: boolean;
-  };
-  metadata: {
-    conversation_id: string;
-    message_id: string;
-    timestamp: string;
-  };
-}
+import type { StreamChatChunk } from "@/features/chat/types";
 
 const config = getApiConfig();
 const client = createClient<paths>({
@@ -119,12 +107,21 @@ export const apiClient = {
                 const jsonData = line.slice(6); // Remove "data: " prefix
                 if (jsonData.trim()) {
                   try {
-                    const parsed = JSON.parse(jsonData);
+                    const parsed = JSON.parse(jsonData) as StreamChatChunk;
                     onChunk(parsed);
 
-                    // Check if this is the final chunk
-                    if (parsed.data.is_final) {
+                    // Check for completion on message_end event
+                    if (parsed.data.type === "message_end") {
                       onComplete?.();
+                      return;
+                    }
+
+                    // Handle errors
+                    if (parsed.data.type === "error" || parsed.data.type === "abort") {
+                      const errorMessage = parsed.data.type === "error"
+                        ? parsed.data.error
+                        : `Stream aborted: ${parsed.data.reason}`;
+                      onError?.(new Error(errorMessage));
                       return;
                     }
                   } catch (parseError) {
