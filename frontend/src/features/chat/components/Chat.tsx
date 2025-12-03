@@ -7,7 +7,7 @@ import { PreviewAttachment } from "@/components/preview-attachment";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { cn } from "@/lib/utils";
 import { useStreamChat } from "../hooks/useStreamChat";
-import type { Message } from "../types";
+import type { Attachment, Message } from "../types";
 import ChatComposer from "./ChatComposer";
 
 interface ChatProps {
@@ -61,34 +61,29 @@ function Chat({ id, initialMessages }: ChatProps) {
   }, []);
 
   const handleSendMessage = async (content: string, files?: File[]) => {
-    if (!content.trim() && (!files || files.length === 0)) return
+    if (!content.trim() && (!files || files.length === 0)) return;
 
     try {
       // Upload files if any
-      let attachments: {
-        filename: string
-        content_type: string
-        path: string
-        size: number
-      }[] = []
+      let attachments: Attachment[] = [];
       if (files && files.length > 0) {
-        const uploadResponse = await apiClient.uploads.uploadFiles(files)
-        attachments = uploadResponse.data
+        const uploadResponse = await apiClient.uploads.uploadFiles(files);
+        attachments = uploadResponse.data;
       }
 
       // Create message with content and attachments
-      const messageContent = content.trim() || "Sent files"
+      const messageContent = content.trim() || "Sent files";
       const userMessage = await apiClient.conversations
         .createMessage(id, {
           content: messageContent,
           role: "user",
           attachments: attachments,
         })
-        .then((res) => res.data)
+        .then((res) => res.data);
 
-      setMessages((prev) => [...prev, userMessage])
+      setMessages((prev) => [...prev, userMessage]);
 
-      const shouldNavigate = window.location.pathname !== `/chat/${id}`
+      const shouldNavigate = window.location.pathname !== `/chat/${id}`;
 
       await startStream({
         conversation_id: id,
@@ -111,7 +106,7 @@ function Chat({ id, initialMessages }: ChatProps) {
           "grid w-full h-screen mx-auto px-8 max-w-208",
           messages.length === 0
             ? "grid-rows-[40vh_auto]"
-            : "grid-rows-[1fr_auto]"
+            : "grid-rows-[1fr_auto]",
         )}
       >
         {/* Messages Container */}
@@ -125,14 +120,14 @@ function Chat({ id, initialMessages }: ChatProps) {
               <div
                 className={cn(
                   "flex flex-col gap-2",
-                  message.role === "user" ? "items-end" : "items-start"
+                  message.role === "user" ? "items-end" : "items-start",
                 )}
               >
                 {message.attachments && message.attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {message.attachments.map((attachment) => (
                       <PreviewAttachment
-                        key={attachment.id}
+                        key={attachment.path}
                         attachment={attachment}
                       />
                     ))}
@@ -189,7 +184,7 @@ function Chat({ id, initialMessages }: ChatProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default Chat;

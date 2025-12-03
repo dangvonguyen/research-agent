@@ -414,47 +414,16 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * AttachmentCreate
-         * @description Model for creating a new attachment.
+         * Attachment
+         * @description Model for attachments stored in JSONB.
          */
-        AttachmentCreate: {
-            /** Filename */
-            filename: string;
-            /** Content Type */
-            content_type: string;
+        Attachment: {
+            /** Name */
+            name: string;
             /** Path */
             path: string;
-            /** Size */
-            size: number;
-        };
-        /**
-         * AttachmentDB
-         * @description Model for attachment stored in database.
-         */
-        AttachmentDB: {
-            /** Filename */
-            filename: string;
             /** Content Type */
             content_type: string;
-            /** Path */
-            path: string;
-            /** Size */
-            size: number;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Message Id
-             * Format: uuid
-             */
-            message_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
         };
         /** Body_upload_files_api_v1_uploads_post */
         Body_upload_files_api_v1_uploads_post: {
@@ -734,7 +703,7 @@ export interface components {
             content: string;
             role: components["schemas"]["Role"];
             /** Attachments */
-            attachments?: components["schemas"]["AttachmentCreate"][];
+            attachments?: components["schemas"]["Attachment"][];
         };
         /**
          * MessageDB
@@ -760,7 +729,7 @@ export interface components {
              */
             created_at: string;
             /** Attachments */
-            attachments?: components["schemas"]["AttachmentDB"][];
+            attachments?: components["schemas"]["Attachment"][];
         };
         /**
          * Paper
@@ -907,10 +876,10 @@ export interface components {
                 [key: string]: unknown;
             };
         };
-        /** Response[list[AttachmentCreate]] */
-        Response_list_AttachmentCreate__: {
+        /** Response[list[Attachment]] */
+        Response_list_Attachment__: {
             /** Data */
-            data: components["schemas"]["AttachmentCreate"][];
+            data: components["schemas"]["Attachment"][];
             /** Metadata */
             metadata: {
                 [key: string]: unknown;
@@ -1868,7 +1837,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Response_list_AttachmentCreate__"];
+                    "application/json": components["schemas"]["Response_list_Attachment__"];
                 };
             };
             /** @description Validation Error */

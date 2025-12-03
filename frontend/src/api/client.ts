@@ -21,7 +21,7 @@ import type {
   PaperCreate,
   PaperUpdate,
   Response_ConversationDB_,
-  Response_list_AttachmentCreate__,
+  Response_list_Attachment__,
   Response_list_ConversationDB__,
   Response_list_MessageDB__,
   Response_MessageDB_,
@@ -241,28 +241,26 @@ export const apiClient = {
 
   // File uploads
   uploads: {
-    uploadFiles: async (
-      files: File[]
-    ): Promise<Response_list_AttachmentCreate__> => {
-      const formData = new FormData()
+    uploadFiles: async (files: File[]): Promise<Response_list_Attachment__> => {
+      const formData = new FormData();
       for (const file of files) {
-        formData.append("files", file)
+        formData.append("files", file);
       }
 
       const response = await fetch(`${config.baseUrl}/api/v1/uploads`, {
         method: "POST",
         // Don't set Content-Type header for FormData - browser will set it with boundary
         body: formData,
-      })
+      });
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({
           detail: response.statusText,
-        }))
-        throw new Error(`Failed to upload files: ${JSON.stringify(error)}`)
+        }));
+        throw new Error(`Failed to upload files: ${JSON.stringify(error)}`);
       }
 
-      return response.json()
+      return response.json();
     },
   },
 

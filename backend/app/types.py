@@ -231,6 +231,14 @@ class ConversationDB(ConversationBase):
     }
 
 
+class Attachment(BaseModel):
+    """Model for attachments stored in JSONB."""
+
+    name: str
+    path: str
+    content_type: str
+
+
 class MessageBase(BaseModel):
     """Base model for messages."""
 
@@ -241,7 +249,7 @@ class MessageBase(BaseModel):
 class MessageCreate(MessageBase):
     """Model for creating a new message."""
 
-    attachments: list["AttachmentCreate"] = Field(default_factory=list)
+    attachments: list[Attachment] = Field(default_factory=list)
 
 
 class MessageUpdate(BaseModel):
@@ -257,43 +265,7 @@ class MessageDB(MessageBase):
     id: UUID
     conversation_id: UUID
     created_at: datetime
-    attachments: list["AttachmentDB"] = Field(default_factory=list)
-
-    model_config = {
-        "from_attributes": True,
-    }
-
-
-class AttachmentBase(BaseModel):
-    """Base model for attachments."""
-
-    filename: str
-    content_type: str
-    path: str
-    size: int
-
-
-class AttachmentCreate(AttachmentBase):
-    """Model for creating a new attachment."""
-
-    pass
-
-
-class AttachmentUpdate(BaseModel):
-    """Model for updating an existing attachment."""
-
-    filename: str | None = None
-    content_type: str | None = None
-    path: str | None = None
-    size: int | None = None
-
-
-class AttachmentDB(AttachmentBase):
-    """Model for attachment stored in database."""
-
-    id: UUID
-    message_id: UUID
-    created_at: datetime
+    attachments: list[Attachment] = Field(default_factory=list)
 
     model_config = {
         "from_attributes": True,
