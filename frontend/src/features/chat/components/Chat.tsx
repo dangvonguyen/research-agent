@@ -2,8 +2,16 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
-import { Response } from "@/components/ai-elements/response";
-import { PreviewAttachment } from "@/components/preview-attachment";
+import {
+  MessageAttachment,
+  MessageAttachments,
+  MessageContent,
+  MessageResponse,
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+  Message as UIMessage,
+} from "@/components/ai-elements";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { cn } from "@/lib/utils";
 import { useChat } from "../hooks/useChat";
@@ -114,40 +122,55 @@ function Chat({ id, initialMessages }: ChatProps) {
         ) : (
           <div className="flex flex-col gap-10 pt-[7vh] pb-[10vh] whitespace-pre-wrap">
             {messages.map((message) => (
-              <div
-                className={cn(
-                  "flex flex-col gap-2",
-                  message.role === "user" ? "items-end" : "items-start",
-                )}
-              >
+              <UIMessage from={message.role} key={message.id}>
                 {message.attachments && message.attachments.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {message.attachments.map((attachment) => (
-                      <PreviewAttachment
-                        key={attachment.path}
-                        attachment={attachment}
+                  <MessageAttachments>
+                    {message.attachments.map((att) => (
+                      <MessageAttachment
+                        key={att.path}
+                        data={{
+                          type: "file",
+                          url: att.path,
+                          mediaType: att.content_type,
+                          filename: att.name,
+                        }}
                       />
                     ))}
-                  </div>
+                  </MessageAttachments>
                 )}
 
-                <div
-                  key={message.id}
-                  className={
-                    message.role === "user"
-                      ? "bg-secondary text-secondary-foreground rounded-3xl px-4 py-2 max-w-[70%] shadow"
-                      : "bg-background text-foreground"
-                  }
-                >
-                  {message.content.map((part, index) =>
-                    part.type === "text" ? (
-                      <Response key={`${message.id}-${index}`}>
-                        {part.text}
-                      </Response>
-                    ) : null,
-                  )}
-                </div>
-              </div>
+                <MessageContent>
+                  {message.content.map((part, index) => {
+                    switch (part.type) {
+                      case "text":
+                        return (
+                          <MessageResponse key={`${message.id}-${index}`}>
+                            {part.text}
+                          </MessageResponse>
+                        );
+                      case "reasoning":
+                        return (
+                          <Reasoning
+                            key={`${message.id}-${index}`}
+                            defaultOpen={
+                              isStreaming && message.id === messageId
+                            }
+                            isStreaming={
+                              isStreaming &&
+                              index === message.content.length - 1 &&
+                              message.id === messageId
+                            }
+                          >
+                            <ReasoningTrigger />
+                            <ReasoningContent>{part.text}</ReasoningContent>
+                          </Reasoning>
+                        );
+                      default:
+                        return null;
+                    }
+                  })}
+                </MessageContent>
+              </UIMessage>
             ))}
 
             {/* Loading indicator */}
