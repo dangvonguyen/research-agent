@@ -1,23 +1,14 @@
-import logging
-
-from llama_index.core.agent.workflow import FunctionAgent
-from pydantic import BaseModel, Field
+from llama_index.core.llms import ChatMessage
 
 from app.ai.prompts import TITLE_PROMPT
-
-logger = logging.getLogger(__name__)
-
-
-class TitleResult(BaseModel):
-    title: str = Field(description="Generated a title", min_length=4, max_length=80)
+from app.services.llm_service import default_llm
 
 
 async def generate_title(message: str) -> str:
     """Generate a title from the user's message."""
-    agent = FunctionAgent(
-        name="title_generator",
-        system_prompt=TITLE_PROMPT,
-        output_cls=TitleResult,
-    )
-    response = await agent.run(message)
-    return response.structured_response["title"]
+    messages = [
+        ChatMessage(role="system", content=TITLE_PROMPT),
+        ChatMessage(role="user", content=message),
+    ]
+    response = await default_llm.achat(messages)
+    return response.message.content

@@ -148,3 +148,4 @@ class LLMService:
 
 # Global service instance
 llm_service = LLMService()
+default_llm = llm_service.get_default_llm()
