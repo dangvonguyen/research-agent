@@ -145,7 +145,7 @@ async def stream_chat(
             # Update database with final content (non-blocking)
             # Create a new session for the background task because the
             # request session will be closed before the task runs
-            async def save_final_content():
+            async def save_final_content() -> None:
                 async with Session() as bg_session:
                     try:
                         await update_message_content(

@@ -361,7 +361,7 @@ class StreamContentType(str, Enum):
 
 
 # Base class with shared metadata
-class StreamEvent(BaseModel):
+class StreamEventBase(BaseModel):
     """Base streaming event with common metadata."""
 
     conversation_id: UUID
@@ -369,7 +369,7 @@ class StreamEvent(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
-class StreamContentStart(StreamEvent):
+class StreamContentStart(StreamEventBase):
     """Signals the start of a new content part."""
 
     type: Literal["content_start"] = "content_start"
@@ -381,7 +381,7 @@ class StreamContentStart(StreamEvent):
     tool_name: str | None = None
 
 
-class StreamContentDelta(StreamEvent):
+class StreamContentDelta(StreamEventBase):
     """Incremental update to a content part."""
 
     type: Literal["content_delta"] = "content_delta"
@@ -389,27 +389,27 @@ class StreamContentDelta(StreamEvent):
     delta: str | dict[str, Any]  # Text delta or partial structured data
 
 
-class StreamContentEnd(StreamEvent):
+class StreamContentEnd(StreamEventBase):
     """Signals completion of a content part."""
 
     type: Literal["content_end"] = "content_end"
     index: int
 
 
-class StreamMessageEnd(StreamEvent):
+class StreamMessageEnd(StreamEventBase):
     """Signals completion of entire message."""
 
     type: Literal["message_end"] = "message_end"
 
 
-class StreamError(StreamEvent):
+class StreamError(StreamEventBase):
     """Error during streaming."""
 
     type: Literal["error"] = "error"
     error: str
 
 
-class StreamAbort(StreamEvent):
+class StreamAbort(StreamEventBase):
     """Stream was cancelled."""
 
     type: Literal["abort"] = "abort"

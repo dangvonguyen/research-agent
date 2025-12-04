@@ -92,7 +92,7 @@ async def create_message(
 
     if is_new and message.role == "user":
         # Create a new session for the background task
-        async def generate_name():
+        async def generate_name() -> None:
             async with Session() as bg_session:
                 try:
                     await generate_conversation_name_from_message(

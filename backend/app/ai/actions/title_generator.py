@@ -11,4 +11,4 @@ async def generate_title(message: str) -> str:
         ChatMessage(role="user", content=message),
     ]
     response = await default_llm.achat(messages)
-    return response.message.content
+    return response.message.content or "New Chat"

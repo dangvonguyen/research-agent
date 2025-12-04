@@ -16,14 +16,14 @@ from app.types import (
 class ContentPartBuilder:
     """Builds content parts from streaming deltas."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.parts: list[MessageContentPart | None] = []
         self.current_index: int | None = None
         self.current_type: StreamContentType | None = None
         self.current_data: dict[str, Any] = {}
 
     def start_content(
-        self, content_type: StreamContentType, index: int, **metadata
+        self, content_type: StreamContentType, index: int, **metadata: Any
     ) -> None:
         """Start a new content part."""
         # Finalize previous part if exists
@@ -84,7 +84,7 @@ class ContentPartBuilder:
                 # Complete dict update
                 self.current_data["output"] = delta
 
-    def end_content(self, index: int) -> MessageContentPart:
+    def end_content(self, index: int) -> None:
         """Finalize current content part."""
         if index != self.current_index:
             raise ValueError(

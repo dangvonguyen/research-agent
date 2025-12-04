@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -48,12 +49,12 @@ class Message(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     role: Mapped[Role] = mapped_column(Enum(Role), nullable=False)
-    content: Mapped[list[dict]] = mapped_column(
+    content: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB,
         default=list,
         nullable=False,
     )
-    attachments: Mapped[list[dict]] = mapped_column(
+    attachments: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB,
         default=list,
         nullable=False,

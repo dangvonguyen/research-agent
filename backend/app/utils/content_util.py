@@ -45,7 +45,7 @@ def has_tool_calls(content: list[MessageContentPart]) -> bool:
     return any(isinstance(part, MessageToolCallPart) for part in content)
 
 
-def get_tool_calls(content: list[MessageContentPart]) -> list:
+def get_tool_calls(content: list[MessageContentPart]) -> list[MessageToolCallPart]:
     """Extract all tool calls from content.
 
     Args:
@@ -57,7 +57,7 @@ def get_tool_calls(content: list[MessageContentPart]) -> list:
     return [part for part in content if isinstance(part, MessageToolCallPart)]
 
 
-def get_tool_results(content: list[MessageContentPart]) -> list:
+def get_tool_results(content: list[MessageContentPart]) -> list[MessageToolResultPart]:
     """Extract all tool results from content.
 
     Args:

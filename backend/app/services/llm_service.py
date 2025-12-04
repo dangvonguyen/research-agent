@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from llama_index.core import Settings
 from llama_index.core.llms import LLM
@@ -86,9 +86,9 @@ class LLMFactory:
     def _create_llm(model: LLMModel) -> LLM:
         """Create LLM instance."""
         config = LLMFactory._PROVIDER_CONFIG[model.provider]
-        llm_class = config["llm_class"]
-        api_key_attr = config["api_key_attr"]
-        provider_name = config["provider_name"]
+        llm_class = cast(type[LLM], config["llm_class"])
+        api_key_attr = cast(str, config["api_key_attr"])
+        provider_name = cast(str, config["provider_name"])
 
         # Get API key from settings
         api_key = getattr(settings, api_key_attr, None)
@@ -97,8 +97,6 @@ class LLMFactory:
             raise ValueError(
                 f"{provider_name} API key is required for model {model.model_name}"
             )
-
-        print(model)
 
         # Build base kwargs
         kwargs = {
@@ -115,7 +113,7 @@ class LLMFactory:
 
 
 class LLMService:
-    def __init__(self):
+    def __init__(self) -> None:
         self._default_llm = self.create_llm(
             model_name=settings.DEFAULT_LLM_MODEL,
             provider=settings.DEFAULT_LLM_PROVIDER,
@@ -123,7 +121,9 @@ class LLMService:
 
         Settings.llm = self._default_llm
 
-    def create_llm(self, model_name: str, provider: str | LLMProvider, **kwargs) -> LLM:
+    def create_llm(
+        self, model_name: str, provider: str | LLMProvider, **kwargs: Any
+    ) -> LLM:
         """Create an LLM instance from a model configuration.
 
         Args:

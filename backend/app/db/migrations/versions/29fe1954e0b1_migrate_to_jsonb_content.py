@@ -56,6 +56,9 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
+    # Drop GIN index
+    op.drop_index("ix_message_content_tool_calls", table_name="message")
+
     # Step 1: Add a temporary string column
     op.add_column("message", sa.Column("content_text", sa.String(), nullable=True))
 
@@ -74,6 +77,3 @@ def downgrade() -> None:
 
     # Step 5: Make the column NOT NULL
     op.alter_column("message", "content", nullable=False)
-
-    # Drop GIN index
-    op.drop_index("ix_message_content_tool_calls", table_name="message")
