@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
-from app.api.deps import SessionDep
+from app.api.deps import Session, SessionDep
 from app.db.queries import conversation as conv_db
 from app.services.db_service import (
     generate_conversation_name_from_message,
@@ -69,7 +69,7 @@ async def create_message(
     session: SessionDep,
     message: MessageCreate,
     conversation_id: Annotated[UUID, Query()],
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
 ) -> Any:
     """
     Create a new message in a new or existing conversation.
@@ -91,12 +91,19 @@ async def create_message(
     await update_conversation_updated_at(session, conversation_id)
 
     if is_new and message.role == "user":
-        background_tasks.add_task(
-            generate_conversation_name_from_message,
-            session,
-            conversation_id,
-            message.content,
-        )
+        # Create a new session for the background task
+        async def generate_name():
+            async with Session() as bg_session:
+                try:
+                    await generate_conversation_name_from_message(
+                        bg_session,
+                        conversation_id,
+                        message.content,
+                    )
+                except Exception as e:
+                    logger.exception(f"Failed to generate conversation name: {e}")
+
+        background_tasks.add_task(generate_name)
 
     return {
         "data": result,
@@ -109,7 +116,9 @@ async def create_message(
 
 
 @router.get("/messages/last", response_model=Response[MessageDB])
-async def get_last_message(session: SessionDep, conversation_id: Annotated[UUID, Query()]) -> Any:
+async def get_last_message(
+    session: SessionDep, conversation_id: Annotated[UUID, Query()]
+) -> Any:
     """
     Get the latest message in a conversation.
     """

@@ -5,7 +5,7 @@ from collections.abc import AsyncGenerator
 from fastapi import APIRouter, BackgroundTasks
 from fastapi.responses import StreamingResponse
 
-from app.api.deps import SessionDep
+from app.api.deps import Session, SessionDep
 from app.services.chat_service import chat_service
 from app.services.db_service import (
     load_history,
@@ -143,12 +143,20 @@ async def stream_chat(
             final_content = builder.get_all_parts()
 
             # Update database with final content (non-blocking)
-            background_tasks.add_task(
-                update_message_content,
-                session,
-                ai_message_id,
-                final_content,
-            )
+            # Create a new session for the background task because the
+            # request session will be closed before the task runs
+            async def save_final_content():
+                async with Session() as bg_session:
+                    try:
+                        await update_message_content(
+                            bg_session,
+                            ai_message_id,
+                            final_content,
+                        )
+                    except Exception as e:
+                        logger.exception(f"Failed to save final content: {e}")
+
+            background_tasks.add_task(save_final_content)
 
     return StreamingResponse(
         generate_stream(),
