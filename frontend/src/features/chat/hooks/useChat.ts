@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useReducer } from "react";
+import { useCallback, useMemo, useReducer, useRef } from "react";
 import { apiClient } from "@/api/client";
 import type { ChatRequest } from "@/api/models";
 import type {
+  ChatStatus,
   MessageContentPart,
   StreamAbort,
   StreamChatChunk,
@@ -15,7 +16,7 @@ import type {
 
 interface ChatState {
   // Streaming status
-  isStreaming: boolean;
+  status: ChatStatus;
   messageId: string | null;
   conversationId: string | null;
 
@@ -30,6 +31,7 @@ interface ChatState {
 }
 
 type ChatAction =
+  | { type: "SUBMIT" }
   | { type: "STREAM_START"; payload: { conversationId: string } }
   | { type: "CONTENT_START"; payload: StreamContentStart }
   | { type: "CONTENT_DELTA"; payload: StreamContentDelta }
@@ -40,7 +42,7 @@ type ChatAction =
   | { type: "RESET" };
 
 const initialState: ChatState = {
-  isStreaming: false,
+  status: "ready",
   messageId: null,
   conversationId: null,
   contentParts: new Map(),
@@ -50,10 +52,18 @@ const initialState: ChatState = {
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
+    case "SUBMIT": {
+      return {
+        ...state,
+        status: "submitted",
+        error: null,
+      };
+    }
+
     case "STREAM_START": {
       return {
         ...initialState,
-        isStreaming: true,
+        status: "streaming",
         conversationId: action.payload.conversationId,
       };
     }
@@ -217,14 +227,14 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case "MESSAGE_END": {
       return {
         ...state,
-        isStreaming: false,
+        status: "ready",
       };
     }
 
     case "STREAM_ERROR": {
       return {
         ...state,
-        isStreaming: false,
+        status: "error",
         error: action.payload.error,
       };
     }
@@ -232,7 +242,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case "STREAM_ABORT": {
       return {
         ...state,
-        isStreaming: false,
+        status: "error",
         error: `Stream aborted: ${action.payload.reason}`,
       };
     }
@@ -254,7 +264,7 @@ export interface UseChatOptions {
 
 export interface UseChatReturn {
   // Status
-  isStreaming: boolean;
+  status: ChatStatus;
   messageId: string | null;
   conversationId: string | null;
 
@@ -265,12 +275,15 @@ export interface UseChatReturn {
   error: string | null;
 
   // Actions
+  submitChat: () => void;
   startChat: (request: ChatRequest) => Promise<void>;
+  stopChat: () => void;
   reset: () => void;
 }
 
 export function useChat(options: UseChatOptions = {}): UseChatReturn {
   const [state, dispatch] = useReducer(chatReducer, initialState);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const startChat = useCallback(
     async (request: ChatRequest) => {
@@ -280,6 +293,9 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         type: "STREAM_START",
         payload: { conversationId: request.conversation_id || "" },
       });
+
+      // Create new AbortController for this stream
+      abortControllerRef.current = new AbortController();
 
       await apiClient.chat.stream_respond(
         request,
@@ -296,7 +312,6 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
               break;
             case "content_delta":
               dispatch({ type: "CONTENT_DELTA", payload: event });
-              console.log("delta", event);
               break;
             case "content_end":
               dispatch({ type: "CONTENT_END", payload: event });
@@ -327,11 +342,35 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         },
         () => {
           options.onComplete?.();
+          abortControllerRef.current = null;
         },
+        abortControllerRef.current.signal,
       );
     },
     [options, state.messageId],
   );
+
+  const submitChat = useCallback(() => {
+    dispatch({ type: "SUBMIT" });
+  }, []);
+
+  const stopChat = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+
+      dispatch({
+        type: "STREAM_ABORT",
+        payload: {
+          type: "abort",
+          reason: "User stopped the chat",
+          conversation_id: state.conversationId || "",
+          message_id: state.messageId || "",
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+  }, [state.conversationId, state.messageId]);
 
   const reset = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -348,7 +387,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
 
   return {
     // Status
-    isStreaming: state.isStreaming,
+    status: state.status,
     messageId: state.messageId,
     conversationId: state.conversationId,
 
@@ -359,7 +398,9 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     error: state.error,
 
     // Actions
+    submitChat,
     startChat,
+    stopChat,
     reset,
   };
 }

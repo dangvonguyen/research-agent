@@ -66,6 +66,7 @@ export const apiClient = {
       onChunk: (chunk: StreamChatChunk) => void,
       onError?: (error: Error) => void,
       onComplete?: () => void,
+      signal?: AbortSignal,
     ): Promise<void> => {
       try {
         const response = await fetch(`${config.baseUrl}/api/v1/chat/stream`, {
@@ -75,6 +76,7 @@ export const apiClient = {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(body),
+          signal,
         });
 
         if (!response.ok) {
@@ -141,6 +143,10 @@ export const apiClient = {
 
         onComplete?.();
       } catch (error) {
+        // Don't treat abort errors as failures
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
         console.error("Stream error:", error);
         onError?.(error instanceof Error ? error : new Error(String(error)));
       }

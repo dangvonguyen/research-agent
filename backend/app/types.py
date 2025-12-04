@@ -308,6 +308,7 @@ class MessageBase(BaseModel):
 class MessageCreate(MessageBase):
     """Model for creating a new message."""
 
+    id: UUID | None = None
     attachments: list[Attachment] = Field(default_factory=list)
 
 

@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncGenerator
 from typing import Optional, cast
 from uuid import UUID
@@ -82,29 +83,42 @@ class ChatService:
             await self.chat_engine.astream_chat(user_text, chat_history),
         )
 
-        # Announce text content starting
-        yield StreamContentStart(
-            conversation_id=conversation_id,
-            message_id=message_id,
-            content_type=StreamContentType.TEXT,
-            index=0,
-        )
+        response_gen = response.async_response_gen()
 
-        # Stream text chunks as deltas
-        async for chunk in response.async_response_gen():
-            yield StreamContentDelta(
+        try:
+            # Announce text content starting
+            yield StreamContentStart(
+                conversation_id=conversation_id,
+                message_id=message_id,
+                content_type=StreamContentType.TEXT,
+                index=0,
+            )
+
+            # Stream text chunks as deltas
+            async for chunk in response_gen:
+                yield StreamContentDelta(
+                    conversation_id=conversation_id,
+                    message_id=message_id,
+                    index=0,
+                    delta=chunk,
+                )
+
+            # Finalize text content
+            yield StreamContentEnd(
                 conversation_id=conversation_id,
                 message_id=message_id,
                 index=0,
-                delta=chunk,
             )
 
-        # Finalize text content
-        yield StreamContentEnd(
-            conversation_id=conversation_id,
-            message_id=message_id,
-            index=0,
-        )
+        except asyncio.CancelledError:
+            # Close the response generator to stop the LLM stream
+            await response_gen.aclose()
+            raise
+
+        except Exception:
+            # Close generator on any error
+            await response_gen.aclose()
+            raise
 
     def _build_chat_history(
         self, messages: list[MessageDB]

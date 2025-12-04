@@ -26,7 +26,9 @@ interface ChatProps {
 function Chat({ id, initialMessages }: ChatProps) {
   const navigate = useNavigate();
   const [messages, setMessages] = useState(initialMessages);
-  const { isStreaming, messageId, startChat, contentParts } = useChat();
+  const { status, messageId, submitChat, startChat, stopChat, contentParts } =
+    useChat();
+  const isStreaming = status === "streaming" || status === "submitted";
 
   const bottomRef = useAutoScroll({
     deps: messages,
@@ -76,11 +78,13 @@ function Chat({ id, initialMessages }: ChatProps) {
         attachments = uploadResponse.data;
       }
 
+      // Set status to "submitted"
+      submitChat();
+
       // Create message with content and attachments
-      const messageContent = content.trim() || "Sent files";
       const userMessage = await apiClient.conversations
         .createMessage(id, {
-          content: [{ type: "text", text: messageContent }],
+          content: [{ type: "text", text: content }],
           role: "user",
           attachments: attachments,
         })
@@ -195,7 +199,9 @@ function Chat({ id, initialMessages }: ChatProps) {
           {/* Foreground content */}
           <div className="relative z-10">
             <ChatComposer
+              status={status}
               onSend={handleSendMessage}
+              onStop={stopChat}
               placeholder="Ask anything"
               disabled={isStreaming}
             />

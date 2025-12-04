@@ -703,6 +703,8 @@ export interface components {
             role: components["schemas"]["Role"];
             /** Content */
             content: (components["schemas"]["MessageTextPart"] | components["schemas"]["MessageFilePart"] | components["schemas"]["MessageReasoningPart"] | components["schemas"]["MessageToolCallPart"] | components["schemas"]["MessageToolResultPart"])[];
+            /** Id */
+            id?: string | null;
             /** Attachments */
             attachments?: components["schemas"]["Attachment"][];
         };

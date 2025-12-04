@@ -22,6 +22,8 @@ export type MessageContentPart =
   | MessageToolCallPart
   | MessageToolResultPart;
 
+export type ChatStatus = "submitted" | "streaming" | "ready" | "error";
+
 export interface ChatLoaderData {
   id: string;
   initialMessages: Message[];
