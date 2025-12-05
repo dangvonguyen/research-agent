@@ -44,8 +44,6 @@ class ACLAnthologyCrawler(BaseCrawler):
             paper.source_url = f"{paper_url}.pdf"
             paper.file_path = str(self.output_dir / f"{paper_id}.pdf")
 
-            print("adfdslkf", paper.file_path)
-
             logger.debug("Successfully extracted metadata for paper '%s'", paper.title)
         else:
             logger.warning("Failed to parse paper page for paper '%s'", paper_id)
@@ -178,8 +176,16 @@ class ACLAnthologyCrawler(BaseCrawler):
             "Processing search query '%s' (max papers: %s)", query, str(max_papers)
         )
 
+        # Clean and URL-encode the query
+        # Remove quotes if LLM added them, and clean up the query
+        cleaned_query = query.strip().strip('"').strip("'")
+        # URL encode the query properly
+        from urllib.parse import quote_plus
+
+        encoded_query = quote_plus(cleaned_query)
+
         # Prepare search URL
-        search_url = f"{self.BASE_URL}/search/?q={query.replace(' ', '+')}"
+        search_url = f"{self.BASE_URL}/search/?q={encoded_query}"
 
         return await self.process_search_page(search_url, max_papers)
 
@@ -188,6 +194,7 @@ class ACLAnthologyCrawler(BaseCrawler):
     ) -> list[str]:
         """
         Find paper IDs from a search page using browser automation.
+        Falls back to direct HTTP fetch if Playwright fails.
         """
         logger.debug(
             "Finding paper IDs from search page with URL %s (attempt %d/%d)",
@@ -196,9 +203,54 @@ class ACLAnthologyCrawler(BaseCrawler):
             self.max_attempts,
         )
 
+        paper_ids = []
+
+        # First, try direct HTTP fetch (works for some search results)
         try:
-            # Use Playwright to render the page and extract paper IDs
-            paper_ids = []
+            logger.debug("Attempting direct HTTP fetch for search page: %s", url)
+            html_content = cast(str | None, await self.fetch_url(url))
+            if html_content:
+                direct_ids = self.parser.parse_search_page(html_content)
+                if direct_ids:
+                    logger.info(
+                        "Found %d paper IDs using direct HTTP fetch from search page",
+                        len(direct_ids),
+                    )
+                    # Limit to max_papers if specified
+                    if max_papers:
+                        return direct_ids[:max_papers]
+                    return direct_ids
+                else:
+                    logger.debug(
+                        "Direct HTTP fetch returned no results, trying Playwright"
+                    )
+        except Exception as e:
+            logger.debug("Direct HTTP fetch failed, trying Playwright: %s", str(e))
+
+        # Fallback to Playwright for JavaScript-rendered content
+        try:
+            # Try to use Playwright with proper event loop handling for Windows
+            import platform
+
+            # On Windows, try to use ProactorEventLoop if available
+            if platform.system() == "Windows":
+                try:
+                    import asyncio
+
+                    if isinstance(
+                        asyncio.get_event_loop_policy(),
+                        asyncio.WindowsSelectorEventLoopPolicy,
+                    ):
+                        logger.debug(
+                            "Switching to ProactorEventLoop for Windows compatibility"
+                        )
+                        asyncio.set_event_loop_policy(
+                            asyncio.WindowsProactorEventLoopPolicy()
+                        )
+                except Exception as loop_error:
+                    logger.warning(
+                        "Could not switch event loop policy: %s", str(loop_error)
+                    )
 
             async with async_playwright() as playwright:
                 browser = await playwright.chromium.launch(headless=True)
@@ -206,7 +258,7 @@ class ACLAnthologyCrawler(BaseCrawler):
 
                 try:
                     # Load initial search page
-                    logger.debug("Loading search page with URL %s", url)
+                    logger.debug("Loading search page with Playwright: %s", url)
                     await page.goto(url, wait_until="domcontentloaded", timeout=30000)
                     await page.wait_for_selector(".gsc-result", timeout=10000)
 
@@ -244,12 +296,17 @@ class ACLAnthologyCrawler(BaseCrawler):
                             url,
                         )
 
+                        # Stop if we have enough papers
+                        if max_papers and len(paper_ids) >= max_papers:
+                            paper_ids = paper_ids[:max_papers]
+                            break
+
                         # Rate limiting delay
                         await page.wait_for_timeout(3000)
 
                 except Exception as e:
                     logger.error(
-                        "Error processing search page with URL %s: %s", url, str(e)
+                        "Error processing search page with Playwright: %s", str(e)
                     )
                     raise
 
@@ -258,6 +315,14 @@ class ACLAnthologyCrawler(BaseCrawler):
 
             return paper_ids
 
+        except NotImplementedError as e:
+            logger.error(
+                "Playwright not supported on this platform (likely Windows with Python 3.13): %s. "
+                "Search functionality requires browser automation which is not available.",
+                str(e),
+            )
+            # Return empty list - search won't work without Playwright
+            return []
         except Exception as e:
             logger.error(
                 "Error finding paper IDs from search page with URL %s (attempt %d/%d): %s",

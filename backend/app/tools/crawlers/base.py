@@ -54,7 +54,7 @@ class BaseCrawler(ABC):
         self.visited_urls: set[str] = set()
         self._last_request_time: float = 0.0
 
-        config_dict = (dict(locals()))
+        config_dict = dict(locals())
         config_dict.pop("self")
         logger.debug(
             "Initialized %s with settings: %s",
@@ -112,7 +112,10 @@ class BaseCrawler(ABC):
 
         logger.warning(
             "Request failed: %s, backing off for %.2f seconds (attempt %d/%d)",
-            reason, final_delay, attempt + 1, self.max_attempts,
+            reason,
+            final_delay,
+            attempt + 1,
+            self.max_attempts,
         )
         await asyncio.sleep(final_delay)
 
@@ -135,7 +138,10 @@ class BaseCrawler(ABC):
             }
 
             logger.debug(
-                "Fetching URL %s (attempt %d/%d)", url, attempt + 1, self.max_attempts,
+                "Fetching URL %s (attempt %d/%d)",
+                url,
+                attempt + 1,
+                self.max_attempts,
             )
 
             async with self.semaphore:
@@ -160,7 +166,10 @@ class BaseCrawler(ABC):
 
                     logger.warning(
                         "HTTP error %d for URL %s (attempt %d/%d)",
-                        resp.status, url, attempt + 1, self.max_attempts,
+                        resp.status,
+                        url,
+                        attempt + 1,
+                        self.max_attempts,
                     )
 
                     # Check if we should retry
@@ -169,7 +178,8 @@ class BaseCrawler(ABC):
                     else:
                         logger.debug(
                             "Client error %d for URL %s - not retrying",
-                            resp.status, url,
+                            resp.status,
+                            url,
                         )
                         return None
 
@@ -183,7 +193,9 @@ class BaseCrawler(ABC):
         except asyncio.TimeoutError:  # noqa: UP041
             logger.warning(
                 "Timeout fetching URL %s (attempt %d/%d): %s",
-                url, attempt + 1, self.max_attempts,
+                url,
+                attempt + 1,
+                self.max_attempts,
             )
             if attempt < self.max_attempts - 1:
                 await self._backoff(attempt, "timeout")
@@ -193,7 +205,10 @@ class BaseCrawler(ABC):
         except Exception as e:
             logger.exception(
                 "Unexpected error fetching URL %s (attempt %d/%d): %s",
-                url, attempt + 1, self.max_attempts, str(e),
+                url,
+                attempt + 1,
+                self.max_attempts,
+                str(e),
             )
             if attempt < self.max_attempts - 1:
                 await self._backoff(attempt, f"unexpected error: {e}")
@@ -214,7 +229,6 @@ class BaseCrawler(ABC):
         # Mark as visited if downloaded
         if mode == "bytes":
             self.visited_urls.add(url)
-        print(self.visited_urls)
 
         # Fetch with retry
         logger.debug("Fetching URL %s", url)
@@ -238,18 +252,15 @@ class BaseCrawler(ABC):
         # Get filepath for the PDF
         filepath = Path(paper.file_path)
 
-        print("paper fiadjkslfjd", paper.file_path)
-        print(filepath)
-        print(1, filepath.exists() )
-
         # Skip if already downloaded
         if filepath.exists():
             logger.debug("PDF already exists for paper '%s': %s", paper.title, filepath)
             return
 
         logger.debug("Downloading PDF for paper '%s'", paper.title)
-        print("source_url", paper.source_url)
-        pdf_content = cast(bytes | None, await self.fetch_url(paper.source_url, "bytes"))
+        pdf_content = cast(
+            bytes | None, await self.fetch_url(paper.source_url, "bytes")
+        )
 
         if not pdf_content:
             logger.warning("Failed to download PDF for paper '%s'", paper.title)
@@ -261,7 +272,8 @@ class BaseCrawler(ABC):
 
             logger.info(
                 "Successfully downloaded PDF for paper '%s' to %s",
-                paper.title, filepath,
+                paper.title,
+                filepath,
             )
         except Exception as e:
             logger.error("Error saving PDF for paper '%s': %s", paper.title, str(e))
