@@ -11,9 +11,12 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
   Textarea,
 } from "@/components/ui";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 
 interface SavePaperModalProps {
   isOpen: boolean;

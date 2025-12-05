@@ -2,11 +2,11 @@ import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
+from app.ai.actions.enhance_keywords import enhance_search_keywords
 from app.api.deps import Session
 from app.db.queries import crawler as crawler_db
 from app.db.queries import paper as paper_db
 from app.services.embedding_service import embedding_service
-from app.services.llm_service import llm_service
 from app.tools.crawlers import ACLAnthologyCrawler
 from app.tools.parsers import PDFParser
 from app.types import CrawlerConfigCreate, JobStatus, PaperSource
@@ -171,9 +171,7 @@ class CrawlerService:
                                 "Enhancing search query with LLM for job '%s'", job_id
                             )
                             try:
-                                enhanced_query = (
-                                    await llm_service.enhance_search_keywords(query)
-                                )
+                                enhanced_query = await enhance_search_keywords(query)
                                 query = enhanced_query
                                 logger.info(
                                     "Enhanced query for job '%s': '%s' -> '%s'",
