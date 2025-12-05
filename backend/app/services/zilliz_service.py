@@ -26,7 +26,9 @@ class ZillizService:
         Connect to Zilliz vector database.
         """
         if not self.endpoint or not self.token:
-            logger.warning("Zilliz endpoint or token not configured. Vector database features will be disabled.")
+            logger.warning(
+                "Zilliz endpoint or token not configured. Vector database features will be disabled."
+            )
             return
 
         try:
@@ -36,10 +38,10 @@ class ZillizService:
                 uri=self.endpoint,
                 token=self.token,
             )
-            
+
             logger.info("Successfully connected to Zilliz vector database")
         except Exception as e:
-            logger.error("Failed to connect to Zilliz: %s", str(e), exc_info=True)
+            logger.exception("Failed to connect to Zilliz: %s", str(e))
             raise
 
     def _ensure_connected(self) -> None:
@@ -52,7 +54,7 @@ class ZillizService:
         Create collection in Zilliz if it doesn't exist (one-time operation).
         Collection schema includes:
         - Vector field for embeddings
-        - Metadata fields: paper_id, paper_title, authors, venue, year, collection_names, 
+        - Metadata fields: paper_id, paper_title, authors, venue, year, collection_names,
           section_name, section_index, chunk_index, content, chunk_id
         """
         if self._collection_created:
@@ -80,18 +82,37 @@ class ZillizService:
             )
 
             # Add fields to schema
-            schema.add_field(field_name="chunk_id", datatype=DataType.VARCHAR, is_primary=True, max_length=255)
-            schema.add_field(field_name="paper_id", datatype=DataType.VARCHAR, max_length=255)
-            schema.add_field(field_name="paper_title", datatype=DataType.VARCHAR, max_length=512)
+            schema.add_field(
+                field_name="chunk_id",
+                datatype=DataType.VARCHAR,
+                is_primary=True,
+                max_length=255,
+            )
+            schema.add_field(
+                field_name="paper_id", datatype=DataType.VARCHAR, max_length=255
+            )
+            schema.add_field(
+                field_name="paper_title", datatype=DataType.VARCHAR, max_length=512
+            )
             schema.add_field(field_name="authors", datatype=DataType.JSON)
-            schema.add_field(field_name="venue", datatype=DataType.VARCHAR, max_length=255)
+            schema.add_field(
+                field_name="venue", datatype=DataType.VARCHAR, max_length=255
+            )
             schema.add_field(field_name="year", datatype=DataType.INT64)
             schema.add_field(field_name="collection_names", datatype=DataType.JSON)
-            schema.add_field(field_name="section_name", datatype=DataType.VARCHAR, max_length=255)
+            schema.add_field(
+                field_name="section_name", datatype=DataType.VARCHAR, max_length=255
+            )
             schema.add_field(field_name="section_index", datatype=DataType.INT64)
             schema.add_field(field_name="chunk_index", datatype=DataType.INT64)
-            schema.add_field(field_name="content", datatype=DataType.VARCHAR, max_length=65535)
-            schema.add_field(field_name="embedding", datatype=DataType.FLOAT_VECTOR, dim=self.vector_dimension)
+            schema.add_field(
+                field_name="content", datatype=DataType.VARCHAR, max_length=65535
+            )
+            schema.add_field(
+                field_name="embedding",
+                datatype=DataType.FLOAT_VECTOR,
+                dim=self.vector_dimension,
+            )
 
             # Create collection with schema
             self.client.create_collection(
@@ -113,15 +134,16 @@ class ZillizService:
                 index_params=index_params,
             )
 
-            logger.info("Successfully created collection '%s' with schema", self.collection_name)
+            logger.info(
+                "Successfully created collection '%s' with schema", self.collection_name
+            )
             self._collection_created = True
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to create collection '%s': %s",
                 self.collection_name,
                 str(e),
-                exc_info=True,
             )
             raise
 
@@ -142,7 +164,7 @@ class ZillizService:
     ) -> None:
         """
         Insert paper chunks with embeddings and metadata into Zilliz.
-        
+
         Args:
             paper_id: UUID of the paper
             chunks: List of chunk dictionaries with keys:
@@ -160,7 +182,9 @@ class ZillizService:
         try:
             self._ensure_connected()
             if not self.client:
-                logger.warning("Zilliz client not available, skipping embedding insertion")
+                logger.warning(
+                    "Zilliz client not available, skipping embedding insertion"
+                )
                 return
 
             self._ensure_collection()
@@ -171,20 +195,22 @@ class ZillizService:
             paper_id_str = str(paper_id)
 
             for chunk in chunks:
-                data.append({
-                    "chunk_id": str(chunk["chunk_id"]),
-                    "paper_id": paper_id_str,
-                    "paper_title": paper_title,
-                    "authors": authors if authors else [],
-                    "venue": venue if venue else "",
-                    "year": year if year else 0,
-                    "collection_names": collection_names,
-                    "section_name": chunk["section_name"],
-                    "section_index": chunk.get("section_index", 0),
-                    "chunk_index": chunk.get("chunk_index", 0),
-                    "content": chunk["content"],
-                    "embedding": chunk["embedding"],
-                })
+                data.append(
+                    {
+                        "chunk_id": str(chunk["chunk_id"]),
+                        "paper_id": paper_id_str,
+                        "paper_title": paper_title,
+                        "authors": authors if authors else [],
+                        "venue": venue if venue else "",
+                        "year": year if year else 0,
+                        "collection_names": collection_names,
+                        "section_name": chunk["section_name"],
+                        "section_index": chunk.get("section_index", 0),
+                        "chunk_index": chunk.get("chunk_index", 0),
+                        "content": chunk["content"],
+                        "embedding": chunk["embedding"],
+                    }
+                )
 
             # Insert data using MilvusClient
             self.client.insert(
@@ -199,18 +225,17 @@ class ZillizService:
             )
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to insert embeddings for paper '%s': %s",
                 paper_id,
                 str(e),
-                exc_info=True,
             )
             raise
 
     def delete_paper_chunks(self, paper_id: UUID) -> None:
         """
         Delete all chunks for a specific paper from Zilliz.
-        
+
         Args:
             paper_id: UUID of the paper
         """
@@ -232,14 +257,15 @@ class ZillizService:
                 filter=f'paper_id == "{paper_id}"',
             )
 
-            logger.info("Successfully deleted chunks for paper '%s' from Zilliz", paper_id)
+            logger.info(
+                "Successfully deleted chunks for paper '%s' from Zilliz", paper_id
+            )
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to delete chunks for paper '%s': %s",
                 paper_id,
                 str(e),
-                exc_info=True,
             )
 
     def search(
@@ -251,13 +277,13 @@ class ZillizService:
     ) -> list[dict[str, Any]]:
         """
         Search for similar chunks using vector similarity.
-        
+
         Args:
             query_vector: Query embedding vector
             limit: Maximum number of results to return
             filter_expr: Optional filter expression (e.g., 'year == 2023')
             output_fields: Optional list of fields to return in results
-            
+
         Returns:
             List of search results with metadata
         """
@@ -268,7 +294,9 @@ class ZillizService:
         try:
             self._ensure_connected()
             if not self.client:
-                logger.warning("Zilliz client not available, returning empty search results")
+                logger.warning(
+                    "Zilliz client not available, returning empty search results"
+                )
                 return []
 
             self._ensure_collection()
@@ -309,19 +337,20 @@ class ZillizService:
             formatted_results = []
             if results and len(results) > 0:
                 for hit in results[0]:
-                    formatted_results.append({
-                        "id": hit.get("id"),
-                        "distance": hit.get("distance"),
-                        "entity": hit,
-                    })
+                    formatted_results.append(
+                        {
+                            "id": hit.get("id"),
+                            "distance": hit.get("distance"),
+                            "entity": hit,
+                        }
+                    )
 
             return formatted_results
 
         except Exception as e:
-            logger.error("Failed to search in Zilliz: %s", str(e), exc_info=True)
+            logger.exception("Failed to search in Zilliz: %s", str(e))
             return []
 
 
 # Create singleton instance
 zilliz_service = ZillizService()
-

@@ -148,23 +148,25 @@ class LLMService:
     async def enhance_search_keywords(self, user_query: str) -> str:
         """
         Enhance user query by extracting and improving keywords for paper search.
-        
+
         Args:
             user_query: The user's search query/question
-            
+
         Returns:
             Enhanced keywords string optimized for paper search
         """
         try:
-            llm = self.get_current_llm()
+            llm = self.get_default_llm()
             if not llm:
                 # Fallback: create a default LLM if none is set
-                llm = create_openai_llm(model_name="gpt-3.5-turbo", temperature=0.3)
+                llm = self.create_llm(
+                    model_name="gpt-3.5-turbo", provider="openai", temperature=0.3
+                )
                 if not llm:
                     logger.warning("No LLM available, returning original query")
                     return user_query.strip()
-            
-            prompt = f"""You are a research assistant helping to find academic papers. 
+
+            prompt = f"""You are a research assistant helping to find academic papers.
 Extract and enhance the key search terms from the following user query to optimize it for searching academic paper databases.
 
 User query: "{user_query}"
@@ -181,20 +183,22 @@ Return ONLY the enhanced search query as plain text, nothing else. Do not includ
 
             response = await llm.acomplete(prompt)
             enhanced_query = response.text.strip()
-            
+
             # Remove any quotes that the LLM might have added
             enhanced_query = enhanced_query.strip('"').strip("'").strip()
-            
+
             # Fallback to original if enhancement failed or is empty
             if not enhanced_query or len(enhanced_query) < 3:
-                logger.warning("LLM enhancement produced empty/invalid result, using original query")
+                logger.warning(
+                    "LLM enhancement produced empty/invalid result, using original query"
+                )
                 return user_query.strip()
-            
+
             logger.info(f"Enhanced query: '{user_query}' -> '{enhanced_query}'")
             return enhanced_query
-            
+
         except Exception as e:
-            logger.error(f"Error enhancing search keywords: {e}", exc_info=True)
+            logger.exception(f"Error enhancing search keywords: {e}")
             # Fallback to original query on error
             return user_query.strip()
 

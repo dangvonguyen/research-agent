@@ -94,9 +94,9 @@ async def create_crawler_job(
     """Create a new crawler job."""
     # Convert URLs from HttpUrl to strings if needed
     job_dict = job.model_dump(exclude_unset=True)
-    if "urls" in job_dict and job_dict["urls"]:
+    if job_dict.get("urls"):
         job_dict["urls"] = [str(url) for url in job_dict["urls"]]
-    
+
     job_db = CrawlerJob(**job_dict)
     session.add(job_db)
     await session.commit()
@@ -129,7 +129,10 @@ async def get_crawler_job_by_id(
 
 
 async def update_crawler_job(
-    session: AsyncSession, job_id: UUID, update_data: CrawlerJobUpdate | None = None, **kwargs
+    session: AsyncSession,
+    job_id: UUID,
+    update_data: CrawlerJobUpdate | None = None,
+    **kwargs,
 ) -> CrawlerJob | None:
     """Update a crawler job."""
     stmt = select(CrawlerJob).where(CrawlerJob.id == job_id)
@@ -142,11 +145,11 @@ async def update_crawler_job(
     if update_data:
         update_dict = update_data.model_dump(exclude_unset=True)
         # Convert URLs from HttpUrl to strings if needed
-        if "urls" in update_dict and update_dict["urls"]:
+        if update_dict.get("urls"):
             update_dict["urls"] = [str(url) for url in update_dict["urls"]]
-    
+
     update_dict.update(kwargs)
-    
+
     for key, value in update_dict.items():
         setattr(job, key, value)
 
@@ -166,4 +169,3 @@ async def delete_crawler_job(session: AsyncSession, job_id: UUID) -> bool:
     await session.delete(job)
     await session.commit()
     return True
-

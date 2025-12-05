@@ -5,11 +5,12 @@ Revises: e840e1cb1ca9
 Create Date: 2025-11-16 00:00:00.000000
 
 """
-from typing import Sequence, Union
 
-from alembic import op
+from collections.abc import Sequence
+from typing import Union
+
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "f123456789ab"
@@ -49,5 +50,3 @@ def downgrade() -> None:
     )
     op.drop_index(op.f("ix_paper_job_id"), table_name="paper")
     op.drop_column("paper", "job_id")
-
-

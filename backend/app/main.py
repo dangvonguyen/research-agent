@@ -26,7 +26,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa
     start_time = time.time()
     logger.info(
         "Starting application '%s' (version %s)",
-        settings.PROJECT_NAME, settings.API_V1_STR,
+        settings.PROJECT_NAME,
+        settings.API_V1_STR,
     )
 
     # Initialize default crawler configurations

@@ -2,13 +2,13 @@ import logging
 from uuid import UUID
 
 from openai import OpenAI
+from sqlalchemy import select, update
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import Session
 from app.core.config import settings
 from app.db.models import Paper, PaperContent
 from app.services.zilliz_service import zilliz_service
-from sqlalchemy import select, update
-from sqlalchemy.orm import selectinload
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +35,10 @@ class EmbeddingService:
     async def generate_embedding(self, text: str) -> list[float]:
         """
         Generate embedding vector for given text using OpenAI.
-        
+
         Args:
             text: Text to embed
-            
+
         Returns:
             List of floats representing the embedding vector
         """
@@ -60,19 +60,21 @@ class EmbeddingService:
             return response.data[0].embedding
 
         except Exception as e:
-            logger.error("Failed to generate embedding: %s", str(e), exc_info=True)
+            logger.exception("Failed to generate embedding: %s", str(e))
             raise
 
     async def embed_paper_chunks(self, paper_id: UUID) -> None:
         """
         Generate embeddings for all chunks of a paper and store them in Zilliz.
         This includes all metadata: paper title, authors, venue, year, collection names.
-        
+
         Args:
             paper_id: UUID of the paper to embed
         """
         if not settings.ZILLIZ_ENDPOINT or not settings.ZILLIZ_TOKEN:
-            logger.debug("Zilliz not configured, skipping embedding for paper '%s'", paper_id)
+            logger.debug(
+                "Zilliz not configured, skipping embedding for paper '%s'", paper_id
+            )
             return
 
         async with Session() as session:
@@ -80,7 +82,9 @@ class EmbeddingService:
                 # Fetch paper with all related data
                 stmt = (
                     select(Paper)
-                    .options(selectinload(Paper.contents), selectinload(Paper.collections))
+                    .options(
+                        selectinload(Paper.contents), selectinload(Paper.collections)
+                    )
                     .where(Paper.id == paper_id)
                 )
                 result = await session.execute(stmt)
@@ -95,7 +99,11 @@ class EmbeddingService:
                     return
 
                 # Get collection names
-                collection_names = [collection.name for collection in paper.collections] if paper.collections else []
+                collection_names = (
+                    [collection.name for collection in paper.collections]
+                    if paper.collections
+                    else []
+                )
 
                 logger.info(
                     "Generating embeddings for %d chunks of paper '%s'",
@@ -140,11 +148,10 @@ class EmbeddingService:
                         )
 
                     except Exception as e:
-                        logger.error(
+                        logger.exception(
                             "Failed to generate embedding for chunk '%s': %s",
                             content.id,
                             str(e),
-                            exc_info=True,
                         )
                         # Continue with other chunks
                         continue
@@ -174,11 +181,10 @@ class EmbeddingService:
                 )
 
             except Exception as e:
-                logger.error(
+                logger.exception(
                     "Failed to embed paper chunks for paper '%s': %s",
                     paper_id,
                     str(e),
-                    exc_info=True,
                 )
                 # Don't raise - this is a background task, we don't want to fail the main operation
                 raise
@@ -186,4 +192,3 @@ class EmbeddingService:
 
 # Create singleton instance
 embedding_service = EmbeddingService()
-
