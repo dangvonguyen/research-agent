@@ -24,11 +24,66 @@ export type HTTPValidationError = components["schemas"]["HTTPValidationError"];
 export type JobStatus = components["schemas"]["JobStatus"];
 export type MessageCreate = components["schemas"]["MessageCreate"];
 export type MessageDB = components["schemas"]["MessageDB"];
-export type Paper = components["schemas"]["Paper"];
+
+// Use schemas from OpenAPI, but extend Paper to match backend PaperDB model
+// The backend returns PaperDB which has different fields than the OpenAPI Paper schema
+export type PaperBase = components["schemas"]["Paper"];
+
+// PaperContentDB - should use schema from OpenAPI once types are regenerated
+// TODO: After regenerating OpenAPI types with `npm run generate:all`, replace with:
+// export type PaperContentDB = components["schemas"]["PaperContentDB"];
+// For now, define based on backend app/types.py PaperContentDB model
+export type PaperContentDB = {
+  id: string;
+  paper_id: string;
+  section_name: string;
+  section_index: number | null;
+  chunk_index: number | null;
+  content: string;
+  token_count: number | null;
+  embedding_vector: number[] | null;
+  extra_metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+
+// Paper type - extends OpenAPI Paper schema but overrides fields to match backend PaperDB
+export type Paper = Omit<PaperBase, "_id" | "url" | "pdf_url" | "venues" | "sections" | "source" | "source_id"> & {
+  id: string;  // Backend uses 'id', not '_id'
+  venue: string | null;  // Backend has single venue string, not array
+  abstract: string | null;  // Backend has abstract as direct field
+  source_type: string;  // Backend has source_type instead of source
+  source_url: string | null;  // Backend has source_url, not url/pdf_url
+  file_path: string | null;
+  parsed: boolean;
+  contents: PaperContentDB[];  // Backend has contents array with PaperContentDB
+  collection_ids?: string[];  // IDs of collections this paper belongs to
+  collection_names?: string[];  // Names of collections this paper belongs to
+};
+
 export type PaperCreate = components["schemas"]["PaperCreate"];
 export type PaperSection = components["schemas"]["PaperSection"];
 export type PaperSource = components["schemas"]["PaperSource"];
 export type PaperUpdate = components["schemas"]["PaperUpdate"];
+
+// Collection types (will be in OpenAPI after regeneration, but defining manually for now)
+export interface Collection {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  paper_count: number;
+}
+
+export interface CollectionCreate {
+  name: string;
+  description?: string | null;
+}
+
+export interface CollectionUpdate {
+  name?: string | null;
+  description?: string | null;
+}
 export type Response_ConversationDB_ = components["schemas"]["Response_ConversationDB_"];
 export type Response_MessageDB_ = components["schemas"]["Response_MessageDB_"];
 export type Response_NoneType_ = components["schemas"]["Response_NoneType_"];

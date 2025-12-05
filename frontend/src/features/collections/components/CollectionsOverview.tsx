@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -6,6 +6,7 @@ import { BookOpen, FolderOpen, Clock } from "lucide-react";
 import { RecentActivityList } from "./RecentActivityList";
 import { AnalyticsCharts } from "./AnalyticsCharts";
 import { TopSearchBar } from "./TopSearchBar";
+import type { Paper } from "@/api/models";
 
 export function CollectionsOverview() {
   const [stats, setStats] = useState({
@@ -13,38 +14,66 @@ export function CollectionsOverview() {
     totalCollections: 0,
     recentlyAdded: 0,
   });
+  const [papers, setPapers] = useState<Paper[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [statsReady, setStatsReady] = useState(false);
+  const fetchingRef = useRef(false);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    // Prevent concurrent fetches (e.g., from StrictMode double-mount)
+    if (fetchingRef.current) {
+      return;
+    }
+    fetchingRef.current = true;
+
+    let isMounted = true;
+
+    const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [papers, collections] = await Promise.all([
-          apiClient.papers.list(0, 1000), // Get all papers for count
-          apiClient.collections.list(0, 1000), // Get all collections for count
-        ]);
+        
+        // 1. First: Fetch papers (for stats and recent activity)
+        const papersData = await apiClient.papers.list();
+        if (!isMounted) return;
+        setPapers(papersData);
+        
+        // 2. Second: Fetch collections (for stats)
+        const collections = await apiClient.collections.list();
+        if (!isMounted) return;
 
         // Calculate recently added (papers added in last 7 days)
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
-        const recentlyAdded = papers.filter(
+        const recentlyAdded = papersData.filter(
           (p) => new Date(p.created_at) >= weekAgo
         ).length;
 
+        if (!isMounted) return;
         setStats({
-          totalPapers: papers.length,
+          totalPapers: papersData.length,
           totalCollections: collections.length,
           recentlyAdded,
         });
+        setIsLoading(false);
+        setStatsReady(true); // Signal that stats are ready, analytics can start
       } catch (error) {
+        if (!isMounted) return;
         console.error("Failed to fetch stats:", error);
         toast.error("Failed to load dashboard data");
-      } finally {
         setIsLoading(false);
+        setStatsReady(true); // Still allow other components to render
+      } finally {
+        fetchingRef.current = false;
       }
     };
 
-    fetchStats();
+    fetchData();
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      fetchingRef.current = false;
+    };
   }, []);
 
   return (
@@ -54,14 +83,14 @@ export function CollectionsOverview() {
         <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
       {/* Page Header */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-foreground">Dashboard Overview</h1>
+        <h1 className="text-3xl font-bold text-foreground">Collections Overview</h1>
         <p className="text-muted-foreground">Welcome back! Here's your research library at a glance.</p>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {/* Total Papers Card */}
-        <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
+        <Card className="bg-gradient-to-br from-primary/5 to-primary/15">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Papers</CardTitle>
             <BookOpen className="h-5 w-5 text-primary" />
@@ -73,10 +102,10 @@ export function CollectionsOverview() {
         </Card>
 
         {/* Total Collections Card */}
-        <Card className="bg-gradient-to-br from-accent/5 to-accent/10">
+        <Card className="bg-gradient-to-br from-primary/5 to-primary/15">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Collections</CardTitle>
-            <FolderOpen className="h-5 w-5 text-accent" />
+            <FolderOpen className="h-5 w-5 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{isLoading ? "..." : stats.totalCollections}</div>
@@ -85,7 +114,7 @@ export function CollectionsOverview() {
         </Card>
 
         {/* Recently Added Card */}
-        <Card className="bg-gradient-to-br from-green-500/5 to-green-500/10">
+        <Card className="bg-gradient-to-br from-primary/5 to-primary/15">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Recently Added</CardTitle>
             <Clock className="h-5 w-5 text-green-600" />
@@ -98,10 +127,10 @@ export function CollectionsOverview() {
       </div>
 
       {/* Charts Section */}
-      <AnalyticsCharts />
+      <AnalyticsCharts shouldFetch={statsReady} />
 
       {/* Recent Activity Section */}
-      <RecentActivityList />
+      <RecentActivityList papers={papers} isLoading={isLoading} />
         </div>
       </div>
     </div>

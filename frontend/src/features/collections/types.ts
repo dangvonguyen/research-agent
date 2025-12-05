@@ -22,6 +22,7 @@ export interface Paper {
   keywords?: string[];
   tags?: string[];
   collectionIds?: string[];
+  collection_names?: string[];
 }
 
 export interface CollectionsLoaderData {

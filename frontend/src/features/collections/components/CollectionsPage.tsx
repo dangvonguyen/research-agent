@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { Plus, LayoutGrid, List } from "lucide-react";
 import { toast } from "sonner";
@@ -16,12 +16,22 @@ export function CollectionsPage() {
   const [sortBy, setSortBy] = useState("recently-updated");
   const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const fetchingRef = useRef(false);
 
   useEffect(() => {
+    // Prevent concurrent fetches (e.g., from StrictMode double-mount)
+    if (fetchingRef.current) {
+      return;
+    }
+    fetchingRef.current = true;
+
+    let isMounted = true;
+
     const fetchCollections = async () => {
       try {
         setIsLoading(true);
         const data = await apiClient.collections.list();
+        if (!isMounted) return;
         const formattedCollections: Collection[] = data.map((c) => ({
           id: c.id,
           name: c.name,
@@ -31,14 +41,23 @@ export function CollectionsPage() {
         }));
         setCollections(formattedCollections);
       } catch (error) {
+        if (!isMounted) return;
         console.error("Failed to fetch collections:", error);
         toast.error("Failed to load collections");
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
+        fetchingRef.current = false;
       }
     };
 
     fetchCollections();
+
+    return () => {
+      isMounted = false;
+      fetchingRef.current = false;
+    };
   }, []);
 
   const handleCollectionCreated = () => {

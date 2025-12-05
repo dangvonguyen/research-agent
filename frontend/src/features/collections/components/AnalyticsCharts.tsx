@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import apiClient from "@/api/client";
@@ -27,19 +27,39 @@ interface PapersByCollection {
   fill?: string;
 }
 
-export function AnalyticsCharts() {
+interface AnalyticsChartsProps {
+  shouldFetch: boolean;
+}
+
+export function AnalyticsCharts({ shouldFetch }: AnalyticsChartsProps) {
   const [papersPerMonth, setPapersPerMonth] = useState<PapersPerMonth[]>([]);
   const [collectionData, setCollectionData] = useState<PapersByCollection[]>([]);
   const [loading, setLoading] = useState(true);
+  const fetchingRef = useRef(false);
 
   useEffect(() => {
+    // Only fetch when parent indicates stats are ready (sequential loading)
+    if (!shouldFetch) {
+      return;
+    }
+
+    // Prevent concurrent fetches (e.g., from StrictMode double-mount)
+    if (fetchingRef.current) {
+      return;
+    }
+    fetchingRef.current = true;
+
+    let isMounted = true;
+
     const fetchAnalytics = async () => {
       try {
         setLoading(true);
-        const [monthData, collectionDataResult] = await Promise.all([
-          apiClient.papers.getPapersPerMonth(),
-          apiClient.collections.getPapersByCollection(),
-        ]);
+        // Fetch analytics data sequentially after stats
+        const monthData = await apiClient.papers.getPapersPerMonth();
+        if (!isMounted) return;
+        
+        const collectionDataResult = await apiClient.collections.getPapersByCollection();
+        if (!isMounted) return;
 
         // Transform month data to include month names
         const transformedMonthData = monthData.map((item) => ({
@@ -55,6 +75,7 @@ export function AnalyticsCharts() {
         }));
         setCollectionData(transformedCollectionData);
       } catch (error) {
+        if (!isMounted) return;
         console.error("Failed to fetch analytics data:", error);
         // Set empty data on error
         setPapersPerMonth(
@@ -62,14 +83,23 @@ export function AnalyticsCharts() {
         );
         setCollectionData([]);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
+        fetchingRef.current = false;
       }
     };
 
     fetchAnalytics();
-  }, []);
 
-  if (loading) {
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      fetchingRef.current = false;
+    };
+  }, [shouldFetch]);
+
+  if (loading || !shouldFetch) {
     return (
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search, Filter, ArrowUpDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
@@ -24,23 +24,55 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
   const [papers, setPapers] = useState<Paper[]>([]);
   const [collectionName, setCollectionName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const fetchingRef = useRef(false);
+  // Use a sentinel value to distinguish "never fetched" from "fetched with null"
+  const currentCollectionIdRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
+    // Only fetch if collectionId actually changed
+    if (currentCollectionIdRef.current === collectionId) {
+      console.log("Skipping fetch - collectionId unchanged:", collectionId);
+      return;
+    }
+    
+    // Prevent concurrent fetches
+    if (fetchingRef.current) {
+      console.log("Skipping fetch - already fetching");
+      return;
+    }
+    
+    console.log("Starting fetch for collectionId:", collectionId);
+    fetchingRef.current = true;
+
+    let isMounted = true;
+
     const fetchData = async () => {
       try {
         setIsLoading(true);
         if (collectionId && collectionId !== "") {
           // Fetch collection details
+          console.log("Step 1: Fetching collection details for:", collectionId);
           const collection = await apiClient.collections.getById(collectionId);
+          console.log("Step 1: Collection received:", collection);
+          if (!isMounted) {
+            console.log("Component unmounted after getById");
+            return;
+          }
           setCollectionName(collection.name);
 
           // Fetch papers in collection
+          console.log("Step 2: Fetching papers for collection:", collectionId);
           const papersData = await apiClient.collections.getPapers(collectionId);
+          console.log("Step 2: Papers received:", papersData?.length || 0, "papers");
+          if (!isMounted) {
+            console.log("Component unmounted after getPapers");
+            return;
+          }
           const formattedPapers: Paper[] = papersData.map((p) => ({
             id: p.id,
             title: p.title,
             authors: p.authors || [],
-            year: p.year,
+            year: p.year ?? null,
             venue: p.venue || undefined,
             abstract: p.abstract || "",
             source_type: p.source_type as "upload" | "url",
@@ -51,17 +83,21 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
             updated_at: new Date(p.updated_at),
             keywords: [],
             tags: [],
-            collectionIds: [collectionId],
+            collectionIds: p.collection_ids || [collectionId],
+            collection_names: p.collection_names || [],
           }));
           setPapers(formattedPapers);
         } else {
           // Fetch all papers
+          console.log("Step 1: Fetching all papers (no collection filter)");
           const papersData = await apiClient.papers.list();
+          console.log("Step 1: All papers received:", papersData?.length || 0, "papers");
+          if (!isMounted) return;
           const formattedPapers: Paper[] = papersData.map((p) => ({
             id: p.id,
             title: p.title,
             authors: p.authors || [],
-            year: p.year,
+            year: p.year ?? null,
             venue: p.venue || undefined,
             abstract: p.abstract || "",
             source_type: p.source_type as "upload" | "url",
@@ -72,19 +108,35 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
             updated_at: new Date(p.updated_at),
             keywords: [],
             tags: [],
-            collectionIds: [],
+            collectionIds: p.collection_ids || [],
+            collection_names: p.collection_names || [],
           }));
           setPapers(formattedPapers);
         }
+        // Mark this collectionId as fetched only after successful completion
+        currentCollectionIdRef.current = collectionId;
+        console.log("Successfully fetched papers for collectionId:", collectionId);
       } catch (error) {
+        if (!isMounted) return;
         console.error("Failed to fetch papers:", error);
         toast.error("Failed to load papers");
+        // Reset ref on error to allow retry
+        currentCollectionIdRef.current = undefined;
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
+        fetchingRef.current = false;
       }
     };
 
     fetchData();
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      fetchingRef.current = false;
+    };
   }, [collectionId]);
 
   // Filter papers
@@ -105,8 +157,15 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
 
   // Sort papers
   const sortedPapers = [...filteredPapers].sort((a, b) => {
-    if (sortBy === "newest") return (b.year || 0) - (a.year || 0);
-    if (sortBy === "oldest") return (a.year || 0) - (b.year || 0);
+    if (sortBy === "newest") {
+      // Sort by created_at (newest first - time paper was added)
+      return b.created_at.getTime() - a.created_at.getTime();
+    }
+    if (sortBy === "oldest") {
+      // Sort by created_at (oldest first)
+      return a.created_at.getTime() - b.created_at.getTime();
+    }
+    // Sort alphabetically by title
     return a.title.localeCompare(b.title);
   });
 
@@ -146,8 +205,17 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
                   placeholder="Search papers within this collection..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 pr-10"
                 />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 hover:bg-muted rounded p-1 transition-colors"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                )}
               </div>
 
               <div className="flex gap-2">
@@ -157,6 +225,11 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
                     <Button variant="outline" size="sm" className="gap-2 bg-transparent">
                       <Filter className="h-4 w-4" />
                       Filter
+                      {filterYear && (
+                        <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                          1
+                        </span>
+                      )}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
@@ -170,6 +243,17 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
                         {year}
                       </DropdownMenuItem>
                     ))}
+                    {filterYear && (
+                      <>
+                        <div className="border-t border-border my-1" />
+                        <DropdownMenuItem
+                          onClick={() => setFilterYear(null)}
+                          className="text-muted-foreground"
+                        >
+                          Clear Year Filter
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -202,8 +286,22 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
               </div>
             </div>
 
-            <div className="mt-3 text-sm text-muted-foreground">
-              {sortedPapers.length} paper{sortedPapers.length !== 1 ? "s" : ""} found
+            <div className="mt-3 flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                {sortedPapers.length} paper{sortedPapers.length !== 1 ? "s" : ""} found
+              </div>
+              {(searchTerm || filterYear) && (
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setFilterYear(null);
+                  }}
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                  Clear all filters
+                </button>
+              )}
             </div>
           </div>
 
