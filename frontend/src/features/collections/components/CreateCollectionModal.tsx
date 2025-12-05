@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Textarea,
+} from "@/components/ui";
 
 interface CreateCollectionModalProps {
   isOpen: boolean;
@@ -12,7 +17,11 @@ interface CreateCollectionModalProps {
   onCreated?: () => void;
 }
 
-export function CreateCollectionModal({ isOpen, onClose, onCreated }: CreateCollectionModalProps) {
+export function CreateCollectionModal({
+  isOpen,
+  onClose,
+  onCreated,
+}: CreateCollectionModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -51,8 +60,14 @@ export function CreateCollectionModal({ isOpen, onClose, onCreated }: CreateColl
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Collection Name</label>
+            <label
+              htmlFor="collection-name"
+              className="text-sm font-medium text-foreground"
+            >
+              Collection Name
+            </label>
             <Input
+              id="collection-name"
               placeholder="e.g., Natural Language Processing"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -60,8 +75,14 @@ export function CreateCollectionModal({ isOpen, onClose, onCreated }: CreateColl
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Description (optional)</label>
+            <label
+              htmlFor="collection-description"
+              className="text-sm font-medium text-foreground"
+            >
+              Description (optional)
+            </label>
             <Textarea
+              id="collection-description"
               placeholder="Add a description for this collection..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -71,10 +92,19 @@ export function CreateCollectionModal({ isOpen, onClose, onCreated }: CreateColl
         </div>
 
         <div className="flex gap-2 pt-4">
-          <Button variant="outline" onClick={onClose} className="flex-1 bg-transparent" disabled={isCreating}>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="flex-1 bg-transparent"
+            disabled={isCreating}
+          >
             Cancel
           </Button>
-          <Button onClick={handleCreate} className="flex-1" disabled={isCreating}>
+          <Button
+            onClick={handleCreate}
+            className="flex-1"
+            disabled={isCreating}
+          >
             {isCreating ? "Creating..." : "Create Collection"}
           </Button>
         </div>
@@ -82,4 +112,3 @@ export function CreateCollectionModal({ isOpen, onClose, onCreated }: CreateColl
     </Dialog>
   );
 }
-

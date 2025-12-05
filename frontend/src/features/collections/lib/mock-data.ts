@@ -78,14 +78,26 @@ export const mockPapers = [
     parsed: true,
     created_at: new Date("2017-06-12"),
     updated_at: new Date("2017-06-12"),
-    keywords: ["deep learning", "transformers", "NLP", "attention", "sequence modeling"],
+    keywords: [
+      "deep learning",
+      "transformers",
+      "NLP",
+      "attention",
+      "sequence modeling",
+    ],
     tags: ["important", "core-ml"],
     collectionIds: [1, 2],
   },
   {
     id: "2",
-    title: "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
-    authors: ["Jacob Devlin", "Ming-Wei Chang", "Kenton Lee", "Kristina Toutanova"],
+    title:
+      "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+    authors: [
+      "Jacob Devlin",
+      "Ming-Wei Chang",
+      "Kenton Lee",
+      "Kristina Toutanova",
+    ],
     year: 2018,
     venue: "NAACL 2019",
     abstract:
@@ -96,7 +108,13 @@ export const mockPapers = [
     parsed: true,
     created_at: new Date("2018-10-11"),
     updated_at: new Date("2018-10-11"),
-    keywords: ["NLP", "transformers", "pre-training", "language models", "bidirectional"],
+    keywords: [
+      "NLP",
+      "transformers",
+      "pre-training",
+      "language models",
+      "bidirectional",
+    ],
     tags: ["nlp-models"],
     collectionIds: [1],
   },
@@ -114,7 +132,13 @@ export const mockPapers = [
     parsed: true,
     created_at: new Date("2012-12-01"),
     updated_at: new Date("2012-12-01"),
-    keywords: ["computer vision", "deep learning", "CNN", "image classification", "AlexNet"],
+    keywords: [
+      "computer vision",
+      "deep learning",
+      "CNN",
+      "image classification",
+      "AlexNet",
+    ],
     tags: ["computer-vision"],
     collectionIds: [2],
   },
@@ -122,11 +146,11 @@ export const mockPapers = [
 
 // Helper function to get collection papers count
 export function getCollectionPaperCount(collectionId: number): number {
-  return mockPapers.filter((p) => p.collectionIds.includes(collectionId)).length;
+  return mockPapers.filter((p) => p.collectionIds.includes(collectionId))
+    .length;
 }
 
 // Helper function to get all papers in a collection
 export function getPapersInCollection(collectionId: number) {
   return mockPapers.filter((p) => p.collectionIds.includes(collectionId));
 }
-

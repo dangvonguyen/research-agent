@@ -1,6 +1,5 @@
-import { Trash2, ExternalLink } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import { ExternalLink, Trash2 } from "lucide-react";
+import { Button, Card } from "@/components/ui";
 import type { Paper } from "../types";
 
 interface PaperCardProps {
@@ -14,20 +13,30 @@ export function PaperCard({ paper, isSelected, onSelect }: PaperCardProps) {
     <Card
       onClick={onSelect}
       className={`cursor-pointer transition-all p-4 ${
-        isSelected ? "ring-2 ring-primary bg-primary/5" : "hover:shadow-md hover:bg-accent/50"
+        isSelected
+          ? "ring-2 ring-primary bg-primary/5"
+          : "hover:shadow-md hover:bg-accent/50"
       }`}
     >
       <div className="space-y-3">
         {/* Title */}
-        <h3 className="font-semibold text-foreground line-clamp-2 text-balance">{paper.title}</h3>
+        <h3 className="font-semibold text-foreground line-clamp-2 text-balance">
+          {paper.title}
+        </h3>
 
         {/* Authors */}
-        <p className="text-sm text-muted-foreground line-clamp-1">{paper.authors.join(", ")}</p>
+        <p className="text-sm text-muted-foreground line-clamp-1">
+          {paper.authors.join(", ")}
+        </p>
 
         {/* Year and Abstract Preview */}
         <div className="space-y-2">
-          <p className="text-xs text-muted-foreground font-medium">{paper.year}</p>
-          <p className="text-sm text-muted-foreground line-clamp-2">{paper.abstract}</p>
+          <p className="text-xs text-muted-foreground font-medium">
+            {paper.year}
+          </p>
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            {paper.abstract}
+          </p>
         </div>
 
         {/* Keywords and Tags */}
@@ -86,4 +95,3 @@ export function PaperCard({ paper, isSelected, onSelect }: PaperCardProps) {
     </Card>
   );
 }
-

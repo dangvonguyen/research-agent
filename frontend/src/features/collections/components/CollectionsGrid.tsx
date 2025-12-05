@@ -55,9 +55,10 @@ export function CollectionsGrid({
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold uppercase text-primary">
                   {collection.name.slice(0, 2)}
                 </div>
-                <button
+                <Button
+                  variant="ghost"
                   onClick={() => navigate(`/collections/${collection.id}`)}
-                  className="text-left"
+                  className="text-left justify-start h-auto p-0 hover:bg-transparent"
                 >
                   <CardTitle className="text-foreground text-base font-semibold group-hover:text-primary transition-colors">
                     {collection.name}
@@ -67,7 +68,7 @@ export function CollectionsGrid({
                       {collection.description}
                     </CardDescription>
                   )}
-                </button>
+                </Button>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

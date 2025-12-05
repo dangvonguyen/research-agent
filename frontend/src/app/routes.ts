@@ -8,6 +8,6 @@ export const router = createBrowserRouter([
   {
     path: "/",
     Component: AppLayout,
-    children: [...chatRoutes,  ...collectionsRoutes],
+    children: [...chatRoutes, ...collectionsRoutes],
   },
 ]);

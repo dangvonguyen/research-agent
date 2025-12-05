@@ -1,7 +1,6 @@
 import createClient from "openapi-fetch";
-
+import type { StreamChatChunk } from "@/features/chat/types";
 import { getApiConfig } from "./config";
-
 import type {
   ChatRequest,
   ChatResponse,
@@ -32,7 +31,6 @@ import type {
   UpdateResponse,
 } from "./models";
 import type { paths } from "./openapi.gen";
-import type { StreamChatChunk } from "@/features/chat/types";
 
 const config = getApiConfig();
 const client = createClient<paths>({
@@ -122,10 +120,14 @@ export const apiClient = {
                     }
 
                     // Handle errors
-                    if (parsed.data.type === "error" || parsed.data.type === "abort") {
-                      const errorMessage = parsed.data.type === "error"
-                        ? parsed.data.error
-                        : `Stream aborted: ${parsed.data.reason}`;
+                    if (
+                      parsed.data.type === "error" ||
+                      parsed.data.type === "abort"
+                    ) {
+                      const errorMessage =
+                        parsed.data.type === "error"
+                          ? parsed.data.error
+                          : `Stream aborted: ${parsed.data.reason}`;
                       onError?.(new Error(errorMessage));
                       return;
                     }
@@ -380,9 +382,7 @@ export const apiClient = {
         const error = await response.json().catch(() => ({
           detail: response.statusText,
         }));
-        throw new Error(
-          `Failed to upload papers: ${JSON.stringify(error)}`,
-        );
+        throw new Error(`Failed to upload papers: ${JSON.stringify(error)}`);
       }
 
       return response.json();
@@ -417,11 +417,11 @@ export const apiClient = {
         doi?: string;
         year?: number;
         keywords?: string;
-      }
+      },
     ): Promise<CreateResponse> => {
       const formData = new FormData();
       formData.append("file", file);
-      
+
       if (metadata) {
         if (metadata.title) formData.append("title", metadata.title);
         if (metadata.authors) formData.append("authors", metadata.authors);
@@ -440,9 +440,7 @@ export const apiClient = {
         const error = await response.json().catch(() => ({
           detail: response.statusText,
         }));
-        throw new Error(
-          `Failed to upload paper: ${JSON.stringify(error)}`,
-        );
+        throw new Error(`Failed to upload paper: ${JSON.stringify(error)}`);
       }
 
       return response.json();
@@ -528,9 +526,7 @@ export const apiClient = {
         },
       ),
 
-    getPapers: (
-      collectionId: string,
-    ): Promise<Paper[]> =>
+    getPapers: (collectionId: string): Promise<Paper[]> =>
       apiCall(
         "/api/v1/collections/{collection_id}/papers",
         "GET",

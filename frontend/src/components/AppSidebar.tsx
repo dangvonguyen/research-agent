@@ -1,6 +1,14 @@
-import { LayoutDashboard, MessagesSquare, SquarePen, FolderKanban, Home, BookOpen, ChevronDown } from "lucide-react";
+import {
+  BookOpen,
+  ChevronDown,
+  FolderKanban,
+  Home,
+  LayoutDashboard,
+  MessagesSquare,
+  SquarePen,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useLocation, useParams, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { apiClient } from "@/api";
 import {
   Sidebar,
@@ -10,21 +18,21 @@ import {
   SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuItem,
   SidebarMenuButton,
-  SidebarTrigger,
+  SidebarMenuItem,
   SidebarMenuSub,
-  SidebarMenuSubItem,
   SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarTrigger,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { Conversation } from "@/types";
 import {
   RecentChatsSection,
   SearchChatsDialog,
-  SidebarSettings,
   SidebarButton,
   SidebarLogo,
+  SidebarSettings,
   useSidebarActions,
   useSidebarInteractions,
 } from "./sidebar";
@@ -52,7 +60,8 @@ function AppSidebar() {
 
   useEffect(() => {
     // Only fetch conversations when on chat pages
-    const isChatPage = location.pathname === "/" || location.pathname.startsWith("/chat");
+    const isChatPage =
+      location.pathname === "/" || location.pathname.startsWith("/chat");
     if (!isChatPage) {
       return;
     }
@@ -156,7 +165,10 @@ function AppSidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={() => navigate("/")}
-                isActive={location.pathname === "/" || location.pathname.startsWith("/chat")}
+                isActive={
+                  location.pathname === "/" ||
+                  location.pathname.startsWith("/chat")
+                }
                 tooltip="Chatbot"
                 className="group/button cursor-pointer"
               >
@@ -176,7 +188,7 @@ function AppSidebar() {
                 <ChevronDown
                   className={cn(
                     "ml-auto h-4 w-4 transition-transform",
-                    isCollectionsOpen ? "rotate-0" : "-rotate-90"
+                    isCollectionsOpen ? "rotate-0" : "-rotate-90",
                   )}
                 />
               </SidebarMenuButton>
@@ -184,7 +196,10 @@ function AppSidebar() {
                 <SidebarMenuSub>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton
-                      isActive={location.pathname === "/collections" || location.pathname === "/collections/overview"}
+                      isActive={
+                        location.pathname === "/collections" ||
+                        location.pathname === "/collections/overview"
+                      }
                       onClick={() => navigate("/collections")}
                     >
                       <Home className="h-4 w-4" />
@@ -216,7 +231,8 @@ function AppSidebar() {
         </SidebarGroup>
 
         {/* Chat Actions - Only show in Chatbot view */}
-        {(location.pathname === "/" || location.pathname.startsWith("/chat")) && (
+        {(location.pathname === "/" ||
+          location.pathname.startsWith("/chat")) && (
           <SidebarGroup>
             <SidebarMenu>
               <SidebarButton
@@ -234,7 +250,8 @@ function AppSidebar() {
         )}
 
         {/* Recent Chats - Only show in Chatbot view */}
-        {(location.pathname === "/" || location.pathname.startsWith("/chat")) && (
+        {(location.pathname === "/" ||
+          location.pathname.startsWith("/chat")) && (
           <RecentChatsSection
             chatData={chatData}
             activeChatId={chatId}

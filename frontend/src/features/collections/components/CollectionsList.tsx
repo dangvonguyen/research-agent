@@ -67,15 +67,16 @@ export function CollectionsList({
                 className="border-t border-border bg-background hover:bg-accent/40 transition-colors"
               >
                 <td className="p-4 font-semibold text-foreground">
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => navigate(`/collections/${collection.id}`)}
-                    className="inline-flex items-center gap-2 text-left hover:text-primary hover:underline"
+                    className="inline-flex items-center gap-2 text-left hover:text-primary hover:underline h-auto p-0"
                   >
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold uppercase text-primary">
                       {collection.name.slice(0, 2)}
                     </span>
                     {collection.name}
-                  </button>
+                  </Button>
                 </td>
                 <td className="p-4 text-muted-foreground text-xs md:text-sm">
                   <span className="line-clamp-2">{collection.description}</span>

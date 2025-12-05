@@ -10,4 +10,3 @@ export function CollectionPapersViewRoute() {
 
   return <CollectionPapersView collectionId={collectionId} />;
 }
-

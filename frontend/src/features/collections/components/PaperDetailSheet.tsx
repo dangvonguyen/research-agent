@@ -29,7 +29,7 @@ interface PaperDetailSheetProps {
 export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>(
-    [],
+    []
   );
   const [isAddToCollectionOpen, setIsAddToCollectionOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -63,7 +63,7 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
     setSelectedCollectionIds((prev) =>
       prev.includes(collectionId)
         ? prev.filter((id) => id !== collectionId)
-        : [...prev, collectionId],
+        : [...prev, collectionId]
     );
   };
 
@@ -89,7 +89,7 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
         } catch (error) {
           console.error(
             `Failed to add paper to collection ${collectionId}:`,
-            error,
+            error
           );
           errorCount++;
         }
@@ -97,7 +97,7 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
 
       if (successCount > 0) {
         toast.success(
-          `Successfully added paper to ${successCount} collection(s)`,
+          `Successfully added paper to ${successCount} collection(s)`
         );
         setIsAddToCollectionOpen(false);
         // Optionally refresh the paper data or trigger a callback
@@ -147,16 +147,31 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
       <div
         className="fixed right-0 top-0 h-screen w-lg border-l border-border bg-card shadow-xl overflow-y-auto z-30"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            onClose();
+          }
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="paper-details-title"
       >
         {/* Header */}
         <div className="sticky top-0 flex items-center justify-between border-b border-border bg-card px-6 py-4 z-10">
-          <h2 className="font-semibold text-foreground">Paper Details</h2>
-          <button
+          <h2
+            id="paper-details-title"
+            className="font-semibold text-foreground"
+          >
+            Paper Details
+          </h2>
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={onClose}
-            className="rounded-md p-1 hover:bg-accent transition-colors"
+            className="rounded-md p-1 hover:bg-accent"
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
 
         {/* Content */}
@@ -321,13 +336,24 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
               ) : (
                 collections.map((collection) => {
                   const isSelected = selectedCollectionIds.includes(
-                    collection.id,
+                    collection.id
                   );
                   return (
                     <div
                       key={collection.id}
                       className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent cursor-pointer"
                       onClick={() => handleToggleCollection(collection.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleToggleCollection(collection.id);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${
+                        isSelected ? "Remove from" : "Add to"
+                      } collection ${collection.name}`}
                     >
                       <div
                         className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
@@ -339,9 +365,9 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
                         {isSelected && <Check className="h-3 w-3" />}
                       </div>
                       <div className="flex-1">
-                        <label className="text-sm font-medium cursor-pointer block">
+                        <span className="text-sm font-medium block">
                           {collection.name}
-                        </label>
+                        </span>
                         {collection.description && (
                           <p className="text-xs text-muted-foreground truncate">
                             {collection.description}

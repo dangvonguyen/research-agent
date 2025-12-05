@@ -1,6 +1,6 @@
 import type { RouteObject } from "react-router-dom";
-import { CollectionsView } from "./routes/collections";
 import { CollectionPapersViewRoute } from "./routes/collection-papers";
+import { CollectionsView } from "./routes/collections";
 import { CollectionsOverviewView } from "./routes/collections-overview";
 import { PapersView } from "./routes/papers";
 
@@ -31,4 +31,3 @@ export const collectionsRoutes: RouteObject[] = [
     ],
   },
 ];
-

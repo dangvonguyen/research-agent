@@ -1,9 +1,39 @@
-import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { useEffect, useRef, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import apiClient from "@/api/client";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
-const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 const CHART_COLORS = [
   "var(--color-chart-1)",
@@ -25,6 +55,7 @@ interface PapersByCollection {
   name: string;
   value: number;
   fill?: string;
+  [key: string]: string | number | undefined;
 }
 
 interface AnalyticsChartsProps {
@@ -33,7 +64,9 @@ interface AnalyticsChartsProps {
 
 export function AnalyticsCharts({ shouldFetch }: AnalyticsChartsProps) {
   const [papersPerMonth, setPapersPerMonth] = useState<PapersPerMonth[]>([]);
-  const [collectionData, setCollectionData] = useState<PapersByCollection[]>([]);
+  const [collectionData, setCollectionData] = useState<PapersByCollection[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
   const fetchingRef = useRef(false);
 
@@ -57,8 +90,9 @@ export function AnalyticsCharts({ shouldFetch }: AnalyticsChartsProps) {
         // Fetch analytics data sequentially after stats
         const monthData = await apiClient.papers.getPapersPerMonth();
         if (!isMounted) return;
-        
-        const collectionDataResult = await apiClient.collections.getPapersByCollection();
+
+        const collectionDataResult =
+          await apiClient.collections.getPapersByCollection();
         if (!isMounted) return;
 
         // Transform month data to include month names
@@ -69,18 +103,18 @@ export function AnalyticsCharts({ shouldFetch }: AnalyticsChartsProps) {
         setPapersPerMonth(transformedMonthData);
 
         // Add colors to collection data
-        const transformedCollectionData = collectionDataResult.map((item, index) => ({
-          ...item,
-          fill: CHART_COLORS[index % CHART_COLORS.length],
-        }));
+        const transformedCollectionData = collectionDataResult.map(
+          (item, index) => ({
+            ...item,
+            fill: CHART_COLORS[index % CHART_COLORS.length],
+          })
+        );
         setCollectionData(transformedCollectionData);
       } catch (error) {
         if (!isMounted) return;
         console.error("Failed to fetch analytics data:", error);
         // Set empty data on error
-        setPapersPerMonth(
-          MONTH_NAMES.map((month) => ({ month, papers: 0 }))
-        );
+        setPapersPerMonth(MONTH_NAMES.map((month) => ({ month, papers: 0 })));
         setCollectionData([]);
       } finally {
         if (isMounted) {
@@ -116,7 +150,9 @@ export function AnalyticsCharts({ shouldFetch }: AnalyticsChartsProps) {
         <Card>
           <CardHeader>
             <CardTitle>Papers by Collection</CardTitle>
-            <CardDescription>Distribution across research areas</CardDescription>
+            <CardDescription>
+              Distribution across research areas
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-center h-[300px]">
@@ -159,7 +195,7 @@ export function AnalyticsCharts({ shouldFetch }: AnalyticsChartsProps) {
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={collectionData as any}
+                data={collectionData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
@@ -168,8 +204,11 @@ export function AnalyticsCharts({ shouldFetch }: AnalyticsChartsProps) {
                 fill="#8884d8"
                 dataKey="value"
               >
-                {collectionData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill || CHART_COLORS[index % CHART_COLORS.length]} />
+                {collectionData.map((entry) => (
+                  <Cell
+                    key={`cell-${entry.name}-${entry.value}`}
+                    fill={entry.fill || CHART_COLORS[0]}
+                  />
                 ))}
               </Pie>
               <Tooltip />
@@ -180,4 +219,3 @@ export function AnalyticsCharts({ shouldFetch }: AnalyticsChartsProps) {
     </div>
   );
 }
-

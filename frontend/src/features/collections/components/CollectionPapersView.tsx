@@ -69,12 +69,13 @@ export function CollectionPapersView({
 
           // Fetch papers in collection
           console.log("Step 2: Fetching papers for collection:", collectionId);
-          const papersData =
-            await apiClient.collections.getPapers(collectionId);
+          const papersData = await apiClient.collections.getPapers(
+            collectionId
+          );
           console.log(
             "Step 2: Papers received:",
             papersData?.length || 0,
-            "papers",
+            "papers"
           );
           if (!isMounted) {
             console.log("Component unmounted after getPapers");
@@ -106,7 +107,7 @@ export function CollectionPapersView({
           console.log(
             "Step 1: All papers received:",
             papersData?.length || 0,
-            "papers",
+            "papers"
           );
           if (!isMounted) return;
           const formattedPapers: Paper[] = papersData.map((p) => ({
@@ -133,7 +134,7 @@ export function CollectionPapersView({
         currentCollectionIdRef.current = collectionId;
         console.log(
           "Successfully fetched papers for collectionId:",
-          collectionId,
+          collectionId
         );
       } catch (error) {
         if (!isMounted) return;
@@ -210,12 +211,14 @@ export function CollectionPapersView({
                     <span className="text-sm font-medium text-primary">
                       {collectionName}
                     </span>
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => navigate("/collections")}
-                      className="ml-1 hover:bg-primary/20 rounded p-0.5 transition-colors"
+                      className="ml-1 hover:bg-primary/20 rounded p-0.5"
                     >
                       <X className="h-3 w-3" />
-                    </button>
+                    </Button>
                   </span>
                 </div>
               )}
@@ -232,13 +235,15 @@ export function CollectionPapersView({
                   className="pl-10 pr-10"
                 />
                 {searchTerm && (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => setSearchTerm("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 hover:bg-muted rounded p-1 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 hover:bg-muted rounded p-1"
                     aria-label="Clear search"
                   >
                     <X className="h-4 w-4 text-muted-foreground" />
-                  </button>
+                  </Button>
                 )}
               </div>
 
@@ -331,16 +336,18 @@ export function CollectionPapersView({
                 {sortedPapers.length !== 1 ? "s" : ""} found
               </div>
               {(searchTerm || filterYear) && (
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     setSearchTerm("");
                     setFilterYear(null);
                   }}
-                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
                 >
                   <X className="h-4 w-4" />
                   Clear all filters
-                </button>
+                </Button>
               )}
             </div>
           </div>

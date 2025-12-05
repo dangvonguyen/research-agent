@@ -115,26 +115,20 @@ export function CollectionsPage() {
           {/* Filters & Controls Row */}
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex gap-2">
-              <button
+              <Button
+                variant={viewMode === "grid" ? "default" : "secondary"}
+                size="icon"
                 onClick={() => setViewMode("grid")}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === "grid"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground hover:bg-muted"
-                }`}
               >
                 <LayoutGrid className="h-4 w-4" />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "secondary"}
+                size="icon"
                 onClick={() => setViewMode("list")}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === "list"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground hover:bg-muted"
-                }`}
               >
                 <List className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
 
             <div className="w-full md:w-48">

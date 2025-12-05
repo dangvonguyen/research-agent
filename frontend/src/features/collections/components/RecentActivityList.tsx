@@ -64,7 +64,7 @@ export function RecentActivityList({
     return [...papers]
       .sort(
         (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
       .slice(0, 3);
   }, [papers]);
@@ -109,9 +109,9 @@ export function RecentActivityList({
                         <div className="flex gap-2 mt-1 flex-wrap">
                           {paper.collection_names
                             .slice(0, 2)
-                            .map((collectionName: string, idx: number) => (
+                            .map((collectionName: string) => (
                               <span
-                                key={idx}
+                                key={collectionName}
                                 className="inline-block rounded-full bg-primary/10 px-2 py-1 text-xs text-primary"
                               >
                                 {collectionName}
