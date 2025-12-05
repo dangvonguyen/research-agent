@@ -1,5 +1,5 @@
-import { LayoutDashboard, MessagesSquare, SquarePen } from "lucide-react";
-import { useCallback, useEffect, useState, useRef } from "react";
+import { LayoutDashboard, MessagesSquare, SquarePen, FolderKanban, Home, BookOpen, ChevronDown } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { apiClient } from "@/api";
 import {
@@ -13,6 +13,9 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarTrigger,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { Conversation } from "@/types";
@@ -32,6 +35,7 @@ function AppSidebar() {
   const navigate = useNavigate();
 
   const [chatData, setChatData] = useState<Conversation[]>([]);
+  const [isCollectionsOpen, setIsCollectionsOpen] = useState(true);
 
   const {
     searchDialogOpen,
@@ -47,6 +51,12 @@ function AppSidebar() {
     useSidebarInteractions();
 
   useEffect(() => {
+    // Only fetch conversations when on chat pages
+    const isChatPage = location.pathname === "/" || location.pathname.startsWith("/chat");
+    if (!isChatPage) {
+      return;
+    }
+
     let isMounted = true;
     let isFetching = false;
 
@@ -74,7 +84,7 @@ function AppSidebar() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [location.pathname]);
 
   const handleDeleteChat = useCallback(
     async (conversation: Conversation) => {
@@ -153,6 +163,54 @@ function AppSidebar() {
                 <MessagesSquare className="h-4 w-4" />
                 <span className="text-sm">Chatbot</span>
               </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => setIsCollectionsOpen(!isCollectionsOpen)}
+                isActive={location.pathname.startsWith("/collections")}
+                tooltip="Collections"
+                className="group/button cursor-pointer"
+              >
+                <FolderKanban className="h-4 w-4" />
+                <span className="text-sm">Collections</span>
+                <ChevronDown
+                  className={cn(
+                    "ml-auto h-4 w-4 transition-transform",
+                    isCollectionsOpen ? "rotate-0" : "-rotate-90"
+                  )}
+                />
+              </SidebarMenuButton>
+              {isCollectionsOpen && (
+                <SidebarMenuSub>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
+                      isActive={location.pathname === "/collections" || location.pathname === "/collections/overview"}
+                      onClick={() => navigate("/collections")}
+                    >
+                      <Home className="h-4 w-4" />
+                      <span>Overview</span>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
+                      isActive={location.pathname === "/collections/list"}
+                      onClick={() => navigate("/collections/list")}
+                    >
+                      <FolderKanban className="h-4 w-4" />
+                      <span>Collections</span>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
+                      isActive={location.pathname === "/collections/papers"}
+                      onClick={() => navigate("/collections/papers")}
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      <span>Papers</span>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                </SidebarMenuSub>
+              )}
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>

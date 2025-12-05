@@ -1,4 +1,4 @@
-import type { Collection as APICollection, Paper as APIPaper } from "@/api";
+import type { Collection as APICollection } from "@/api";
 
 export interface Collection extends Omit<APICollection, "created_at" | "updated_at"> {
   id: string;
@@ -22,6 +22,7 @@ export interface Paper {
   keywords?: string[];
   tags?: string[];
   collectionIds?: string[];
+  collection_names?: string[];
 }
 
 export interface CollectionsLoaderData {

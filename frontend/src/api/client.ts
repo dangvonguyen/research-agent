@@ -5,6 +5,9 @@ import { getApiConfig } from "./config";
 import type {
   ChatRequest,
   ChatResponse,
+  Collection,
+  CollectionCreate,
+  CollectionUpdate,
   ConversationCreate,
   ConversationUpdate,
   CrawlerConfig,
@@ -360,6 +363,30 @@ export const apiClient = {
         "Failed to delete crawler job",
         { params: { path: { job_id: jobId } } },
       ),
+
+    upload: async (files: File[]): Promise<CreateResponse> => {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append("files", file);
+      }
+
+      const response = await fetch(`${config.baseUrl}/api/v1/crawlers/upload`, {
+        method: "POST",
+        // Don't set Content-Type header for FormData - browser will set it with boundary
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({
+          detail: response.statusText,
+        }));
+        throw new Error(
+          `Failed to upload papers: ${JSON.stringify(error)}`,
+        );
+      }
+
+      return response.json();
+    },
   },
 
   // Papers
@@ -381,6 +408,46 @@ export const apiClient = {
         params: { path: { paper_id: paperId } },
       }),
 
+    upload: async (
+      file: File,
+      metadata?: {
+        title?: string;
+        authors?: string;
+        abstract?: string;
+        doi?: string;
+        year?: number;
+        keywords?: string;
+      }
+    ): Promise<CreateResponse> => {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      if (metadata) {
+        if (metadata.title) formData.append("title", metadata.title);
+        if (metadata.authors) formData.append("authors", metadata.authors);
+        if (metadata.abstract) formData.append("abstract", metadata.abstract);
+        if (metadata.doi) formData.append("doi", metadata.doi);
+        if (metadata.year) formData.append("year", metadata.year.toString());
+        if (metadata.keywords) formData.append("keywords", metadata.keywords);
+      }
+
+      const response = await fetch(`${config.baseUrl}/api/v1/papers/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({
+          detail: response.statusText,
+        }));
+        throw new Error(
+          `Failed to upload paper: ${JSON.stringify(error)}`,
+        );
+      }
+
+      return response.json();
+    },
+
     update: (paperId: string, body: PaperUpdate): Promise<UpdateResponse> =>
       apiCall("/api/v1/papers/{paper_id}", "PATCH", "Failed to update paper", {
         params: { path: { paper_id: paperId } },
@@ -391,6 +458,128 @@ export const apiClient = {
       apiCall("/api/v1/papers/{paper_id}", "DELETE", "Failed to delete paper", {
         params: { path: { paper_id: paperId } },
       }),
+
+    getPapersPerMonth: (
+      year?: number,
+    ): Promise<Array<{ month: number; papers: number }>> =>
+      apiCall(
+        "/api/v1/papers/analytics/papers-per-month",
+        "GET",
+        "Failed to fetch papers per month analytics",
+        {
+          params: { query: year ? { year } : {} },
+        },
+      ),
+
+    getByJobId: (jobId: string): Promise<Paper[]> =>
+      apiCall(
+        "/api/v1/papers/by-job/{job_id}",
+        "GET",
+        "Failed to fetch papers by job ID",
+        {
+          params: { path: { job_id: jobId } },
+        },
+      ),
+  },
+
+  // Collections
+  collections: {
+    list: (skip?: number, limit?: number): Promise<Collection[]> =>
+      apiCall("/api/v1/collections", "GET", "Failed to fetch collections", {
+        params: { query: { skip, limit } },
+      }),
+
+    create: (body: CollectionCreate): Promise<CreateResponse> =>
+      apiCall("/api/v1/collections", "POST", "Failed to create collection", {
+        body,
+      }),
+
+    getById: (collectionId: string): Promise<Collection> =>
+      apiCall(
+        "/api/v1/collections/{collection_id}",
+        "GET",
+        "Failed to fetch collection",
+        {
+          params: { path: { collection_id: collectionId } },
+        },
+      ),
+
+    update: (
+      collectionId: string,
+      body: CollectionUpdate,
+    ): Promise<UpdateResponse> =>
+      apiCall(
+        "/api/v1/collections/{collection_id}",
+        "PATCH",
+        "Failed to update collection",
+        {
+          params: { path: { collection_id: collectionId } },
+          body,
+        },
+      ),
+
+    delete: (collectionId: string): Promise<DeleteResponse> =>
+      apiCall(
+        "/api/v1/collections/{collection_id}",
+        "DELETE",
+        "Failed to delete collection",
+        {
+          params: { path: { collection_id: collectionId } },
+        },
+      ),
+
+    getPapers: (
+      collectionId: string,
+    ): Promise<Paper[]> =>
+      apiCall(
+        "/api/v1/collections/{collection_id}/papers",
+        "GET",
+        "Failed to fetch collection papers",
+        {
+          params: {
+            path: { collection_id: collectionId },
+          },
+        },
+      ),
+
+    addPaper: (
+      collectionId: string,
+      paperId: string,
+    ): Promise<UpdateResponse> =>
+      apiCall(
+        "/api/v1/collections/{collection_id}/papers/{paper_id}",
+        "POST",
+        "Failed to add paper to collection",
+        {
+          params: {
+            path: { collection_id: collectionId, paper_id: paperId },
+          },
+        },
+      ),
+
+    removePaper: (
+      collectionId: string,
+      paperId: string,
+    ): Promise<UpdateResponse> =>
+      apiCall(
+        "/api/v1/collections/{collection_id}/papers/{paper_id}",
+        "DELETE",
+        "Failed to remove paper from collection",
+        {
+          params: {
+            path: { collection_id: collectionId, paper_id: paperId },
+          },
+        },
+      ),
+
+    getPapersByCollection: (): Promise<
+      Array<{ name: string; value: number }>
+    > =>
+      apiCall(
+        "/api/v1/collections/analytics/papers-by-collection",
+        "GET",
+        "Failed to fetch papers by collection analytics",
+      ),
   },
 
   health: {
