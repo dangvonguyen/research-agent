@@ -414,47 +414,16 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * AttachmentCreate
-         * @description Model for creating a new attachment.
+         * Attachment
+         * @description Model for attachments stored in JSONB.
          */
-        AttachmentCreate: {
-            /** Filename */
-            filename: string;
-            /** Content Type */
-            content_type: string;
+        Attachment: {
+            /** Name */
+            name: string;
             /** Path */
             path: string;
-            /** Size */
-            size: number;
-        };
-        /**
-         * AttachmentDB
-         * @description Model for attachment stored in database.
-         */
-        AttachmentDB: {
-            /** Filename */
-            filename: string;
             /** Content Type */
             content_type: string;
-            /** Path */
-            path: string;
-            /** Size */
-            size: number;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Message Id
-             * Format: uuid
-             */
-            message_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
         };
         /** Body_upload_files_api_v1_uploads_post */
         Body_upload_files_api_v1_uploads_post: {
@@ -730,20 +699,24 @@ export interface components {
          * @description Model for creating a new message.
          */
         MessageCreate: {
-            /** Content */
-            content: string;
+            /** @default user */
             role: components["schemas"]["Role"];
+            /** Content */
+            content: (components["schemas"]["MessageTextPart"] | components["schemas"]["MessageFilePart"] | components["schemas"]["MessageReasoningPart"] | components["schemas"]["MessageToolCallPart"] | components["schemas"]["MessageToolResultPart"])[];
+            /** Id */
+            id?: string | null;
             /** Attachments */
-            attachments?: components["schemas"]["AttachmentCreate"][];
+            attachments?: components["schemas"]["Attachment"][];
         };
         /**
          * MessageDB
          * @description Model for message stored in database.
          */
         MessageDB: {
-            /** Content */
-            content: string;
+            /** @default user */
             role: components["schemas"]["Role"];
+            /** Content */
+            content: (components["schemas"]["MessageTextPart"] | components["schemas"]["MessageFilePart"] | components["schemas"]["MessageReasoningPart"] | components["schemas"]["MessageToolCallPart"] | components["schemas"]["MessageToolResultPart"])[];
             /**
              * Id
              * Format: uuid
@@ -760,7 +733,90 @@ export interface components {
              */
             created_at: string;
             /** Attachments */
-            attachments?: components["schemas"]["AttachmentDB"][];
+            attachments?: components["schemas"]["Attachment"][];
+        };
+        /**
+         * MessageFilePart
+         * @description File content part of a message.
+         */
+        MessageFilePart: {
+            /**
+             * Type
+             * @default file
+             * @constant
+             */
+            type: "file";
+            /** Filename */
+            filename?: string | null;
+            /** Data */
+            data: string;
+            /** Media Type */
+            media_type: string;
+        };
+        /**
+         * MessageReasoningPart
+         * @description Reasoning content part of a message.
+         */
+        MessageReasoningPart: {
+            /**
+             * Type
+             * @default reasoning
+             * @constant
+             */
+            type: "reasoning";
+            /** Text */
+            text: string;
+        };
+        /**
+         * MessageTextPart
+         * @description Text content part of a message.
+         */
+        MessageTextPart: {
+            /**
+             * Type
+             * @default text
+             * @constant
+             */
+            type: "text";
+            /** Text */
+            text: string;
+        };
+        /**
+         * MessageToolCallPart
+         * @description Tool call content part of a message.
+         */
+        MessageToolCallPart: {
+            /**
+             * Type
+             * @default tool-call
+             * @constant
+             */
+            type: "tool-call";
+            /** Tool Call Id */
+            tool_call_id: string;
+            /** Tool Name */
+            tool_name: string;
+            /** Input */
+            input: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * MessageToolResultPart
+         * @description Tool result content part of a message.
+         */
+        MessageToolResultPart: {
+            /**
+             * Type
+             * @default tool-result
+             * @constant
+             */
+            type: "tool-result";
+            /** Tool Call Id */
+            tool_call_id: string;
+            /** Tool Name */
+            tool_name: string;
+            output: components["schemas"]["ToolResultOutput"];
         };
         /**
          * Paper
@@ -907,10 +963,10 @@ export interface components {
                 [key: string]: unknown;
             };
         };
-        /** Response[list[AttachmentCreate]] */
-        Response_list_AttachmentCreate__: {
+        /** Response[list[Attachment]] */
+        Response_list_Attachment__: {
             /** Data */
-            data: components["schemas"]["AttachmentCreate"][];
+            data: components["schemas"]["Attachment"][];
             /** Metadata */
             metadata: {
                 [key: string]: unknown;
@@ -940,6 +996,19 @@ export interface components {
          * @enum {string}
          */
         Role: "user" | "assistant";
+        /**
+         * ToolResultOutput
+         * @description Result of a tool call. Supports multiple output types.
+         */
+        ToolResultOutput: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "text" | "json" | "error-text" | "error-json" | "content";
+            /** Value */
+            value: unknown;
+        };
         /**
          * UpdateResponse
          * @description Response model for update operations.
@@ -1868,7 +1937,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Response_list_AttachmentCreate__"];
+                    "application/json": components["schemas"]["Response_list_Attachment__"];
                 };
             };
             /** @description Validation Error */

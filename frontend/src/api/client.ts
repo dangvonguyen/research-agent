@@ -21,7 +21,7 @@ import type {
   PaperCreate,
   PaperUpdate,
   Response_ConversationDB_,
-  Response_list_AttachmentCreate__,
+  Response_list_Attachment__,
   Response_list_ConversationDB__,
   Response_list_MessageDB__,
   Response_MessageDB_,
@@ -29,19 +29,7 @@ import type {
   UpdateResponse,
 } from "./models";
 import type { paths } from "./openapi.gen";
-
-// Define StreamChatChunk interface based on backend response
-interface StreamChatChunk {
-  data: {
-    chunk: string;
-    is_final: boolean;
-  };
-  metadata: {
-    conversation_id: string;
-    message_id: string;
-    timestamp: string;
-  };
-}
+import type { StreamChatChunk } from "@/features/chat/types";
 
 const config = getApiConfig();
 const client = createClient<paths>({
@@ -78,6 +66,7 @@ export const apiClient = {
       onChunk: (chunk: StreamChatChunk) => void,
       onError?: (error: Error) => void,
       onComplete?: () => void,
+      signal?: AbortSignal,
     ): Promise<void> => {
       try {
         const response = await fetch(`${config.baseUrl}/api/v1/chat/stream`, {
@@ -87,6 +76,7 @@ export const apiClient = {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(body),
+          signal,
         });
 
         if (!response.ok) {
@@ -119,12 +109,21 @@ export const apiClient = {
                 const jsonData = line.slice(6); // Remove "data: " prefix
                 if (jsonData.trim()) {
                   try {
-                    const parsed = JSON.parse(jsonData);
+                    const parsed = JSON.parse(jsonData) as StreamChatChunk;
                     onChunk(parsed);
 
-                    // Check if this is the final chunk
-                    if (parsed.data.is_final) {
+                    // Check for completion on message_end event
+                    if (parsed.data.type === "message_end") {
                       onComplete?.();
+                      return;
+                    }
+
+                    // Handle errors
+                    if (parsed.data.type === "error" || parsed.data.type === "abort") {
+                      const errorMessage = parsed.data.type === "error"
+                        ? parsed.data.error
+                        : `Stream aborted: ${parsed.data.reason}`;
+                      onError?.(new Error(errorMessage));
                       return;
                     }
                   } catch (parseError) {
@@ -144,6 +143,10 @@ export const apiClient = {
 
         onComplete?.();
       } catch (error) {
+        // Don't treat abort errors as failures
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
         console.error("Stream error:", error);
         onError?.(error instanceof Error ? error : new Error(String(error)));
       }
@@ -241,28 +244,26 @@ export const apiClient = {
 
   // File uploads
   uploads: {
-    uploadFiles: async (
-      files: File[]
-    ): Promise<Response_list_AttachmentCreate__> => {
-      const formData = new FormData()
+    uploadFiles: async (files: File[]): Promise<Response_list_Attachment__> => {
+      const formData = new FormData();
       for (const file of files) {
-        formData.append("files", file)
+        formData.append("files", file);
       }
 
       const response = await fetch(`${config.baseUrl}/api/v1/uploads`, {
         method: "POST",
         // Don't set Content-Type header for FormData - browser will set it with boundary
         body: formData,
-      })
+      });
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({
           detail: response.statusText,
-        }))
-        throw new Error(`Failed to upload files: ${JSON.stringify(error)}`)
+        }));
+        throw new Error(`Failed to upload files: ${JSON.stringify(error)}`);
       }
 
-      return response.json()
+      return response.json();
     },
   },
 

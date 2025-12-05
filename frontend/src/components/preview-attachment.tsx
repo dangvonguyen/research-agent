@@ -1,7 +1,7 @@
 import { Loader2, X } from "lucide-react";
+import { getApiConfig } from "@/api/config";
 import type { Attachment } from "@/types";
 import { Button } from "./ui";
-import { getApiConfig } from "@/api/config";
 
 export const PreviewAttachment = ({
   attachment,
@@ -12,11 +12,11 @@ export const PreviewAttachment = ({
   isUploading?: boolean;
   onRemove?: () => void;
 }) => {
-  const { filename: name, content_type: contentType, path } = attachment
+  const { name, path, content_type: contentType } = attachment;
   // Construct full URL if path is relative
   const url = path.startsWith("http")
     ? path
-    : `${getApiConfig().baseUrl}${path}`
+    : `${getApiConfig().baseUrl}${path}`;
 
   return (
     <div

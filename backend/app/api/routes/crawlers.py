@@ -20,7 +20,7 @@ from app.types import (
     PaperSource,
     UpdateResponse,
 )
-from app.utils import bulk_run
+from app.utils.bulk_run import bulk_run
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

@@ -2,9 +2,8 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from app.db.models import Attachment, Conversation, Message
+from app.db.models import Conversation, Message
 from app.types import (
     ConversationCreate,
     ConversationDB,
@@ -88,30 +87,15 @@ async def create_message(
 ) -> MessageDB:
     """Create a new message."""
     message_db = Message(
-        content=message.content,
+        id=message.id,
         role=message.role,
+        content=[cnt.model_dump() for cnt in message.content],
         conversation_id=conversation_id,
+        attachments=[att.model_dump() for att in message.attachments],
     )
     session.add(message_db)
-    await session.flush()  # Flush to get the message ID without committing
-
-    # Create attachments if provided
-    if message.attachments:
-        attachment_objects = [
-            Attachment(
-                filename=att_data.filename,
-                content_type=att_data.content_type,
-                path=att_data.path,
-                size=att_data.size,
-                message_id=message_db.id,
-            )
-            for att_data in message.attachments
-        ]
-        session.add_all(attachment_objects)
-
-    # Commit and refresh including attachments
     await session.commit()
-    await session.refresh(message_db, ["attachments"])
+    await session.refresh(message_db)
 
     return MessageDB.model_validate(message_db)
 
@@ -125,7 +109,6 @@ async def get_messages_by_conversation_id(
     """Get messages for a conversation."""
     messages_stmt = (
         select(Message)
-        .options(selectinload(Message.attachments))
         .where(Message.conversation_id == conversation_id)
         .order_by(Message.created_at.asc())
     )
@@ -140,12 +123,8 @@ async def get_messages_by_conversation_id(
 async def get_message_by_id(
     session: AsyncSession, message_id: UUID
 ) -> MessageDB | None:
-    """Get a message by ID with optimized attachment loading."""
-    stmt = (
-        select(Message)
-        .options(selectinload(Message.attachments))
-        .where(Message.id == message_id)
-    )
+    """Get a message by ID."""
+    stmt = select(Message).where(Message.id == message_id)
 
     result = await session.execute(stmt)
     message = result.scalar_one_or_none()
@@ -161,7 +140,6 @@ async def get_last_message_by_conversation_id(
     """Get the latest message in a conversation."""
     stmt = (
         select(Message)
-        .options(selectinload(Message.attachments))
         .where(Message.conversation_id == conversation_id)
         .order_by(Message.created_at.desc())
         .limit(1)
@@ -182,15 +160,13 @@ async def update_message(
     result = await session.execute(stmt)
     message = result.scalar_one_or_none()
 
-    print("message:", message)  # Debugging line
-
     if not message:
         return None
 
-    update_dict = update_data.model_dump(exclude_unset=True, exclude={"attachments"})
+    update_dict = update_data.model_dump(exclude_unset=True)
     for key, value in update_dict.items():
         setattr(message, key, value)
 
     await session.commit()
-    await session.refresh(message, ["attachments"])
+    await session.refresh(message)
     return MessageDB.model_validate(message)

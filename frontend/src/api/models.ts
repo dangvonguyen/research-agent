@@ -4,8 +4,7 @@
 
 import type { components } from "./openapi.gen";
 
-export type AttachmentCreate = components["schemas"]["AttachmentCreate"];
-export type AttachmentDB = components["schemas"]["AttachmentDB"];
+export type Attachment = components["schemas"]["Attachment"];
 export type Body_upload_files_api_v1_uploads_post = components["schemas"]["Body_upload_files_api_v1_uploads_post"];
 export type ChatRequest = components["schemas"]["ChatRequest"];
 export type ChatResponse = components["schemas"]["ChatResponse"];
@@ -24,6 +23,11 @@ export type HTTPValidationError = components["schemas"]["HTTPValidationError"];
 export type JobStatus = components["schemas"]["JobStatus"];
 export type MessageCreate = components["schemas"]["MessageCreate"];
 export type MessageDB = components["schemas"]["MessageDB"];
+export type MessageFilePart = components["schemas"]["MessageFilePart"];
+export type MessageReasoningPart = components["schemas"]["MessageReasoningPart"];
+export type MessageTextPart = components["schemas"]["MessageTextPart"];
+export type MessageToolCallPart = components["schemas"]["MessageToolCallPart"];
+export type MessageToolResultPart = components["schemas"]["MessageToolResultPart"];
 export type Paper = components["schemas"]["Paper"];
 export type PaperCreate = components["schemas"]["PaperCreate"];
 export type PaperSection = components["schemas"]["PaperSection"];
@@ -32,9 +36,10 @@ export type PaperUpdate = components["schemas"]["PaperUpdate"];
 export type Response_ConversationDB_ = components["schemas"]["Response_ConversationDB_"];
 export type Response_MessageDB_ = components["schemas"]["Response_MessageDB_"];
 export type Response_NoneType_ = components["schemas"]["Response_NoneType_"];
-export type Response_list_AttachmentCreate__ = components["schemas"]["Response_list_AttachmentCreate__"];
+export type Response_list_Attachment__ = components["schemas"]["Response_list_Attachment__"];
 export type Response_list_ConversationDB__ = components["schemas"]["Response_list_ConversationDB__"];
 export type Response_list_MessageDB__ = components["schemas"]["Response_list_MessageDB__"];
 export type Role = components["schemas"]["Role"];
+export type ToolResultOutput = components["schemas"]["ToolResultOutput"];
 export type UpdateResponse = components["schemas"]["UpdateResponse"];
 export type ValidationError = components["schemas"]["ValidationError"];
