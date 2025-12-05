@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api import api_router
 from app.core.config import settings
 from app.logging import setup_logging
-from app.services.crawler import initialize_default_configs
+from app.services.crawler import crawler_service
 
 
 @asynccontextmanager
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa
 
     # Initialize default crawler configurations
     try:
-        await initialize_default_configs()
+        await crawler_service.initialize_default_configs()
     except Exception as e:
         logger.error("Failed to initialize default crawler configs: %s", str(e))
         # Don't fail startup if config initialization fails

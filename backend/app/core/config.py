@@ -104,9 +104,19 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str
     ANTHROPIC_API_KEY: Optional[str] = None
 
+    # Datalab API settings for PDF parsing
+    DATALAB_API_KEY: Optional[str] = None
+    DATALAB_API_URL: Optional[str] = None
+
     # File upload settings
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024  # 50MB
+
+    # Zilliz vector database settings
+    ZILLIZ_ENDPOINT: Optional[str] = None
+    ZILLIZ_TOKEN: Optional[str] = None
+    ZILLIZ_COLLECTION_NAME: str = "paper_chunks"
+    ZILLIZ_VECTOR_DIMENSION: int = 1536
 
 
 # Load settings from environment
