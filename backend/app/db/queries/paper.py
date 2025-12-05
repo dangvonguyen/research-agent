@@ -1,11 +1,13 @@
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import extract, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.models import Paper, PaperContent as PaperContentORM
-from app.types import PaperCreate, PaperContent, PaperUpdate
+from app.db.models import Paper
+from app.db.models import PaperContent as PaperContentORM
+from app.types import PaperContent, PaperCreate, PaperUpdate
 
 
 async def create_paper(
@@ -40,8 +42,17 @@ async def create_paper(
         paper_dict["job_id"] = job_id
     elif paper.job_id:
         try:
-            paper_dict["job_id"] = UUID(paper.job_id)
-        except (ValueError, TypeError):
+            # Check if job_id is already a UUID object (from asyncpg or Python UUID)
+            if isinstance(paper.job_id, UUID):
+                paper_dict["job_id"] = paper.job_id
+            elif hasattr(paper.job_id, "__str__"):
+                # Handle asyncpg UUID or other UUID-like objects
+                # Convert to string first, then to Python UUID
+                paper_dict["job_id"] = UUID(str(paper.job_id))
+            else:
+                # Try direct conversion for string
+                paper_dict["job_id"] = UUID(paper.job_id)
+        except (ValueError, TypeError, AttributeError):
             pass
 
     # Create the paper
@@ -104,24 +115,28 @@ async def create_papers(
 
 
 async def get_papers(
-    session: AsyncSession, skip: int = 0, limit: int = 100
+    session: AsyncSession, skip: int | None = None, limit: int | None = None
 ) -> list[Paper]:
-    """Get all papers."""
+    """Get all papers with contents and collections loaded."""
     stmt = (
         select(Paper)
-        .options(selectinload(Paper.contents))
-        .offset(skip)
-        .limit(limit)
-        .order_by(Paper.updated_at.desc())
+        .options(selectinload(Paper.contents), selectinload(Paper.collections))
+        .order_by(Paper.created_at.desc())
     )
+    if skip is not None:
+        stmt = stmt.offset(skip)
+    if limit is not None:
+        stmt = stmt.limit(limit)
     result = await session.execute(stmt)
     return list(result.scalars().all())
 
 
 async def get_paper_by_id(session: AsyncSession, paper_id: UUID) -> Paper | None:
-    """Get a paper by ID with its contents."""
+    """Get a paper by ID with its contents and collections."""
     stmt = (
-        select(Paper).options(selectinload(Paper.contents)).where(Paper.id == paper_id)
+        select(Paper)
+        .options(selectinload(Paper.contents), selectinload(Paper.collections))
+        .where(Paper.id == paper_id)
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
@@ -217,3 +232,47 @@ async def get_paper_contents_by_paper_id(
     )
     result = await session.execute(stmt)
     return list(result.scalars().all())
+
+
+async def get_papers_by_job_id(session: AsyncSession, job_id: UUID) -> list[Paper]:
+    """Get all papers created by a specific job with contents and collections loaded."""
+    stmt = (
+        select(Paper)
+        .where(Paper.job_id == job_id)
+        .options(selectinload(Paper.contents), selectinload(Paper.collections))
+        .order_by(Paper.created_at.desc())
+    )
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_papers_per_month(
+    session: AsyncSession, year: int | None = None
+) -> list[dict[str, int]]:
+    """
+    Get count of papers per month.
+    Returns list of dicts with 'month' (1-12) and 'papers' (count).
+    If year is None, uses current year.
+    """
+    if year is None:
+        year = datetime.now().year
+
+    # Query papers grouped by month
+    stmt = (
+        select(
+            extract("month", Paper.created_at).label("month"),
+            func.count(Paper.id).label("count"),
+        )
+        .where(extract("year", Paper.created_at) == year)
+        .group_by(extract("month", Paper.created_at))
+    )
+    result = await session.execute(stmt)
+    rows = result.all()
+
+    # Create a dict with all months initialized to 0
+    month_data = dict.fromkeys(range(1, 13), 0)
+    for row in rows:
+        month_data[int(row.month)] = int(row.count)
+
+    # Convert to list of dicts
+    return [{"month": month, "papers": month_data[month]} for month in range(1, 13)]
