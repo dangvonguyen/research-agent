@@ -1,9 +1,14 @@
-import { Button } from "@/components/ui/Button";
-import { MoreVertical, FileText } from "lucide-react";
+import { FileText, MoreVertical } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/DropdownMenu";
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui";
 import type { Collection } from "../types";
 
 interface CollectionsListProps {
@@ -11,7 +16,10 @@ interface CollectionsListProps {
   onCollectionDeleted?: () => void;
 }
 
-export function CollectionsList({ collections, onCollectionDeleted }: CollectionsListProps) {
+export function CollectionsList({
+  collections,
+  onCollectionDeleted,
+}: CollectionsListProps) {
   const navigate = useNavigate();
 
   const handleDelete = async (collectionId: string) => {
@@ -109,4 +117,3 @@ export function CollectionsList({ collections, onCollectionDeleted }: Collection
     </div>
   );
 }
-

@@ -100,10 +100,6 @@ class Settings(BaseSettings):
     def POSTGRES_URI_SAFE(self) -> str:
         return sanitize_db_uri(self.POSTGRES_URI)
 
-    # LLM Provider API Keys
-    OPENAI_API_KEY: str
-    ANTHROPIC_API_KEY: Optional[str] = None
-
     # Datalab API settings for PDF parsing
     DATALAB_API_KEY: Optional[str] = None
     DATALAB_API_URL: Optional[str] = None
@@ -111,6 +107,15 @@ class Settings(BaseSettings):
     # File upload settings
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024  # 50MB
+
+    # Default LLM settings
+    DEFAULT_LLM_MODEL: str = "models/gemini-2.5-flash"
+    DEFAULT_LLM_PROVIDER: str = "gemini"
+
+    # LLM Provider API Keys
+    ANTHROPIC_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
+    OPENAI_API_KEY: Optional[str] = None
 
     # Zilliz vector database settings
     ZILLIZ_ENDPOINT: Optional[str] = None
@@ -124,13 +129,16 @@ settings = Settings()  # type: ignore
 logger.info("Settings loaded for project: %s", settings.PROJECT_NAME)
 logger.debug(
     "API settings: API_V1_STR=%s, DEBUG=%s",
-    settings.API_V1_STR, settings.DEBUG,
+    settings.API_V1_STR,
+    settings.DEBUG,
 )
 logger.debug(
     "MongoDB settings: database=%s, URI=%s",
-    settings.MONGODB_DATABASE, settings.MONGODB_URI_SAFE,
+    settings.MONGODB_DATABASE,
+    settings.MONGODB_URI_SAFE,
 )
 logger.debug(
     "Postgres settings: database=%s, URI=%s",
-    settings.POSTGRES_DB, settings.POSTGRES_URI_SAFE,
+    settings.POSTGRES_DB,
+    settings.POSTGRES_URI_SAFE,
 )

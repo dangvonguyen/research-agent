@@ -8,7 +8,7 @@ import aiofiles
 from fastapi import APIRouter, HTTPException, UploadFile
 
 from app.core.config import settings
-from app.types import AttachmentCreate, Response
+from app.types import Attachment, Response
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -18,7 +18,7 @@ UPLOAD_DIR = Path(settings.UPLOAD_DIR)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
-@router.post("", response_model=Response[list[AttachmentCreate]])
+@router.post("", response_model=Response[list[Attachment]])
 async def upload_files(files: list[UploadFile]) -> Any:
     """
     Upload files and return attachment metadata.
@@ -57,11 +57,10 @@ async def upload_files(files: list[UploadFile]) -> Any:
             )
 
             # Create attachment metadata
-            attachment = AttachmentCreate(
-                filename=file.filename or unique_filename,
-                content_type=file.content_type or "application/octet-stream",
+            attachment = Attachment(
+                name=file.filename or unique_filename,
                 path=f"/api/v1/uploads/{unique_filename}",  # URL path for accessing the file
-                size=file_size,
+                content_type=file.content_type or "application/octet-stream",
             )
 
             uploaded_attachments.append(attachment)

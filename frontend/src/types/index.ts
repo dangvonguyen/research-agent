@@ -1,5 +1,5 @@
 export type {
-  AttachmentDB as Attachment,
+  Attachment,
   ConversationDB as Conversation,
   MessageDB as Message,
 } from "@/api/models";

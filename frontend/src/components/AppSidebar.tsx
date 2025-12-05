@@ -1,5 +1,5 @@
 import { LayoutDashboard, MessagesSquare, SquarePen, FolderKanban, Home, BookOpen, ChevronDown } from "lucide-react";
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { apiClient } from "@/api";
 import {

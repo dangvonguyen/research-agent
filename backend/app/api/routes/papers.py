@@ -1,7 +1,7 @@
 import logging
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
 import aiofiles
@@ -58,74 +58,82 @@ async def create_paper(session: SessionDep, paper: PaperCreate) -> Any:
 async def upload_paper(
     session: SessionDep,
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(..., description="PDF file to upload"),
-    title: str | None = Form(None, description="Paper title"),
-    authors: str | None = Form(None, description="Comma-separated list of authors"),
-    abstract: str | None = Form(None, description="Paper abstract"),
-    doi: str | None = Form(None, description="DOI"),
-    year: int | None = Form(None, description="Publication year"),
-    keywords: str | None = Form(None, description="Comma-separated keywords"),
+    file: Annotated[UploadFile, File()],
+    title: Annotated[str | None, Form()] = None,
+    abstract: Annotated[str | None, Form()] = None,
+    doi: Annotated[str | None, Form()] = None,
+    year: Annotated[int | None, Form()] = None,
+    authors: Annotated[str | None, Form(description="Comma-separated")] = None,
+    keywords: Annotated[str | None, Form(description="Comma-separated")] = None,
 ) -> Any:
     """
     Upload a PDF paper file with optional metadata.
-    
+
     If metadata is provided by the user, it will be used.
     If metadata is missing, it will be extracted from the PDF.
     User-provided metadata takes precedence over extracted metadata.
     """
     # Validate file type
-    if not file.filename or not file.filename.lower().endswith('.pdf'):
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
-    
+
     # Validate file size
     content = await file.read()
     file_size = len(content)
     if file_size > settings.MAX_UPLOAD_SIZE:
         raise HTTPException(
             status_code=400,
-            detail=f"File size exceeds maximum allowed size of {settings.MAX_UPLOAD_SIZE / (1024 * 1024)}MB"
+            detail=f"File size exceeds maximum allowed size of {settings.MAX_UPLOAD_SIZE / (1024 * 1024)}MB",
         )
-    
+
     # Generate unique filename
     file_extension = Path(file.filename).suffix
     unique_filename = f"{uuid.uuid4()}{file_extension}"
     file_path = UPLOAD_DIR / unique_filename
-    
+
     try:
         # Save file to disk
         async with aiofiles.open(file_path, "wb") as f:
             await f.write(content)
-        
+
         logger.info(
             "Successfully uploaded file '%s' as '%s' (size: %d bytes)",
             file.filename,
             unique_filename,
             file_size,
         )
-        
+
         # Prepare metadata dictionary
         user_metadata = {
             "title": title.strip() if title and title.strip() else None,
-            "authors": [a.strip() for a in authors.split(',')] if authors and authors.strip() else None,
+            "authors": [a.strip() for a in authors.split(",")]
+            if authors and authors.strip()
+            else None,
             "abstract": abstract.strip() if abstract and abstract.strip() else None,
             "doi": doi.strip() if doi and doi.strip() else None,
             "year": year,
-            "keywords": [k.strip() for k in keywords.split(',')] if keywords and keywords.strip() else None,
+            "keywords": [k.strip() for k in keywords.split(",")]
+            if keywords and keywords.strip()
+            else None,
         }
-        
+
         # Extract metadata from PDF if user didn't provide it
         parsed_metadata = {}
         parser = PDFParser()
         full_markdown_content = None
-        
+
         try:
             # Get full markdown content once (will be reused for content parsing)
             logger.debug("Converting PDF to markdown for '%s'", file.filename)
-            full_markdown_content = parser.get_markdown_content(str(file_path), max_pages=None)
-            
+            full_markdown_content = parser.get_markdown_content(
+                str(file_path), max_pages=None
+            )
+
             # Extract metadata from full markdown (abstract can be anywhere in document)
-            parsed_metadata = paper_service.extract_metadata_from_markdown(full_markdown_content)
-            
+            parsed_metadata = paper_service.extract_metadata_from_markdown(
+                full_markdown_content
+            )
+
             logger.info(
                 "Extracted metadata from PDF '%s': title='%s', authors=%s, year=%s",
                 file.filename,
@@ -140,16 +148,18 @@ async def upload_paper(
                 str(e),
             )
             # Continue with user metadata or filename as fallback
-        
+
         # Merge metadata: user-provided takes precedence, then parsed, then fallback
         final_metadata = {
-            "title": user_metadata["title"] or parsed_metadata.get("title") or Path(file.filename).stem,
+            "title": user_metadata["title"]
+            or parsed_metadata.get("title")
+            or Path(file.filename).stem,
             "authors": user_metadata["authors"] or parsed_metadata.get("authors"),
             "abstract": user_metadata["abstract"] or parsed_metadata.get("abstract"),
             "year": user_metadata["year"] or parsed_metadata.get("year"),
             "venue": parsed_metadata.get("venue"),  # Venue is only from parsing
         }
-        
+
         # Create Paper record
         paper_create = PaperCreate(
             title=final_metadata["title"],
@@ -161,30 +171,36 @@ async def upload_paper(
             file_path=str(file_path),
             source_url=None,
         )
-        
+
         # Create paper in database
         paper_orm = await paper_db.create_paper(session, paper_create)
-        
+
         # Parse PDF content using the already-converted markdown (avoid re-parsing)
         try:
             logger.info("Parsing PDF content for paper '%s'", paper_orm.id)
             # Pass the pre-converted markdown to avoid re-parsing the PDF
-            contents = parser.parse_paper(paper_orm, markdown_content=full_markdown_content)
-            
+            contents = parser.parse_paper(
+                paper_orm, markdown_content=full_markdown_content
+            )
+
             if contents:
                 # Update paper with parsed contents
                 from app.db.models import PaperContent as PaperContentORM
+
                 content_objects = []
-                
+
                 # Extract abstract from parsed contents if found
                 abstract_content = None
                 abstract_chunks = []
-                
+
                 for content_data in contents:
                     # Check if this is an abstract section
-                    if content_data.section_name and "abstract" in content_data.section_name.lower():
+                    if (
+                        content_data.section_name
+                        and "abstract" in content_data.section_name.lower()
+                    ):
                         abstract_chunks.append(content_data.content)
-                    
+
                     content_objects.append(
                         PaperContentORM(
                             paper_id=paper_orm.id,
@@ -197,7 +213,7 @@ async def upload_paper(
                             extra_metadata=content_data.extra_metadata,
                         )
                     )
-                
+
                 # Combine abstract chunks if found
                 if abstract_chunks:
                     abstract_content = " ".join(abstract_chunks).strip()
@@ -211,18 +227,18 @@ async def upload_paper(
                             paper_orm.id,
                             len(abstract_content),
                         )
-                
+
                 session.add_all(content_objects)
                 paper_orm.parsed = True
                 await session.commit()
                 await session.refresh(paper_orm, ["contents"])
-                
+
                 logger.info(
                     "Successfully parsed %d sections for paper '%s'",
                     len(content_objects),
                     paper_orm.id,
                 )
-                
+
                 # Schedule background task to generate embeddings and store in Zilliz
                 background_tasks.add_task(
                     embedding_service.embed_paper_chunks,
@@ -230,27 +246,26 @@ async def upload_paper(
                 )
                 logger.debug("Scheduled embedding task for paper '%s'", paper_orm.id)
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to parse PDF content for paper '%s': %s",
                 paper_orm.id,
                 str(e),
-                exc_info=True,
             )
             # Continue even if parsing fails - paper is still created
-        
+
         logger.info(
             "Successfully created paper '%s' with ID '%s' from uploaded PDF",
             final_metadata["title"],
             paper_orm.id,
         )
-        
+
         return CreateResponse(
             success=True,
             message="Paper successfully uploaded and created",
             created_count=1,
             created_ids=[str(paper_orm.id)],
         )
-        
+
     except Exception as e:
         # Clean up file if paper creation failed
         if file_path.exists():
@@ -258,17 +273,15 @@ async def upload_paper(
                 file_path.unlink()
             except Exception:
                 pass
-        
-        logger.error(
+
+        logger.exception(
             "Failed to upload and create paper from file '%s': %s",
             file.filename,
             str(e),
-            exc_info=True,
         )
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to upload paper: {str(e)}"
-        )
+            status_code=500, detail=f"Failed to upload paper: {e}"
+        ) from e
 
 
 @router.get("", response_model=list[PaperResponse])
@@ -291,8 +304,8 @@ async def get_paper(session: SessionDep, paper_id: str) -> Any:
     logger.debug("Retrieving paper with ID '%s'", paper_id)
     try:
         paper_uuid = UUID(paper_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid paper ID format")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid paper ID format") from e
 
     paper_orm = await paper_db.get_paper_by_id(session, paper_uuid)
     if not paper_orm:
@@ -313,8 +326,8 @@ async def update_paper(
     logger.debug("Updating paper '%s'", paper_id)
     try:
         paper_uuid = UUID(paper_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid paper ID format")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid paper ID format") from e
 
     updated = await paper_db.update_paper(session, paper_uuid, paper)
     if not updated:
@@ -336,8 +349,8 @@ async def delete_paper(session: SessionDep, paper_id: str) -> Any:
     logger.debug("Deleting paper '%s'", paper_id)
     try:
         paper_uuid = UUID(paper_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid paper ID format")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid paper ID format") from e
 
     deleted = await paper_db.delete_paper(session, paper_uuid)
     if not deleted:
@@ -361,9 +374,9 @@ async def get_papers_by_job(
     logger.debug("Retrieving papers for job '%s'", job_id)
     try:
         job_uuid = UUID(job_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid job ID format")
-    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from e
+
     papers_orm = await paper_db.get_papers_by_job_id(session, job_uuid)
     return [PaperResponse.from_orm_with_collections(paper) for paper in papers_orm]
 

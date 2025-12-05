@@ -1,14 +1,20 @@
-import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/Button";
-import { Plus, LayoutGrid, List } from "lucide-react";
+import { LayoutGrid, List, Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
-import { CreateCollectionModal } from "./CreateCollectionModal";
+import {
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui";
+import type { Collection } from "../types";
 import { CollectionsGrid } from "./CollectionsGrid";
 import { CollectionsList } from "./CollectionsList";
+import { CreateCollectionModal } from "./CreateCollectionModal";
 import { TopSearchBar } from "./TopSearchBar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
-import type { Collection } from "../types";
 
 export function CollectionsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -38,6 +44,7 @@ export function CollectionsPage() {
           description: c.description || "",
           paperCount: c.paper_count,
           lastUpdated: c.updated_at,
+          paper_count: c.paper_count,
         }));
         setCollections(formattedCollections);
       } catch (error) {
@@ -71,6 +78,7 @@ export function CollectionsPage() {
           description: c.description || "",
           paperCount: c.paper_count,
           lastUpdated: c.updated_at,
+          paper_count: c.paper_count,
         }));
         setCollections(formattedCollections);
       } catch (error) {
@@ -85,82 +93,98 @@ export function CollectionsPage() {
       <TopSearchBar />
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Collections</h1>
-          <p className="text-muted-foreground">Organize your papers into categories</p>
-        </div>
-        <Button onClick={() => setIsCreateModalOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Create Collection
-        </Button>
-      </div>
+          {/* Page Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">
+                Collections
+              </h1>
+              <p className="text-muted-foreground">
+                Organize your papers into categories
+              </p>
+            </div>
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Create Collection
+            </Button>
+          </div>
 
-      {/* Filters & Controls Row */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setViewMode("grid")}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === "grid"
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground hover:bg-muted"
-            }`}
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setViewMode("list")}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === "list"
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground hover:bg-muted"
-            }`}
-          >
-            <List className="h-4 w-4" />
-          </button>
-        </div>
+          {/* Filters & Controls Row */}
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === "grid"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground hover:bg-muted"
+                }`}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === "list"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground hover:bg-muted"
+                }`}
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
 
-        <div className="w-full md:w-48">
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="a-z">A–Z</SelectItem>
-              <SelectItem value="z-a">Z–A</SelectItem>
-              <SelectItem value="most-papers">Most Papers</SelectItem>
-              <SelectItem value="recently-updated">Recently Updated</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+            <div className="w-full md:w-48">
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="a-z">A–Z</SelectItem>
+                  <SelectItem value="z-a">Z–A</SelectItem>
+                  <SelectItem value="most-papers">Most Papers</SelectItem>
+                  <SelectItem value="recently-updated">
+                    Recently Updated
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-      {/* Collections View */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-muted-foreground">Loading collections...</p>
-        </div>
-      ) : collections.length === 0 ? (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-muted-foreground">No collections yet. Create your first collection!</p>
-        </div>
-      ) : viewMode === "grid" ? (
-        <CollectionsGrid collections={collections} onCollectionDeleted={handleCollectionCreated} />
-      ) : (
-        <CollectionsList collections={collections} onCollectionDeleted={handleCollectionCreated} />
-      )}
+          {/* Collections View */}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <p className="text-muted-foreground">Loading collections...</p>
+            </div>
+          ) : collections.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <p className="text-muted-foreground">
+                No collections yet. Create your first collection!
+              </p>
+            </div>
+          ) : viewMode === "grid" ? (
+            <CollectionsGrid
+              collections={collections}
+              onCollectionDeleted={handleCollectionCreated}
+            />
+          ) : (
+            <CollectionsList
+              collections={collections}
+              onCollectionDeleted={handleCollectionCreated}
+            />
+          )}
 
-      {/* Create Collection Modal */}
-      <CreateCollectionModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onCreated={handleCollectionCreated}
-      />
+          {/* Create Collection Modal */}
+          <CreateCollectionModal
+            isOpen={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+            onCreated={handleCollectionCreated}
+          />
         </div>
       </div>
     </div>
   );
 }
-

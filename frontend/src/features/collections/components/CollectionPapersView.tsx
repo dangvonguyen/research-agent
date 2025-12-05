@@ -1,21 +1,28 @@
-import { useState, useEffect, useRef } from "react";
-import { Search, Filter, ArrowUpDown, X } from "lucide-react";
+import { ArrowUpDown, Filter, Search, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/DropdownMenu";
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Input,
+} from "@/components/ui";
+import type { Paper } from "../types";
 import { PaperCard } from "./PaperCard";
 import { PaperDetailSheet } from "./PaperDetailSheet";
 import { TopSearchBar } from "./TopSearchBar";
-import { useNavigate } from "react-router-dom";
-import type { Paper } from "../types";
 
 interface CollectionPapersViewProps {
   collectionId: string | null;
 }
 
-export function CollectionPapersView({ collectionId }: CollectionPapersViewProps) {
+export function CollectionPapersView({
+  collectionId,
+}: CollectionPapersViewProps) {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "a-z">("newest");
@@ -34,13 +41,13 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
       console.log("Skipping fetch - collectionId unchanged:", collectionId);
       return;
     }
-    
+
     // Prevent concurrent fetches
     if (fetchingRef.current) {
       console.log("Skipping fetch - already fetching");
       return;
     }
-    
+
     console.log("Starting fetch for collectionId:", collectionId);
     fetchingRef.current = true;
 
@@ -62,8 +69,13 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
 
           // Fetch papers in collection
           console.log("Step 2: Fetching papers for collection:", collectionId);
-          const papersData = await apiClient.collections.getPapers(collectionId);
-          console.log("Step 2: Papers received:", papersData?.length || 0, "papers");
+          const papersData =
+            await apiClient.collections.getPapers(collectionId);
+          console.log(
+            "Step 2: Papers received:",
+            papersData?.length || 0,
+            "papers",
+          );
           if (!isMounted) {
             console.log("Component unmounted after getPapers");
             return;
@@ -91,7 +103,11 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
           // Fetch all papers
           console.log("Step 1: Fetching all papers (no collection filter)");
           const papersData = await apiClient.papers.list();
-          console.log("Step 1: All papers received:", papersData?.length || 0, "papers");
+          console.log(
+            "Step 1: All papers received:",
+            papersData?.length || 0,
+            "papers",
+          );
           if (!isMounted) return;
           const formattedPapers: Paper[] = papersData.map((p) => ({
             id: p.id,
@@ -115,7 +131,10 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
         }
         // Mark this collectionId as fetched only after successful completion
         currentCollectionIdRef.current = collectionId;
-        console.log("Successfully fetched papers for collectionId:", collectionId);
+        console.log(
+          "Successfully fetched papers for collectionId:",
+          collectionId,
+        );
       } catch (error) {
         if (!isMounted) return;
         console.error("Failed to fetch papers:", error);
@@ -146,7 +165,8 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
       return (
         paper.title.toLowerCase().includes(term) ||
         paper.authors.some((a) => a.toLowerCase().includes(term)) ||
-        (paper.keywords?.some((k) => k.toLowerCase().includes(term)) || false)
+        paper.keywords?.some((k) => k.toLowerCase().includes(term)) ||
+        false
       );
     }
     if (filterYear && paper.year !== filterYear) {
@@ -183,9 +203,13 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
               <h1 className="text-2xl font-bold text-foreground">Papers</h1>
               {collectionName && (
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="text-sm text-muted-foreground">Filtered by collection:</span>
+                  <span className="text-sm text-muted-foreground">
+                    Filtered by collection:
+                  </span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1">
-                    <span className="text-sm font-medium text-primary">{collectionName}</span>
+                    <span className="text-sm font-medium text-primary">
+                      {collectionName}
+                    </span>
                     <button
                       onClick={() => navigate("/collections")}
                       className="ml-1 hover:bg-primary/20 rounded p-0.5 transition-colors"
@@ -222,7 +246,11 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
                 {/* Filter Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 bg-transparent"
+                    >
                       <Filter className="h-4 w-4" />
                       Filter
                       {filterYear && (
@@ -233,11 +261,15 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
-                    <div className="px-2 py-1.5 text-sm font-semibold">Filter by Year</div>
+                    <div className="px-2 py-1.5 text-sm font-semibold">
+                      Filter by Year
+                    </div>
                     {[2024, 2023, 2022, 2021, 2020].map((year) => (
                       <DropdownMenuItem
                         key={year}
-                        onClick={() => setFilterYear(filterYear === year ? null : year)}
+                        onClick={() =>
+                          setFilterYear(filterYear === year ? null : year)
+                        }
                         className={filterYear === year ? "bg-accent" : ""}
                       >
                         {year}
@@ -260,7 +292,11 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
                 {/* Sort Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 bg-transparent"
+                    >
                       <ArrowUpDown className="h-4 w-4" />
                       Sort
                     </Button>
@@ -278,7 +314,10 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
                     >
                       Oldest
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSortBy("a-z")} className={sortBy === "a-z" ? "bg-accent" : ""}>
+                    <DropdownMenuItem
+                      onClick={() => setSortBy("a-z")}
+                      className={sortBy === "a-z" ? "bg-accent" : ""}
+                    >
                       A–Z
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -288,7 +327,8 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
 
             <div className="mt-3 flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                {sortedPapers.length} paper{sortedPapers.length !== 1 ? "s" : ""} found
+                {sortedPapers.length} paper
+                {sortedPapers.length !== 1 ? "s" : ""} found
               </div>
               {(searchTerm || filterYear) && (
                 <button
@@ -334,10 +374,12 @@ export function CollectionPapersView({ collectionId }: CollectionPapersViewProps
 
         {/* Paper Detail Sheet */}
         {selectedPaper && (
-          <PaperDetailSheet paper={selectedPaper} onClose={() => setSelectedPaperId(null)} />
+          <PaperDetailSheet
+            paper={selectedPaper}
+            onClose={() => setSelectedPaperId(null)}
+          />
         )}
       </div>
     </div>
   );
 }
-

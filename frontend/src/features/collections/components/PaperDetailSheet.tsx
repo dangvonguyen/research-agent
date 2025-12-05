@@ -1,11 +1,25 @@
-import { useState, useEffect } from "react";
-import { X, Plus, ExternalLink, Calendar, MapPin, FileText, Link as LinkIcon, Check } from "lucide-react";
+import {
+  Calendar,
+  Check,
+  ExternalLink,
+  FileText,
+  Link as LinkIcon,
+  MapPin,
+  Plus,
+  X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
-import { Button } from "@/components/ui/Button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
-import type { Paper } from "../types";
 import type { Collection } from "@/api/models";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui";
+import type { Paper } from "../types";
 
 interface PaperDetailSheetProps {
   paper: Paper;
@@ -14,10 +28,12 @@ interface PaperDetailSheetProps {
 
 export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>(
+    [],
+  );
   const [isAddToCollectionOpen, setIsAddToCollectionOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Use collection_names directly from the paper object (provided by backend)
   const paperCollectionNames = paper.collection_names || [];
 
@@ -47,7 +63,7 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
     setSelectedCollectionIds((prev) =>
       prev.includes(collectionId)
         ? prev.filter((id) => id !== collectionId)
-        : [...prev, collectionId]
+        : [...prev, collectionId],
     );
   };
 
@@ -71,13 +87,18 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
           await apiClient.collections.addPaper(collectionId, paper.id);
           successCount++;
         } catch (error) {
-          console.error(`Failed to add paper to collection ${collectionId}:`, error);
+          console.error(
+            `Failed to add paper to collection ${collectionId}:`,
+            error,
+          );
           errorCount++;
         }
       }
 
       if (successCount > 0) {
-        toast.success(`Successfully added paper to ${successCount} collection(s)`);
+        toast.success(
+          `Successfully added paper to ${successCount} collection(s)`,
+        );
         setIsAddToCollectionOpen(false);
         // Optionally refresh the paper data or trigger a callback
       }
@@ -118,19 +139,22 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
     <>
       {/* Backdrop - closes sheet when clicked, very subtle and only covers the main content area */}
       <div
-        className="fixed left-0 right-[32rem] top-0 bottom-0 bg-transparent z-20"
+        className="fixed left-0 right-128 top-0 bottom-0 bg-transparent z-20"
         onClick={onClose}
         aria-hidden="true"
       />
-      
+
       <div
-        className="fixed right-0 top-0 h-screen w-[32rem] border-l border-border bg-card shadow-xl overflow-y-auto z-30"
+        className="fixed right-0 top-0 h-screen w-lg border-l border-border bg-card shadow-xl overflow-y-auto z-30"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="sticky top-0 flex items-center justify-between border-b border-border bg-card px-6 py-4 z-10">
           <h2 className="font-semibold text-foreground">Paper Details</h2>
-          <button onClick={onClose} className="rounded-md p-1 hover:bg-accent transition-colors">
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 hover:bg-accent transition-colors"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -139,14 +163,20 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
         <div className="space-y-6 p-6">
           {/* Title */}
           <div className="space-y-2">
-            <h3 className="font-semibold text-lg text-foreground text-balance leading-tight">{paper.title}</h3>
+            <h3 className="font-semibold text-lg text-foreground text-balance leading-tight">
+              {paper.title}
+            </h3>
           </div>
 
           {/* Authors */}
           {paper.authors && paper.authors.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">Authors</p>
-              <p className="text-sm text-foreground">{paper.authors.join(", ")}</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Authors
+              </p>
+              <p className="text-sm text-foreground">
+                {paper.authors.join(", ")}
+              </p>
             </div>
           )}
 
@@ -181,7 +211,7 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
                   className="text-xs hover:underline flex items-center gap-1 truncate"
                 >
                   {sourceInfo.value}
-                  <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                  <ExternalLink className="h-3 w-3 shrink-0" />
                 </a>
               ) : (
                 <p className="text-xs">{sourceInfo.value}</p>
@@ -203,10 +233,15 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
           {/* Collections */}
           {paperCollectionNames.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Collections</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Collections
+              </p>
               <div className="space-y-1">
                 {paperCollectionNames.map((name, index) => (
-                  <p key={`${name}-${index}`} className="text-sm text-foreground">
+                  <p
+                    key={`${name}-${index}`}
+                    className="text-sm text-foreground"
+                  >
                     • {name}
                   </p>
                 ))}
@@ -215,14 +250,20 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
           )}
           {paperCollectionNames.length === 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Collections</p>
-              <p className="text-sm text-muted-foreground italic">No collections</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Collections
+              </p>
+              <p className="text-sm text-muted-foreground italic">
+                No collections
+              </p>
             </div>
           )}
 
           {/* Paper Metadata */}
           <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Paper Metadata</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              Paper Metadata
+            </p>
             <div className="space-y-1 text-xs text-muted-foreground">
               <div className="flex justify-between">
                 <span>Added:</span>
@@ -244,7 +285,9 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
 
           {/* Actions */}
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase">Actions</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase">
+              Actions
+            </p>
             <Button
               onClick={() => setIsAddToCollectionOpen(true)}
               className="w-full justify-start gap-2"
@@ -258,19 +301,28 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
       </div>
 
       {/* Add to Collection Modal */}
-      <Dialog open={isAddToCollectionOpen} onOpenChange={setIsAddToCollectionOpen}>
+      <Dialog
+        open={isAddToCollectionOpen}
+        onOpenChange={setIsAddToCollectionOpen}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add to Collection</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Select one or more collections to add this paper to:</p>
+            <p className="text-sm text-muted-foreground">
+              Select one or more collections to add this paper to:
+            </p>
             <div className="max-h-64 overflow-y-auto space-y-2">
               {collections.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No collections available</p>
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No collections available
+                </p>
               ) : (
                 collections.map((collection) => {
-                  const isSelected = selectedCollectionIds.includes(collection.id);
+                  const isSelected = selectedCollectionIds.includes(
+                    collection.id,
+                  );
                   return (
                     <div
                       key={collection.id}
@@ -287,9 +339,13 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
                         {isSelected && <Check className="h-3 w-3" />}
                       </div>
                       <div className="flex-1">
-                        <label className="text-sm font-medium cursor-pointer block">{collection.name}</label>
+                        <label className="text-sm font-medium cursor-pointer block">
+                          {collection.name}
+                        </label>
                         {collection.description && (
-                          <p className="text-xs text-muted-foreground truncate">{collection.description}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {collection.description}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -298,11 +354,19 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
               )}
             </div>
             <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsAddToCollectionOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsAddToCollectionOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleAddToCollections} disabled={isLoading || selectedCollectionIds.length === 0}>
-                {isLoading ? "Adding..." : `Add to ${selectedCollectionIds.length} Collection(s)`}
+              <Button
+                onClick={handleAddToCollections}
+                disabled={isLoading || selectedCollectionIds.length === 0}
+              >
+                {isLoading
+                  ? "Adding..."
+                  : `Add to ${selectedCollectionIds.length} Collection(s)`}
               </Button>
             </div>
           </div>
@@ -311,4 +375,3 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
     </>
   );
 }
-

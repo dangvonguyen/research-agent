@@ -1,4 +1,4 @@
-import { ArrowUp, FileText, Paperclip, Plus, X } from "lucide-react";
+import { ArrowUp, FileText, Paperclip, Plus, Square, X } from "lucide-react";
 import type React from "react";
 import { useRef, useState } from "react";
 import {
@@ -14,15 +14,20 @@ import {
   Label,
   Textarea,
 } from "@/components/ui";
+import type { ChatStatus } from "../types";
 
 interface ChatComposerProps {
+  status: ChatStatus;
   onSend: (message: string, files?: File[]) => void;
+  onStop: () => void;
   placeholder: string;
   disabled: boolean;
 }
 
 function ChatComposer({
+  status,
   onSend,
+  onStop,
   placeholder = "Ask anything",
   disabled,
 }: ChatComposerProps) {
@@ -83,7 +88,7 @@ function ChatComposer({
           <CardHeader className="flex px-2 pt-2 gap-2 overflow-x-auto scrollbar-none">
             {files.map((file, index) => (
               <div
-                key={index}
+                key={`${index}-${file.name}`}
                 className="min-w-60 flex items-center justify-between rounded-2xl border bg-muted p-2"
               >
                 <div className="flex items-center gap-2">
@@ -118,7 +123,7 @@ function ChatComposer({
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className="min-h-[0vh] max-h-[25vh] md:text-base font-normal resize-none border-0 rounded-none p-0 pt-4 shadow-none focus-visible:ring-0 scrollbar-thin dark:bg-inherit"
+            className="min-h-0 max-h-[25vh] md:text-base font-normal resize-none border-0 rounded-none p-0 pt-4 shadow-none focus-visible:ring-0 scrollbar-thin dark:bg-inherit"
           />
         </CardContent>
 
@@ -147,18 +152,28 @@ function ChatComposer({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button
-            variant={canSendMessage ? "default" : "ghost"}
-            size="icon"
-            onClick={handleSend}
-            className={`rounded-3xl focus-visible:ring-2 ${
-              canSendMessage
-                ? "cursor-pointer"
-                : "cursor-not-allowed hover:bg-none"
-            }`}
-          >
-            <ArrowUp strokeWidth={3} />
-          </Button>
+
+          {status === "submitted" || status === "streaming" ? (
+            <Button
+              size="icon"
+              onClick={onStop}
+              className="rounded-3xl cursor-pointer bg-muted hover:bg-muted"
+            >
+              <Square fill="white" color="white" />
+            </Button>
+          ) : (
+            <Button
+              size="icon"
+              onClick={handleSend}
+              className={`rounded-3xl focus-visible:ring-2 ${
+                canSendMessage
+                  ? "cursor-pointer"
+                  : "cursor-not-allowed bg-muted-foreground hover:bg-muted-foreground"
+              }`}
+            >
+              <ArrowUp strokeWidth={3} />
+            </Button>
+          )}
         </CardFooter>
       </Card>
 

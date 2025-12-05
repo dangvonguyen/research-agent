@@ -1,14 +1,22 @@
-import { useState, useEffect, useRef } from "react";
-import { Upload, LinkIcon, Search } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
+import { LinkIcon, Search, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import apiClient from "@/api/client";
 import type { Collection } from "@/api/models";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Textarea,
+} from "@/components/ui";
 
 interface SavePaperModalProps {
   isOpen: boolean;
@@ -21,7 +29,9 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
   const [url, setUrl] = useState("");
   const [query, setQuery] = useState("");
   const [maxResult, setMaxResult] = useState(5);
-  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>(collectionId ? [collectionId] : []);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>(
+    collectionId ? [collectionId] : [],
+  );
   const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -53,17 +63,17 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
       };
       fetchCollections();
     }
-  }, [isOpen, collectionId]);
+  }, [isOpen, collectionId, selectedCollectionIds]);
 
   const handleGetPapers = async () => {
     // Check if we're in query mode or URL mode
     const isQueryMode = activeTab === "query";
-    
+
     if (isQueryMode && !query.trim()) {
       toast.error("Please enter a search query");
       return;
     }
-    
+
     if (!isQueryMode && !url.trim()) {
       toast.error("Please enter a URL");
       return;
@@ -85,7 +95,9 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
         max_papers: maxResult,
       });
 
-      toast.success("Crawler job created successfully. Papers will be added to the collection when ready.");
+      toast.success(
+        "Crawler job created successfully. Papers will be added to the collection when ready.",
+      );
 
       // Poll for job completion and add papers to collections
       const jobId = jobResponse.created_ids[0];
@@ -95,28 +107,34 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
           if (job.status === "completed") {
             // Get papers created by this specific job
             const jobPapers = await apiClient.papers.getByJobId(jobId);
-            
+
             if (jobPapers.length === 0) {
               toast.warning("No papers were created by this job");
               setIsLoading(false);
               return;
             }
-            
+
             // Add papers to selected collections (if any selected)
             if (selectedCollectionIds.length > 0) {
               let totalAdded = 0;
               const errors: string[] = [];
-              
+
               for (const paper of jobPapers) {
                 for (const collectionId of selectedCollectionIds) {
                   try {
-                    await apiClient.collections.addPaper(collectionId, paper.id);
+                    await apiClient.collections.addPaper(
+                      collectionId,
+                      paper.id,
+                    );
                     totalAdded++;
                   } catch (error) {
                     // Paper might already be in collection, continue
-                    const errorMsg = error instanceof Error ? error.message : String(error);
+                    const errorMsg =
+                      error instanceof Error ? error.message : String(error);
                     if (!errorMsg.includes("already")) {
-                      errors.push(`Failed to add paper "${paper.title}" to collection`);
+                      errors.push(
+                        `Failed to add paper "${paper.title}" to collection`,
+                      );
                     }
                   }
                 }
@@ -124,17 +142,23 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
 
               if (totalAdded > 0) {
                 toast.success(
-                  `Successfully added ${jobPapers.length} paper(s) to ${selectedCollectionIds.length} collection(s)`
+                  `Successfully added ${jobPapers.length} paper(s) to ${selectedCollectionIds.length} collection(s)`,
                 );
               } else if (errors.length > 0) {
-                toast.warning("Some papers may already be in the selected collections");
+                toast.warning(
+                  "Some papers may already be in the selected collections",
+                );
               } else {
-                toast.info("Papers were created but may already be in the collections");
+                toast.info(
+                  "Papers were created but may already be in the collections",
+                );
               }
             } else {
-              toast.success(`Successfully found ${jobPapers.length} paper(s). Papers are available in your library.`);
+              toast.success(
+                `Successfully found ${jobPapers.length} paper(s). Papers are available in your library.`,
+              );
             }
-            
+
             onClose();
             // Reset form
             setUrl("");
@@ -142,7 +166,9 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
             setMaxResult(5);
             setSelectedCollectionIds(collectionId ? [collectionId] : []);
           } else if (job.status === "failed") {
-            toast.error(`Crawler job failed: ${job.error_message || "Unknown error"}`);
+            toast.error(
+              `Crawler job failed: ${job.error_message || "Unknown error"}`,
+            );
             setIsLoading(false);
           } else {
             // Job still running, poll again after 2 seconds
@@ -188,14 +214,16 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
           </TabsList>
 
           <TabsContent value="query" className="space-y-4">
-            <Textarea 
-              placeholder="Enter title, keywords, or question to search for papers..." 
+            <Textarea
+              placeholder="Enter title, keywords, or question to search for papers..."
               className="min-h-24"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
             <div className="flex items-center gap-2">
-              <label className="text-sm text-muted-foreground whitespace-nowrap">Max Result:</label>
+              <label className="text-sm text-muted-foreground whitespace-nowrap">
+                Max Result:
+              </label>
               <Input
                 type="number"
                 min="1"
@@ -205,10 +233,14 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Select Collections (optional, multiple allowed)</label>
+              <label className="text-sm font-medium">
+                Select Collections (optional, multiple allowed)
+              </label>
               <div className="border border-border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
                 {collections.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No collections available</p>
+                  <p className="text-sm text-muted-foreground">
+                    No collections available
+                  </p>
                 ) : (
                   collections.map((collection) => (
                     <label
@@ -220,10 +252,15 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                         checked={selectedCollectionIds.includes(collection.id)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedCollectionIds([...selectedCollectionIds, collection.id]);
+                            setSelectedCollectionIds([
+                              ...selectedCollectionIds,
+                              collection.id,
+                            ]);
                           } else {
                             setSelectedCollectionIds(
-                              selectedCollectionIds.filter((id) => id !== collection.id)
+                              selectedCollectionIds.filter(
+                                (id) => id !== collection.id,
+                              ),
                             );
                           }
                         }}
@@ -241,12 +278,13 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
               </div>
               {selectedCollectionIds.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {selectedCollectionIds.length} collection{selectedCollectionIds.length !== 1 ? "s" : ""} selected
+                  {selectedCollectionIds.length} collection
+                  {selectedCollectionIds.length !== 1 ? "s" : ""} selected
                 </p>
               )}
             </div>
-            <Button 
-              className="w-full" 
+            <Button
+              className="w-full"
               onClick={handleGetPapers}
               disabled={isLoading || !query.trim()}
             >
@@ -257,28 +295,36 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
           <TabsContent value="url" className="space-y-4">
             <div className="space-y-3">
               <div className="flex gap-2">
-                <Input 
-                  placeholder="Paste paper URL (arXiv, DOI, etc.)" 
+                <Input
+                  placeholder="Paste paper URL (arXiv, DOI, etc.)"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   className="flex-1"
                 />
                 <div className="flex items-center gap-2">
-                  <label className="text-sm text-muted-foreground whitespace-nowrap">Max Result:</label>
-                  <Input 
+                  <label className="text-sm text-muted-foreground whitespace-nowrap">
+                    Max Result:
+                  </label>
+                  <Input
                     type="number"
                     min="1"
                     value={maxResult}
-                    onChange={(e) => setMaxResult(parseInt(e.target.value) || 5)}
+                    onChange={(e) =>
+                      setMaxResult(parseInt(e.target.value) || 5)
+                    }
                     className="w-20"
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Select Collections (optional, multiple allowed)</label>
+                <label className="text-sm font-medium">
+                  Select Collections (optional, multiple allowed)
+                </label>
                 <div className="border border-border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
                   {collections.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No collections available</p>
+                    <p className="text-sm text-muted-foreground">
+                      No collections available
+                    </p>
                   ) : (
                     collections.map((collection) => (
                       <label
@@ -287,13 +333,20 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                       >
                         <input
                           type="checkbox"
-                          checked={selectedCollectionIds.includes(collection.id)}
+                          checked={selectedCollectionIds.includes(
+                            collection.id,
+                          )}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedCollectionIds([...selectedCollectionIds, collection.id]);
+                              setSelectedCollectionIds([
+                                ...selectedCollectionIds,
+                                collection.id,
+                              ]);
                             } else {
                               setSelectedCollectionIds(
-                                selectedCollectionIds.filter((id) => id !== collection.id)
+                                selectedCollectionIds.filter(
+                                  (id) => id !== collection.id,
+                                ),
                               );
                             }
                           }}
@@ -311,11 +364,12 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                 </div>
                 {selectedCollectionIds.length > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    {selectedCollectionIds.length} collection{selectedCollectionIds.length !== 1 ? "s" : ""} selected
+                    {selectedCollectionIds.length} collection
+                    {selectedCollectionIds.length !== 1 ? "s" : ""} selected
                   </p>
                 )}
               </div>
-              <Button 
+              <Button
                 onClick={handleGetPapers}
                 disabled={isLoading || !url.trim()}
                 className="w-full"
@@ -331,7 +385,9 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-              <p className="font-medium text-foreground">Drag and drop your PDF here</p>
+              <p className="font-medium text-foreground">
+                Drag and drop your PDF here
+              </p>
               <Input
                 ref={fileInputRef}
                 type="file"
@@ -345,7 +401,9 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                 }}
               />
               {selectedFile && (
-                <p className="text-sm text-muted-foreground mt-2">{selectedFile.name}</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {selectedFile.name}
+                </p>
               )}
             </div>
 
@@ -355,42 +413,58 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                 <Input
                   placeholder="Title"
                   value={metadata.title}
-                  onChange={(e) => setMetadata({ ...metadata, title: e.target.value })}
+                  onChange={(e) =>
+                    setMetadata({ ...metadata, title: e.target.value })
+                  }
                 />
                 <Input
                   placeholder="Authors"
                   value={metadata.authors}
-                  onChange={(e) => setMetadata({ ...metadata, authors: e.target.value })}
+                  onChange={(e) =>
+                    setMetadata({ ...metadata, authors: e.target.value })
+                  }
                 />
                 <Textarea
                   placeholder="Abstract"
                   value={metadata.abstract}
-                  onChange={(e) => setMetadata({ ...metadata, abstract: e.target.value })}
+                  onChange={(e) =>
+                    setMetadata({ ...metadata, abstract: e.target.value })
+                  }
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <Input
                     placeholder="DOI"
                     value={metadata.doi}
-                    onChange={(e) => setMetadata({ ...metadata, doi: e.target.value })}
+                    onChange={(e) =>
+                      setMetadata({ ...metadata, doi: e.target.value })
+                    }
                   />
                   <Input
                     placeholder="Year"
                     type="number"
                     value={metadata.year}
-                    onChange={(e) => setMetadata({ ...metadata, year: e.target.value })}
+                    onChange={(e) =>
+                      setMetadata({ ...metadata, year: e.target.value })
+                    }
                   />
                 </div>
                 <Input
                   placeholder="Keywords (comma-separated)"
                   value={metadata.keywords}
-                  onChange={(e) => setMetadata({ ...metadata, keywords: e.target.value })}
+                  onChange={(e) =>
+                    setMetadata({ ...metadata, keywords: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Select Collections (multiple allowed)</label>
+                <label className="text-sm font-medium">
+                  Select Collections (multiple allowed)
+                </label>
                 <div className="border border-border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
                   {collections.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No collections available</p>
+                    <p className="text-sm text-muted-foreground">
+                      No collections available
+                    </p>
                   ) : (
                     collections.map((collection) => (
                       <label
@@ -399,13 +473,20 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                       >
                         <input
                           type="checkbox"
-                          checked={selectedCollectionIds.includes(collection.id)}
+                          checked={selectedCollectionIds.includes(
+                            collection.id,
+                          )}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedCollectionIds([...selectedCollectionIds, collection.id]);
+                              setSelectedCollectionIds([
+                                ...selectedCollectionIds,
+                                collection.id,
+                              ]);
                             } else {
                               setSelectedCollectionIds(
-                                selectedCollectionIds.filter((id) => id !== collection.id)
+                                selectedCollectionIds.filter(
+                                  (id) => id !== collection.id,
+                                ),
                               );
                             }
                           }}
@@ -423,7 +504,8 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                 </div>
                 {selectedCollectionIds.length > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    {selectedCollectionIds.length} collection{selectedCollectionIds.length !== 1 ? "s" : ""} selected
+                    {selectedCollectionIds.length} collection
+                    {selectedCollectionIds.length !== 1 ? "s" : ""} selected
                   </p>
                 )}
               </div>
@@ -441,30 +523,41 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
 
                   try {
                     setIsLoading(true);
-                    const response = await apiClient.papers.upload(selectedFile, {
-                      title: metadata.title || undefined,
-                      authors: metadata.authors || undefined,
-                      abstract: metadata.abstract || undefined,
-                      doi: metadata.doi || undefined,
-                      year: metadata.year ? parseInt(metadata.year) : undefined,
-                      keywords: metadata.keywords || undefined,
-                    });
+                    const response = await apiClient.papers.upload(
+                      selectedFile,
+                      {
+                        title: metadata.title || undefined,
+                        authors: metadata.authors || undefined,
+                        abstract: metadata.abstract || undefined,
+                        doi: metadata.doi || undefined,
+                        year: metadata.year
+                          ? parseInt(metadata.year)
+                          : undefined,
+                        keywords: metadata.keywords || undefined,
+                      },
+                    );
 
                     // Add paper to selected collections
                     const paperId = response.created_ids[0];
                     let totalAdded = 0;
                     for (const collectionId of selectedCollectionIds) {
                       try {
-                        await apiClient.collections.addPaper(collectionId, paperId);
+                        await apiClient.collections.addPaper(
+                          collectionId,
+                          paperId,
+                        );
                         totalAdded++;
                       } catch (error) {
-                        console.error(`Failed to add paper to collection ${collectionId}:`, error);
+                        console.error(
+                          `Failed to add paper to collection ${collectionId}:`,
+                          error,
+                        );
                       }
                     }
 
                     if (totalAdded > 0) {
                       toast.success(
-                        `Successfully uploaded paper and added to ${totalAdded} collection(s)`
+                        `Successfully uploaded paper and added to ${totalAdded} collection(s)`,
                       );
                     } else {
                       toast.success("Paper uploaded successfully");
@@ -481,7 +574,9 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                       year: "",
                       keywords: "",
                     });
-                    setSelectedCollectionIds(collectionId ? [collectionId] : []);
+                    setSelectedCollectionIds(
+                      collectionId ? [collectionId] : [],
+                    );
                     if (fileInputRef.current) {
                       fileInputRef.current.value = "";
                     }
@@ -492,7 +587,11 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                     setIsLoading(false);
                   }
                 }}
-                disabled={isLoading || !selectedFile || selectedCollectionIds.length === 0}
+                disabled={
+                  isLoading ||
+                  !selectedFile ||
+                  selectedCollectionIds.length === 0
+                }
                 className="w-full"
               >
                 {isLoading ? "Uploading..." : "Upload Paper"}
@@ -502,7 +601,11 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
         </Tabs>
 
         <div className="flex gap-2 pt-4">
-          <Button variant="outline" onClick={onClose} className="flex-1 bg-transparent">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="flex-1 bg-transparent"
+          >
             Cancel
           </Button>
         </div>
@@ -510,4 +613,3 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
     </Dialog>
   );
 }
-

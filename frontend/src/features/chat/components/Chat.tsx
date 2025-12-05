@@ -2,12 +2,20 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
-import { Response } from "@/components/ai-elements/response";
-import { PreviewAttachment } from "@/components/preview-attachment";
+import {
+  MessageAttachment,
+  MessageAttachments,
+  MessageContent,
+  MessageResponse,
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+  Message as UIMessage,
+} from "@/components/ai-elements";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { cn } from "@/lib/utils";
-import { useStreamChat } from "../hooks/useStreamChat";
-import type { Message } from "../types";
+import { useChat } from "../hooks/useChat";
+import type { Attachment, Message } from "../types";
 import ChatComposer from "./ChatComposer";
 
 interface ChatProps {
@@ -18,8 +26,9 @@ interface ChatProps {
 function Chat({ id, initialMessages }: ChatProps) {
   const navigate = useNavigate();
   const [messages, setMessages] = useState(initialMessages);
-  const { isStreaming, streamingMessageId, streamedContent, startStream } =
-    useStreamChat({ chunkDelay: 20 });
+  const { status, messageId, submitChat, startChat, stopChat, contentParts } =
+    useChat();
+  const isStreaming = status === "streaming" || status === "submitted";
 
   const bottomRef = useAutoScroll({
     deps: messages,
@@ -27,21 +36,19 @@ function Chat({ id, initialMessages }: ChatProps) {
   });
 
   useEffect(() => {
-    if (!streamingMessageId) return;
+    if (!messageId) return;
 
     setMessages((prev) => {
-      if (prev.some((msg) => msg.id === streamingMessageId)) {
+      if (prev.some((msg) => msg.id === messageId)) {
         return prev.map((msg) =>
-          msg.id === streamingMessageId
-            ? { ...msg, content: streamedContent }
-            : msg,
+          msg.id === messageId ? { ...msg, content: contentParts } : msg,
         );
       } else {
         return [
           ...prev,
           {
-            id: streamingMessageId,
-            content: streamedContent,
+            id: messageId,
+            content: contentParts,
             role: "assistant",
             conversation_id: id,
             created_at: new Date().toISOString(),
@@ -49,7 +56,7 @@ function Chat({ id, initialMessages }: ChatProps) {
         ];
       }
     });
-  }, [streamingMessageId, streamedContent, id]);
+  }, [messageId, contentParts, id]);
 
   // Show toast error if any
   useEffect(() => {
@@ -61,36 +68,33 @@ function Chat({ id, initialMessages }: ChatProps) {
   }, []);
 
   const handleSendMessage = async (content: string, files?: File[]) => {
-    if (!content.trim() && (!files || files.length === 0)) return
+    if (!content.trim() && (!files || files.length === 0)) return;
 
     try {
       // Upload files if any
-      let attachments: {
-        filename: string
-        content_type: string
-        path: string
-        size: number
-      }[] = []
+      let attachments: Attachment[] = [];
       if (files && files.length > 0) {
-        const uploadResponse = await apiClient.uploads.uploadFiles(files)
-        attachments = uploadResponse.data
+        const uploadResponse = await apiClient.uploads.uploadFiles(files);
+        attachments = uploadResponse.data;
       }
 
+      // Set status to "submitted"
+      submitChat();
+
       // Create message with content and attachments
-      const messageContent = content.trim() || "Sent files"
       const userMessage = await apiClient.conversations
         .createMessage(id, {
-          content: messageContent,
+          content: [{ type: "text", text: content }],
           role: "user",
           attachments: attachments,
         })
-        .then((res) => res.data)
+        .then((res) => res.data);
 
-      setMessages((prev) => [...prev, userMessage])
+      setMessages((prev) => [...prev, userMessage]);
 
-      const shouldNavigate = window.location.pathname !== `/chat/${id}`
+      const shouldNavigate = window.location.pathname !== `/chat/${id}`;
 
-      await startStream({
+      await startChat({
         conversation_id: id,
         message_id: userMessage.id,
       });
@@ -111,7 +115,7 @@ function Chat({ id, initialMessages }: ChatProps) {
           "grid w-full h-screen mx-auto px-8 max-w-208",
           messages.length === 0
             ? "grid-rows-[40vh_auto]"
-            : "grid-rows-[1fr_auto]"
+            : "grid-rows-[1fr_auto]",
         )}
       >
         {/* Messages Container */}
@@ -122,34 +126,55 @@ function Chat({ id, initialMessages }: ChatProps) {
         ) : (
           <div className="flex flex-col gap-10 pt-[7vh] pb-[10vh] whitespace-pre-wrap">
             {messages.map((message) => (
-              <div
-                className={cn(
-                  "flex flex-col gap-2",
-                  message.role === "user" ? "items-end" : "items-start"
-                )}
-              >
+              <UIMessage from={message.role} key={message.id}>
                 {message.attachments && message.attachments.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {message.attachments.map((attachment) => (
-                      <PreviewAttachment
-                        key={attachment.id}
-                        attachment={attachment}
+                  <MessageAttachments>
+                    {message.attachments.map((att) => (
+                      <MessageAttachment
+                        key={att.path}
+                        data={{
+                          type: "file",
+                          url: att.path,
+                          mediaType: att.content_type,
+                          filename: att.name,
+                        }}
                       />
                     ))}
-                  </div>
+                  </MessageAttachments>
                 )}
 
-                <div
-                  key={message.id}
-                  className={
-                    message.role === "user"
-                      ? "bg-secondary text-secondary-foreground rounded-3xl px-4 py-2 max-w-[70%] shadow"
-                      : "bg-background text-foreground"
-                  }
-                >
-                  {message.content && <Response>{message.content}</Response>}
-                </div>
-              </div>
+                <MessageContent>
+                  {message.content.map((part, index) => {
+                    switch (part.type) {
+                      case "text":
+                        return (
+                          <MessageResponse key={`${message.id}-${index}`}>
+                            {part.text}
+                          </MessageResponse>
+                        );
+                      case "reasoning":
+                        return (
+                          <Reasoning
+                            key={`${message.id}-${index}`}
+                            defaultOpen={
+                              isStreaming && message.id === messageId
+                            }
+                            isStreaming={
+                              isStreaming &&
+                              index === message.content.length - 1 &&
+                              message.id === messageId
+                            }
+                          >
+                            <ReasoningTrigger />
+                            <ReasoningContent>{part.text}</ReasoningContent>
+                          </Reasoning>
+                        );
+                      default:
+                        return null;
+                    }
+                  })}
+                </MessageContent>
+              </UIMessage>
             ))}
 
             {/* Loading indicator */}
@@ -174,7 +199,9 @@ function Chat({ id, initialMessages }: ChatProps) {
           {/* Foreground content */}
           <div className="relative z-10">
             <ChatComposer
+              status={status}
               onSend={handleSendMessage}
+              onStop={stopChat}
               placeholder="Ask anything"
               disabled={isStreaming}
             />
@@ -189,7 +216,7 @@ function Chat({ id, initialMessages }: ChatProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default Chat;

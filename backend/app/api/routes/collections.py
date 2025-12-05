@@ -27,7 +27,9 @@ async def create_collection(session: SessionDep, collection: CollectionCreate) -
     """
     logger.info("Creating new collection '%s'", collection.name)
     result = await collection_db.create_collection(session, collection)
-    logger.info("Successfully created collection '%s' with ID '%s'", collection.name, result.id)
+    logger.info(
+        "Successfully created collection '%s' with ID '%s'", collection.name, result.id
+    )
     return CreateResponse(
         success=True,
         message="Collection successfully created",
@@ -66,14 +68,18 @@ async def get_collection(session: SessionDep, collection_id: str) -> Any:
     logger.debug("Retrieving collection with ID '%s'", collection_id)
     try:
         collection_uuid = UUID(collection_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid collection ID format")
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400, detail="Invalid collection ID format"
+        ) from e
 
-    collection_orm, paper_count = await collection_db.get_collection_by_id(session, collection_uuid)
+    collection_orm, paper_count = await collection_db.get_collection_by_id(
+        session, collection_uuid
+    )
     if not collection_orm:
         logger.warning("Collection '%s' not found", collection_id)
         raise HTTPException(status_code=404, detail="Collection not found")
-    
+
     return CollectionResponse(
         id=collection_orm.id,
         name=collection_orm.name,
@@ -96,10 +102,14 @@ async def update_collection(
     logger.debug("Updating collection '%s'", collection_id)
     try:
         collection_uuid = UUID(collection_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid collection ID format")
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400, detail="Invalid collection ID format"
+        ) from e
 
-    updated = await collection_db.update_collection(session, collection_uuid, collection)
+    updated = await collection_db.update_collection(
+        session, collection_uuid, collection
+    )
     if not updated:
         raise HTTPException(status_code=404, detail="Collection not found")
 
@@ -119,8 +129,10 @@ async def delete_collection(session: SessionDep, collection_id: str) -> Any:
     logger.debug("Deleting collection '%s'", collection_id)
     try:
         collection_uuid = UUID(collection_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid collection ID format")
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400, detail="Invalid collection ID format"
+        ) from e
 
     deleted = await collection_db.delete_collection(session, collection_uuid)
     if not deleted:
@@ -144,17 +156,19 @@ async def get_collection_papers(
     logger.debug("Retrieving all papers for collection '%s'", collection_id)
     try:
         collection_uuid = UUID(collection_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid collection ID format")
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400, detail="Invalid collection ID format"
+        ) from e
 
     # Verify collection exists
-    collection_orm, _ = await collection_db.get_collection_by_id(session, collection_uuid)
+    collection_orm, _ = await collection_db.get_collection_by_id(
+        session, collection_uuid
+    )
     if not collection_orm:
         raise HTTPException(status_code=404, detail="Collection not found")
 
-    papers_orm = await collection_db.get_papers_in_collection(
-        session, collection_uuid
-    )
+    papers_orm = await collection_db.get_papers_in_collection(session, collection_uuid)
     return [PaperResponse.from_orm_with_collections(paper) for paper in papers_orm]
 
 
@@ -171,8 +185,8 @@ async def add_paper_to_collection(
     try:
         collection_uuid = UUID(collection_id)
         paper_uuid = UUID(paper_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid ID format")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid ID format") from e
 
     success = await collection_db.add_paper_to_collection(
         session, collection_uuid, paper_uuid
@@ -203,16 +217,14 @@ async def remove_paper_from_collection(
     try:
         collection_uuid = UUID(collection_id)
         paper_uuid = UUID(paper_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid ID format")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid ID format") from e
 
     success = await collection_db.remove_paper_from_collection(
         session, collection_uuid, paper_uuid
     )
     if not success:
-        raise HTTPException(
-            status_code=404, detail="Paper not found in collection"
-        )
+        raise HTTPException(status_code=404, detail="Paper not found in collection")
 
     return UpdateResponse(
         success=True,

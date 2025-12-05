@@ -1,10 +1,19 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { MoreVertical, FileText } from "lucide-react";
+import { FileText, MoreVertical } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/DropdownMenu";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui";
 import type { Collection } from "../types";
 
 interface CollectionsGridProps {
@@ -12,7 +21,10 @@ interface CollectionsGridProps {
   onCollectionDeleted?: () => void;
 }
 
-export function CollectionsGrid({ collections, onCollectionDeleted }: CollectionsGridProps) {
+export function CollectionsGrid({
+  collections,
+  onCollectionDeleted,
+}: CollectionsGridProps) {
   const navigate = useNavigate();
 
   const handleDelete = async (collectionId: string) => {
@@ -98,4 +110,3 @@ export function CollectionsGrid({ collections, onCollectionDeleted }: Collection
     </div>
   );
 }
-
