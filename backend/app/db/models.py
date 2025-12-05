@@ -140,6 +140,10 @@ class Paper(Base):
         secondary="paper_collection",
         back_populates="papers",
     )
+    crawler_job: Mapped["CrawlerJob | None"] = relationship(
+        "CrawlerJob",
+        back_populates="papers",
+    )
 
 
 class PaperContent(Base):
@@ -246,8 +250,8 @@ class CrawlerJob(Base):
 
     papers: Mapped[list["Paper"]] = relationship(
         "Paper",
-        secondary="paper_collection",
-        back_populates="collections",
+        foreign_keys="Paper.job_id",
+        back_populates="crawler_job",
     )
 
 
