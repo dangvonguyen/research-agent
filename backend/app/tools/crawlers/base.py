@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Literal, Self, cast
 
-import aiofiles
 import aiohttp
 
 from app.db.models import Paper
@@ -214,7 +213,6 @@ class BaseCrawler(ABC):
         # Mark as visited if downloaded
         if mode == "bytes":
             self.visited_urls.add(url)
-        print(self.visited_urls)
 
         # Fetch with retry
         logger.debug("Fetching URL %s", url)
@@ -238,17 +236,12 @@ class BaseCrawler(ABC):
         # Get filepath for the PDF
         filepath = Path(paper.file_path)
 
-        print("paper fiadjkslfjd", paper.file_path)
-        print(filepath)
-        print(1, filepath.exists() )
-
         # Skip if already downloaded
         if filepath.exists():
             logger.debug("PDF already exists for paper '%s': %s", paper.title, filepath)
             return
 
         logger.debug("Downloading PDF for paper '%s'", paper.title)
-        print("source_url", paper.source_url)
         pdf_content = cast(bytes | None, await self.fetch_url(paper.source_url, "bytes"))
 
         if not pdf_content:
