@@ -1,12 +1,4 @@
-import {
-  BookOpen,
-  ChevronDown,
-  FolderKanban,
-  Home,
-  LayoutDashboard,
-  MessagesSquare,
-  SquarePen,
-} from "lucide-react";
+import { MessagesSquare, SquarePen } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { apiClient } from "@/api";
@@ -16,18 +8,17 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarTrigger,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { Conversation } from "@/types";
 import {
+  CollectionsSection,
   RecentChatsSection,
   SearchChatsDialog,
   SidebarButton,
@@ -43,7 +34,6 @@ function AppSidebar() {
   const navigate = useNavigate();
 
   const [chatData, setChatData] = useState<Conversation[]>([]);
-  const [isCollectionsOpen, setIsCollectionsOpen] = useState(true);
 
   const {
     searchDialogOpen,
@@ -101,11 +91,11 @@ function AppSidebar() {
 
       if (deleted) {
         setChatData((prev) =>
-          prev.filter((chat) => chat.id !== conversation.id),
+          prev.filter((chat) => chat.id !== conversation.id)
         );
       }
     },
-    [chatId, deleteChat],
+    [chatId, deleteChat]
   );
 
   const handleRenameChat = useCallback(
@@ -115,12 +105,12 @@ function AppSidebar() {
       if (newName) {
         setChatData((prev) =>
           prev.map((chat) =>
-            chat.id === conversation.id ? { ...chat, name: newName } : chat,
-          ),
+            chat.id === conversation.id ? { ...chat, name: newName } : chat
+          )
         );
       }
     },
-    [renameChat],
+    [renameChat]
   );
 
   return (
@@ -131,7 +121,7 @@ function AppSidebar() {
             <SidebarMenu
               className={cn(
                 "flex flex-row items-center gap-2 transition-all duration-300",
-                open && "justify-between",
+                open && "justify-between"
               )}
               {...headerHandlers}
             >
@@ -148,20 +138,12 @@ function AppSidebar() {
         className={cn("gap-0", !open && "cursor-e-resize")}
         onClick={handleEmptySpaceClick}
       >
-        {/* Navigation Section */}
+        {/* Collections Section - At the top */}
+        <CollectionsSection />
+
+        {/* Chatbot Section - Parent of new chat, search chat, and recent chat */}
         <SidebarGroup>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => navigate("/dashboard")}
-                isActive={location.pathname.startsWith("/dashboard")}
-                tooltip="Dashboard"
-                className="group/button cursor-pointer"
-              >
-                <LayoutDashboard className="h-4 w-4" />
-                <span className="text-sm">Dashboard</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+          <SidebarMenu className="gap-2">
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={() => navigate("/")}
@@ -176,57 +158,6 @@ function AppSidebar() {
                 <span className="text-sm">Chatbot</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => setIsCollectionsOpen(!isCollectionsOpen)}
-                isActive={location.pathname.startsWith("/collections")}
-                tooltip="Collections"
-                className="group/button cursor-pointer"
-              >
-                <FolderKanban className="h-4 w-4" />
-                <span className="text-sm">Collections</span>
-                <ChevronDown
-                  className={cn(
-                    "ml-auto h-4 w-4 transition-transform",
-                    isCollectionsOpen ? "rotate-0" : "-rotate-90",
-                  )}
-                />
-              </SidebarMenuButton>
-              {isCollectionsOpen && (
-                <SidebarMenuSub>
-                  <SidebarMenuSubItem>
-                    <SidebarMenuSubButton
-                      isActive={
-                        location.pathname === "/collections" ||
-                        location.pathname === "/collections/overview"
-                      }
-                      onClick={() => navigate("/collections")}
-                    >
-                      <Home className="h-4 w-4" />
-                      <span>Overview</span>
-                    </SidebarMenuSubButton>
-                  </SidebarMenuSubItem>
-                  <SidebarMenuSubItem>
-                    <SidebarMenuSubButton
-                      isActive={location.pathname === "/collections/list"}
-                      onClick={() => navigate("/collections/list")}
-                    >
-                      <FolderKanban className="h-4 w-4" />
-                      <span>Collections</span>
-                    </SidebarMenuSubButton>
-                  </SidebarMenuSubItem>
-                  <SidebarMenuSubItem>
-                    <SidebarMenuSubButton
-                      isActive={location.pathname === "/collections/papers"}
-                      onClick={() => navigate("/collections/papers")}
-                    >
-                      <BookOpen className="h-4 w-4" />
-                      <span>Papers</span>
-                    </SidebarMenuSubButton>
-                  </SidebarMenuSubItem>
-                </SidebarMenuSub>
-              )}
-            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
 
@@ -234,18 +165,21 @@ function AppSidebar() {
         {(location.pathname === "/" ||
           location.pathname.startsWith("/chat")) && (
           <SidebarGroup>
-            <SidebarMenu>
-              <SidebarButton
-                icon={<SquarePen />}
-                label="New chat"
-                onClick={handleNewChat}
-              />
-              <SidebarButton
-                icon={<MessagesSquare />}
-                label="Search chats"
-                onClick={handleSearchChats}
-              />
-            </SidebarMenu>
+            {/* <SidebarGroupLabel>Chatbot</SidebarGroupLabel> */}
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-2">
+                <SidebarButton
+                  icon={<SquarePen />}
+                  label="New chat"
+                  onClick={handleNewChat}
+                />
+                <SidebarButton
+                  icon={<MessagesSquare />}
+                  label="Search chats"
+                  onClick={handleSearchChats}
+                />
+              </SidebarMenu>
+            </SidebarGroupContent>
           </SidebarGroup>
         )}
 
