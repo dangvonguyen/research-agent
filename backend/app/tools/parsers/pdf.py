@@ -37,7 +37,7 @@ class PDFParser:
         Returns:
             Markdown content as string
         """
-        if not Path.exists(pdf_path):
+        if not Path(pdf_path).exists():
             logger.error("PDF file not found: '%s'", pdf_path)
             raise FileNotFoundError(f"PDF file not found: {pdf_path}")
 
@@ -76,7 +76,7 @@ class PDFParser:
             )
         else:
             # Need to convert PDF to markdown
-            if not Path.exists(paper.file_path):
+            if not Path(paper.file_path).exists():
                 logger.error("PDF file not found: '%s'", paper.file_path)
                 return []
 
@@ -167,7 +167,7 @@ class PDFParser:
 
         # Step 1: Upload PDF and request conversion
         with open(pdf_path, "rb") as f:
-            files = {"file": (Path.name(pdf_path), f, "application/pdf")}
+            files = {"file": (Path(pdf_path).name, f, "application/pdf")}
 
             payload = {
                 "output_format": "markdown",
