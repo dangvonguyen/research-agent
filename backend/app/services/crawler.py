@@ -1,4 +1,6 @@
+import asyncio
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -10,7 +12,7 @@ from app.services.embedding_service import embedding_service
 from app.tools.crawlers import ACLAnthologyCrawler
 from app.tools.parsers import PDFParser
 from app.types import CrawlerConfigCreate, JobStatus, PaperSource
-from app.utils import bulk_run
+from app.utils.bulk_run import bulk_run
 
 logger = logging.getLogger(__name__)
 
@@ -229,45 +231,67 @@ class CrawlerService:
                         logger.info(
                             "Downloading %d PDFs for job '%s'", len(papers), job_id
                         )
-                        await bulk_run(crawler.download_pdf, papers)
+
+                        # Use a wrapper to ensure the bound method is called correctly
+                        async def download_pdf_wrapper(paper):
+                            return await crawler.download_pdf(paper)
+
+                        await bulk_run(download_pdf_wrapper, papers)
 
                     # Parse papers and persist sections using ORM models
+                    # Run parsing in thread pool to avoid blocking the event loop
                     parser = PDFParser()
                     logger.info(
                         "Parsing %d papers for job '%s'", len(created_papers), job_id
                     )
                     papers_to_embed = []
-                    for paper_db_obj in created_papers:
-                        contents = parser.parse_specific_sections(paper_db_obj)
-                        if contents:
-                            # Extract abstract from parsed contents if found
-                            abstract_chunks = []
-                            for content_obj in contents:
-                                # Check if this is an abstract section
-                                if (
-                                    content_obj.section_name
-                                    and "abstract" in content_obj.section_name.lower()
-                                ):
-                                    abstract_chunks.append(content_obj.content)
+                    
+                    # Create a thread pool executor for blocking parsing operations
+                    loop = asyncio.get_event_loop()
+                    with ThreadPoolExecutor(max_workers=3) as executor:
+                        # Parse papers concurrently in thread pool
+                        parse_tasks = []
+                        for paper_db_obj in created_papers:
+                            # Run blocking parse operation in thread pool
+                            task = loop.run_in_executor(
+                                executor,
+                                parser.parse_specific_sections,
+                                paper_db_obj
+                            )
+                            parse_tasks.append((task, paper_db_obj))
+                        
+                        # Wait for all parsing tasks to complete
+                        for task, paper_db_obj in parse_tasks:
+                            contents = await task
+                            if contents:
+                                # Extract abstract from parsed contents if found
+                                abstract_chunks = []
+                                for content_obj in contents:
+                                    # Check if this is an abstract section
+                                    if (
+                                        content_obj.section_name
+                                        and "abstract" in content_obj.section_name.lower()
+                                    ):
+                                        abstract_chunks.append(content_obj.content)
 
-                            # Combine abstract chunks if found
-                            if abstract_chunks:
-                                abstract_content = " ".join(abstract_chunks).strip()
-                                # Clean up the abstract (remove extra whitespace)
-                                abstract_content = " ".join(abstract_content.split())
-                                if abstract_content and not paper_db_obj.abstract:
-                                    # Only update if paper doesn't already have an abstract
-                                    paper_db_obj.abstract = abstract_content
-                                    logger.info(
-                                        "Extracted abstract from parsed content for paper '%s' (length: %d)",
-                                        paper_db_obj.id,
-                                        len(abstract_content),
-                                    )
+                                # Combine abstract chunks if found
+                                if abstract_chunks:
+                                    abstract_content = " ".join(abstract_chunks).strip()
+                                    # Clean up the abstract (remove extra whitespace)
+                                    abstract_content = " ".join(abstract_content.split())
+                                    if abstract_content and not paper_db_obj.abstract:
+                                        # Only update if paper doesn't already have an abstract
+                                        paper_db_obj.abstract = abstract_content
+                                        logger.info(
+                                            "Extracted abstract from parsed content for paper '%s' (length: %d)",
+                                            paper_db_obj.id,
+                                            len(abstract_content),
+                                        )
 
-                            # Persist PaperContent rows and mark paper as parsed
-                            session.add_all(contents)
-                            paper_db_obj.parsed = True
-                            papers_to_embed.append(paper_db_obj.id)
+                                # Persist PaperContent rows and mark paper as parsed
+                                session.add_all(contents)
+                                paper_db_obj.parsed = True
+                                papers_to_embed.append(paper_db_obj.id)
 
                     await session.commit()
 
@@ -278,12 +302,10 @@ class CrawlerService:
                     for paper_id in papers_to_embed:
                         try:
                             # Run embedding in background (fire and forget)
-                            import asyncio
-
                             task = asyncio.create_task(
                                 embedding_service.embed_paper_chunks(paper_id)
                             )
-                            background_tasks.append(task)
+                            background_tasks.add(task)
                             logger.debug(
                                 "Scheduled embedding task for paper '%s'", paper_id
                             )
