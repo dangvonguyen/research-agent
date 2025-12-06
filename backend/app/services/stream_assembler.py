@@ -1,6 +1,5 @@
 """Assembles streaming deltas into complete content parts."""
 
-import json
 from typing import Any
 
 from app.types import (
@@ -37,12 +36,6 @@ class ContentPartBuilder:
         # Initialize accumulator based on type
         if content_type in (StreamContentType.TEXT, StreamContentType.REASONING):
             self.current_data["text"] = ""
-        elif content_type == StreamContentType.TOOL_CALL:
-            self.current_data["input"] = {}
-            self.current_data["input_buffer"] = ""  # For partial JSON
-        elif content_type == StreamContentType.TOOL_RESULT:
-            self.current_data["output"] = None
-            self.current_data["output_buffer"] = ""  # For partial JSON
 
     def add_delta(self, index: int, delta: str | dict[str, Any]) -> None:
         """Add incremental update to current content part."""
@@ -56,33 +49,18 @@ class ContentPartBuilder:
             self.current_data["text"] += delta
 
         elif self.current_type == StreamContentType.TOOL_CALL:
-            # Accumulate JSON chunks for tool call input
+            # Support batch mode only for now
             if isinstance(delta, str):
-                self.current_data["input_buffer"] += delta
-                # Try to parse accumulated JSON
-                try:
-                    self.current_data["input"] = json.loads(
-                        self.current_data["input_buffer"]
-                    )
-                except json.JSONDecodeError:
-                    pass  # Wait for more data
+                self.current_data["input"] = {}
             else:
-                # Complete dict update
-                self.current_data["input"].update(delta)
+                self.current_data["input"] = delta
 
         elif self.current_type == StreamContentType.TOOL_RESULT:
-            # Accumulate tool result output
+            # Support batch mode only for now
             if isinstance(delta, str):
-                self.current_data["output_buffer"] += delta
-                # Try to parse accumulated JSON
-                try:
-                    parsed = json.loads(self.current_data["output_buffer"])
-                    self.current_data["output"] = parsed
-                except json.JSONDecodeError:
-                    pass  # Wait for more data
+                self.current_data["output"] = {"type": "text", "value": delta}
             else:
-                # Complete dict update
-                self.current_data["output"] = delta
+                self.current_data["output"] = {"type": "json", "value": delta}
 
     def end_content(self, index: int) -> None:
         """Finalize current content part."""
@@ -112,10 +90,6 @@ class ContentPartBuilder:
     def _build_part_from_data(self) -> MessageContentPart:
         """Build a MessageContentPart from current_data."""
         data = self.current_data.copy()
-
-        # Clean up internal fields
-        data.pop("input_buffer", None)
-        data.pop("output_buffer", None)
 
         if self.current_type == StreamContentType.TEXT:
             return MessageTextPart(**data)

@@ -4,29 +4,26 @@ from typing import Optional, cast
 from uuid import UUID
 
 from llama_index.core import Settings
+from llama_index.core.agent import ReActAgent
 from llama_index.core.chat_engine import SimpleChatEngine
-from llama_index.core.chat_engine.types import (
-    AgentChatResponse,
-    StreamingAgentChatResponse,
-)
+from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.llms import ChatMessage, MessageRole
 
+from app.ai.tools.multiple_tool import MultipleTool
 from app.services.llm_service import llm_service
+from app.services.stream_adapter import StreamAdapter
 from app.types import (
     MessageContentPart,
     MessageDB,
     Role,
-    StreamContentDelta,
-    StreamContentEnd,
-    StreamContentStart,
-    StreamContentType,
+    StreamError,
     StreamEvent,
 )
 from app.utils.content_util import extract_text_from_content
 
 
 class ChatService:
-    """Service for handling chat operations with LlamaIndex integration."""
+    """Service for handling chat operations with agent and AI tool support."""
 
     def __init__(self, system_prompt: Optional[str] = None):
         # Configure LlamaIndex settings
@@ -38,6 +35,8 @@ class ChatService:
             "You are a helpful AI assistant. Provide clear, accurate, "
             "and helpful responses to user queries."
         )
+
+        self.stream_adapter = StreamAdapter()
 
         # Initialize chat engine
         self.chat_engine = SimpleChatEngine.from_defaults(
@@ -69,55 +68,39 @@ class ChatService:
         conversation_id: UUID,
         message_id: UUID,
     ) -> AsyncGenerator[StreamEvent, None]:
-        """Stream chat response as typed events."""
+        """Stream chat response with AI tool support."""
         # Extract text from content parts
         user_text = extract_text_from_content(user_message)
 
         # Build conversation history
         chat_history = self._build_chat_history(history)
 
-        # Reset chat engine to clear previous state
-        self.chat_engine.reset()
-        response = cast(
-            StreamingAgentChatResponse,
-            await self.chat_engine.astream_chat(user_text, chat_history),
-        )
-
-        response_gen = response.async_response_gen()
-
         try:
-            # Announce text content starting
-            yield StreamContentStart(
-                conversation_id=conversation_id,
-                message_id=message_id,
-                content_type=StreamContentType.TEXT,
-                index=0,
+            agent = ReActAgent(
+                system_prompt=self.system_prompt,
+                tools=[MultipleTool.as_tool()],
+                llm=self.llm,
             )
 
-            # Stream text chunks as deltas
-            async for chunk in response_gen:
-                yield StreamContentDelta(
-                    conversation_id=conversation_id,
-                    message_id=message_id,
-                    index=0,
-                    delta=chunk,
-                )
+            # Run agent and get workflow handler
+            handler = agent.run(user_msg=user_text, chat_history=chat_history)
 
-            # Finalize text content
-            yield StreamContentEnd(
-                conversation_id=conversation_id,
-                message_id=message_id,
-                index=0,
-            )
+            # Adapt LlamaIndex workflow events to stream events
+            async for event in self.stream_adapter.adapt_stream(
+                handler, conversation_id, message_id
+            ):
+                yield event
 
         except asyncio.CancelledError:
-            # Close the response generator to stop the LLM stream
-            await response_gen.aclose()
             raise
 
-        except Exception:
-            # Close generator on any error
-            await response_gen.aclose()
+        except Exception as e:
+            # Error handling
+            yield StreamError(
+                conversation_id=conversation_id,
+                message_id=message_id,
+                error=str(e),
+            )
             raise
 
     def _build_chat_history(
