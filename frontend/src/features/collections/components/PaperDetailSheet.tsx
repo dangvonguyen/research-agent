@@ -216,7 +216,9 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
             <div className={`rounded-lg border p-3 ${sourceInfo.color}`}>
               <div className="flex items-center gap-2 mb-1">
                 <sourceInfo.icon className="h-4 w-4" />
-                <p className="text-xs font-semibold">{sourceInfo.label}</p>
+                <p className="text-xs font-semibold text-foreground">
+                  {sourceInfo.label}
+                </p>
               </div>
               {paper.source_url ? (
                 <a
@@ -237,7 +239,9 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
           {/* Abstract - Colored Component (if exists) */}
           {paper.abstract && (
             <div className="rounded-lg border bg-muted/50 text-muted-foreground border-border p-3">
-              <p className="text-xs font-semibold mb-2">Abstract</p>
+              <p className="text-xs font-semibold mb-2 text-foreground">
+                Abstract
+              </p>
               <p className="text-sm leading-relaxed">{paper.abstract}</p>
             </div>
           )}
@@ -248,17 +252,17 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
           {/* Collections */}
           {paperCollectionNames.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">
+              <p className="text-xs font-semibold mb-2 text-foreground">
                 Collections
               </p>
-              <div className="space-y-1">
+              <div className="flex flex-wrap gap-2">
                 {paperCollectionNames.map((name, index) => (
-                  <p
+                  <div
                     key={`${name}-${index}`}
-                    className="text-sm text-foreground"
+                    className="rounded-md border border-border bg-muted/50 px-3 py-1.5"
                   >
-                    • {name}
-                  </p>
+                    <span className="text-sm text-foreground">{name}</span>
+                  </div>
                 ))}
               </div>
             </div>
@@ -276,7 +280,7 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
 
           {/* Paper Metadata */}
           <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">
+            <p className="text-xs font-semibold mb-2 text-foreground">
               Paper Metadata
             </p>
             <div className="space-y-1 text-xs text-muted-foreground">
@@ -300,12 +304,9 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
 
           {/* Actions */}
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase">
-              Actions
-            </p>
             <Button
               onClick={() => setIsAddToCollectionOpen(true)}
-              className="w-full justify-start gap-2"
+              className="w-full justify-center gap-2"
               variant="default"
             >
               <Plus className="h-4 w-4" />

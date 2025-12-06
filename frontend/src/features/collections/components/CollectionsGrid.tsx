@@ -58,7 +58,7 @@ export function CollectionsGrid({
                 <Button
                   variant="ghost"
                   onClick={() => navigate(`/collections/${collection.id}`)}
-                  className="text-left justify-start h-auto p-0 hover:bg-transparent"
+                  className="text-left justify-start h-auto p-0 hover:bg-transparent flex flex-col items-start"
                 >
                   <CardTitle className="text-foreground text-base font-semibold group-hover:text-primary transition-colors">
                     {collection.name}

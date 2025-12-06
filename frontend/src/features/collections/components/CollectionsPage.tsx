@@ -13,8 +13,8 @@ import {
 import type { Collection } from "../types";
 import { CollectionsGrid } from "./CollectionsGrid";
 import { CollectionsList } from "./CollectionsList";
+import { CollectionsNavBar } from "./CollectionsNavBar";
 import { CreateCollectionModal } from "./CreateCollectionModal";
-import { TopSearchBar } from "./TopSearchBar";
 
 export function CollectionsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -90,7 +90,7 @@ export function CollectionsPage() {
 
   return (
     <div className="flex flex-col h-screen">
-      <TopSearchBar />
+      <CollectionsNavBar />
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
           {/* Page Header */}

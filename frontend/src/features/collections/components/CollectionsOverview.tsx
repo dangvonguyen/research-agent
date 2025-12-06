@@ -5,8 +5,8 @@ import { apiClient } from "@/api";
 import type { Paper } from "@/api/models";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 import { AnalyticsCharts } from "./AnalyticsCharts";
+import { CollectionsNavBar } from "./CollectionsNavBar";
 import { RecentActivityList } from "./RecentActivityList";
-import { TopSearchBar } from "./TopSearchBar";
 
 export function CollectionsOverview() {
   const [stats, setStats] = useState({
@@ -45,7 +45,7 @@ export function CollectionsOverview() {
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
         const recentlyAdded = papersData.filter(
-          (p) => new Date(p.created_at) >= weekAgo,
+          (p) => new Date(p.created_at) >= weekAgo
         ).length;
 
         if (!isMounted) return;
@@ -78,7 +78,7 @@ export function CollectionsOverview() {
 
   return (
     <div className="flex flex-col h-screen">
-      <TopSearchBar />
+      <CollectionsNavBar />
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
           {/* Page Header */}

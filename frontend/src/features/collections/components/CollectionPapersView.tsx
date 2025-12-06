@@ -1,5 +1,5 @@
 import { ArrowUpDown, Filter, Search, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
@@ -12,9 +12,9 @@ import {
   Input,
 } from "@/components/ui";
 import type { Paper } from "../types";
+import { CollectionsNavBar } from "./CollectionsNavBar";
 import { PaperCard } from "./PaperCard";
 import { PaperDetailSheet } from "./PaperDetailSheet";
-import { TopSearchBar } from "./TopSearchBar";
 
 interface CollectionPapersViewProps {
   collectionId: string | null;
@@ -35,25 +35,24 @@ export function CollectionPapersView({
   // Use a sentinel value to distinguish "never fetched" from "fetched with null"
   const currentCollectionIdRef = useRef<string | null | undefined>(undefined);
 
-  useEffect(() => {
-    // Only fetch if collectionId actually changed
-    if (currentCollectionIdRef.current === collectionId) {
-      console.log("Skipping fetch - collectionId unchanged:", collectionId);
-      return;
-    }
+  // Fetch data function
+  const fetchData = useCallback(
+    async (skipIfUnchanged = false) => {
+      // Only fetch if collectionId actually changed (if skipIfUnchanged is true)
+      if (skipIfUnchanged && currentCollectionIdRef.current === collectionId) {
+        console.log("Skipping fetch - collectionId unchanged:", collectionId);
+        return;
+      }
 
-    // Prevent concurrent fetches
-    if (fetchingRef.current) {
-      console.log("Skipping fetch - already fetching");
-      return;
-    }
+      // Prevent concurrent fetches
+      if (fetchingRef.current) {
+        console.log("Skipping fetch - already fetching");
+        return;
+      }
 
-    console.log("Starting fetch for collectionId:", collectionId);
-    fetchingRef.current = true;
+      console.log("Starting fetch for collectionId:", collectionId);
+      fetchingRef.current = true;
 
-    let isMounted = true;
-
-    const fetchData = async () => {
       try {
         setIsLoading(true);
         if (collectionId && collectionId !== "") {
@@ -61,10 +60,6 @@ export function CollectionPapersView({
           console.log("Step 1: Fetching collection details for:", collectionId);
           const collection = await apiClient.collections.getById(collectionId);
           console.log("Step 1: Collection received:", collection);
-          if (!isMounted) {
-            console.log("Component unmounted after getById");
-            return;
-          }
           setCollectionName(collection.name);
 
           // Fetch papers in collection
@@ -77,10 +72,6 @@ export function CollectionPapersView({
             papersData?.length || 0,
             "papers"
           );
-          if (!isMounted) {
-            console.log("Component unmounted after getPapers");
-            return;
-          }
           const formattedPapers: Paper[] = papersData.map((p) => ({
             id: p.id,
             title: p.title,
@@ -109,7 +100,6 @@ export function CollectionPapersView({
             papersData?.length || 0,
             "papers"
           );
-          if (!isMounted) return;
           const formattedPapers: Paper[] = papersData.map((p) => ({
             id: p.id,
             title: p.title,
@@ -137,27 +127,34 @@ export function CollectionPapersView({
           collectionId
         );
       } catch (error) {
-        if (!isMounted) return;
         console.error("Failed to fetch papers:", error);
         toast.error("Failed to load papers");
         // Reset ref on error to allow retry
         currentCollectionIdRef.current = undefined;
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
         fetchingRef.current = false;
       }
-    };
+    },
+    [collectionId]
+  );
 
-    fetchData();
-
-    // Cleanup function
-    return () => {
-      isMounted = false;
-      fetchingRef.current = false;
-    };
+  // Initial fetch when collectionId changes
+  useEffect(() => {
+    fetchData(true);
   }, [collectionId]);
+
+  // Poll for updates every 5 seconds when viewing a collection
+  useEffect(() => {
+    if (!collectionId) return;
+
+    const intervalId = setInterval(() => {
+      // Poll for updates (skip the unchanged check)
+      fetchData(false);
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(intervalId);
+  }, [collectionId, fetchData]);
 
   // Filter papers
   const filteredPapers = papers.filter((paper) => {
@@ -194,7 +191,7 @@ export function CollectionPapersView({
 
   return (
     <div className="flex flex-col h-screen gap-0 bg-background">
-      <TopSearchBar />
+      <CollectionsNavBar />
       <div className="flex flex-1 overflow-hidden">
         {/* Main Content */}
         <div className="flex-1 overflow-hidden flex flex-col">
