@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -19,6 +18,11 @@ logger = logging.getLogger(__name__)
 
 class CrawlerService:
     """Service for managing crawler operations."""
+
+    def __init__(self):
+        """Initialize crawler service with semaphore and parser."""
+        self.sem = asyncio.Semaphore(3)
+        self.parser = PDFParser()
 
     async def initialize_default_configs(self) -> None:
         """
@@ -88,6 +92,20 @@ class CrawlerService:
                     "All default crawler configurations already exist (%d skipped)",
                     skipped_count,
                 )
+
+    async def parse_one(self, paper_db_obj):
+        async with self.sem:
+            try:
+                contents = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self.parser.parse_specific_sections, paper_db_obj
+                    ),
+                    timeout=300,  # 300s per PDF
+                )
+                return paper_db_obj, contents
+            except TimeoutError:
+                logger.error("TIMEOUT", paper_db_obj.id)
+                return paper_db_obj, []
 
     async def run_crawler_job(self, job_id: str) -> None:
         """
@@ -239,61 +257,50 @@ class CrawlerService:
                         await bulk_run(download_pdf_wrapper, papers)
 
                     # Parse papers and persist sections using ORM models
-                    # Run parsing in thread pool to avoid blocking the event loop
-                    parser = PDFParser()
                     logger.info(
                         "Parsing %d papers for job '%s'", len(created_papers), job_id
                     )
                     papers_to_embed = []
 
-                    # Create a thread pool executor for blocking parsing operations
-                    loop = asyncio.get_event_loop()
-                    with ThreadPoolExecutor(max_workers=3) as executor:
-                        # Parse papers concurrently in thread pool
-                        parse_tasks = []
-                        for paper_db_obj in created_papers:
-                            # Run blocking parse operation in thread pool
-                            task = loop.run_in_executor(
-                                executor,
-                                parser.parse_specific_sections,
-                                paper_db_obj
-                            )
-                            parse_tasks.append((task, paper_db_obj))
+                    parse_tasks = [
+                        self.parse_one(paper_db_obj) for paper_db_obj in created_papers
+                    ]
 
-                        # Wait for all parsing tasks to complete
-                        for task, paper_db_obj in parse_tasks:
-                            contents = await task
-                            if contents:
-                                # Extract abstract from parsed contents if found
-                                abstract_chunks = []
-                                for content_obj in contents:
-                                    # Check if this is an abstract section
-                                    if (
-                                        content_obj.section_name
-                                        and "abstract" in content_obj.section_name.lower()
-                                    ):
-                                        abstract_chunks.append(content_obj.content)
+                    # Wait for all parsing tasks to complete
+                    for coro in asyncio.as_completed(parse_tasks):
+                        paper_db_obj, contents = await coro
+                        if contents:
+                            # Extract abstract from parsed contents if found
+                            abstract_chunks = []
+                            for content_obj in contents:
+                                # Check if this is an abstract section
+                                if (
+                                    content_obj.section_name
+                                    and "abstract" in content_obj.section_name.lower()
+                                ):
+                                    abstract_chunks.append(content_obj.content)
 
-                                # Combine abstract chunks if found
-                                if abstract_chunks:
-                                    abstract_content = " ".join(abstract_chunks).strip()
-                                    # Clean up the abstract (remove extra whitespace)
-                                    abstract_content = " ".join(abstract_content.split())
-                                    if abstract_content and not paper_db_obj.abstract:
-                                        # Only update if paper doesn't already have an abstract
-                                        paper_db_obj.abstract = abstract_content
-                                        logger.info(
-                                            "Extracted abstract from parsed content for paper '%s' (length: %d)",
-                                            paper_db_obj.id,
-                                            len(abstract_content),
-                                        )
+                            # Combine abstract chunks if found
+                            if abstract_chunks:
+                                abstract_content = " ".join(abstract_chunks).strip()
+                                # Clean up the abstract (remove extra whitespace)
+                                abstract_content = " ".join(abstract_content.split())
+                                if abstract_content and not paper_db_obj.abstract:
+                                    # Only update if paper doesn't already have an abstract
+                                    paper_db_obj.abstract = abstract_content
+                                    logger.info(
+                                        "Extracted abstract from parsed content for paper '%s' (length: %d)",
+                                        paper_db_obj.id,
+                                        len(abstract_content),
+                                    )
 
-                                # Persist PaperContent rows and mark paper as parsed
-                                session.add_all(contents)
-                                paper_db_obj.parsed = True
-                                papers_to_embed.append(paper_db_obj.id)
-
+                            # Persist PaperContent rows and mark paper as parsed
+                            session.add_all(contents)
+                            paper_db_obj.parsed = True
+                            papers_to_embed.append(paper_db_obj.id)
+                    logger.info("Before commit")
                     await session.commit()
+                    logger.info("After commit")
 
                     background_tasks = set()
 
