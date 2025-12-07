@@ -19,9 +19,9 @@ class PDFParser:
     def __init__(self) -> None:
         self.api_key = settings.DATALAB_API_KEY
         self.api_url = settings.DATALAB_API_URL
-        self.min_content_length = 200  # Minimum content length for a section
-        self.max_chunk_words = 500  # Maximum words per chunk
-        self.chunk_overlap_words = 50  # Overlap between chunks in words
+        self.min_content_length = settings.PDF_MIN_CONTENT_LENGTH
+        self.max_chunk_words = settings.PDF_MAX_CHUNK_WORDS
+        self.chunk_overlap_words = settings.PDF_CHUNK_OVERLAP_WORDS
 
     def get_markdown_content(
         self, pdf_path: str, max_pages: Optional[int] = None

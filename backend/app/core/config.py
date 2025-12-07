@@ -104,6 +104,11 @@ class Settings(BaseSettings):
     DATALAB_API_KEY: Optional[str] = None
     DATALAB_API_URL: Optional[str] = None
 
+    # PDF parsing settings
+    PDF_MIN_CONTENT_LENGTH: int  # Minimum content length for a section
+    PDF_MAX_CHUNK_WORDS: int  # Maximum words per chunk
+    PDF_CHUNK_OVERLAP_WORDS: int  # Overlap between chunks in words
+
     # File upload settings
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024  # 50MB
