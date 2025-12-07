@@ -115,6 +115,17 @@ class EmbeddingService:
                 chunks_with_embeddings = []
 
                 for content in paper.contents:
+                    # Skip the first section (section_index=0) as it typically contains
+                    # title and author metadata, not content to embed
+                    section_index = content.section_index or 0
+                    if section_index == 0:
+                        logger.debug(
+                            "Skipping embedding for first section (metadata) '%s' of paper '%s'",
+                            content.section_name,
+                            paper_id,
+                        )
+                        continue
+
                     try:
                         # Generate embedding for chunk content
                         embedding = await self.generate_embedding(content.content)
