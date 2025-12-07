@@ -245,7 +245,7 @@ class CrawlerService:
                         "Parsing %d papers for job '%s'", len(created_papers), job_id
                     )
                     papers_to_embed = []
-                    
+
                     # Create a thread pool executor for blocking parsing operations
                     loop = asyncio.get_event_loop()
                     with ThreadPoolExecutor(max_workers=3) as executor:
@@ -259,7 +259,7 @@ class CrawlerService:
                                 paper_db_obj
                             )
                             parse_tasks.append((task, paper_db_obj))
-                        
+
                         # Wait for all parsing tasks to complete
                         for task, paper_db_obj in parse_tasks:
                             contents = await task

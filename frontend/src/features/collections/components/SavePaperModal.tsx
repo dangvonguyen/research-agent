@@ -192,12 +192,13 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Save Paper</DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="query" className="flex items-center gap-2">
               <Search className="h-4 w-4" />
@@ -599,8 +600,9 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
             </div>
           </TabsContent>
         </Tabs>
+        </div>
 
-        <div className="flex gap-2 pt-4">
+        <div className="flex gap-2 pt-4 border-t mt-4">
           <Button
             variant="outline"
             onClick={onClose}
