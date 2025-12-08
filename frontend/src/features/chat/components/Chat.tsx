@@ -28,7 +28,6 @@ function Chat({ id, initialMessages }: ChatProps) {
   const [messages, setMessages] = useState(initialMessages);
   const { status, messageId, submitChat, startChat, stopChat, contentParts } =
     useChat();
-  const isStreaming = status === "streaming" || status === "submitted";
 
   const bottomRef = useAutoScroll({
     deps: messages,
@@ -152,23 +151,22 @@ function Chat({ id, initialMessages }: ChatProps) {
                             {part.text}
                           </MessageResponse>
                         );
-                      case "reasoning":
+                      case "reasoning": {
+                        const isPartStreaming =
+                          status === "streaming" &&
+                          index === message.content.length - 1 &&
+                          message.id === messageId;
                         return (
                           <Reasoning
                             key={`${message.id}-${index}`}
-                            defaultOpen={
-                              isStreaming && message.id === messageId
-                            }
-                            isStreaming={
-                              isStreaming &&
-                              index === message.content.length - 1 &&
-                              message.id === messageId
-                            }
+                            defaultOpen={isPartStreaming}
+                            isStreaming={isPartStreaming}
                           >
                             <ReasoningTrigger />
                             <ReasoningContent>{part.text}</ReasoningContent>
                           </Reasoning>
                         );
+                      }
                       default:
                         return null;
                     }
@@ -178,7 +176,7 @@ function Chat({ id, initialMessages }: ChatProps) {
             ))}
 
             {/* Loading indicator */}
-            {isStreaming && (
+            {status === "streaming" && (
               <div className="flex gap-1.5">
                 <div className="w-1.5 h-1.5 bg-current rounded-3xl animate-bounce [animation-delay:-0.3s]"></div>
                 <div className="w-1.5 h-1.5 bg-current rounded-3xl animate-bounce [animation-delay:-0.15s]"></div>
@@ -203,7 +201,7 @@ function Chat({ id, initialMessages }: ChatProps) {
               onSend={handleSendMessage}
               onStop={stopChat}
               placeholder="Ask anything"
-              disabled={isStreaming}
+              disabled={status === "submitted" || status === "streaming"}
             />
             {messages.length > 0 && (
               <div className="flex justify-center">

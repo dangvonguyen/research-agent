@@ -54,11 +54,14 @@ class StreamAdapter:
             )
 
         def end_block():
-            return StreamContentEnd(
+            nonlocal content_index
+            block = StreamContentEnd(
                 conversation_id=conversation_id,
                 message_id=message_id,
                 index=content_index,
             )
+            content_index += 1
+            return block
 
         async def ensure_block(block_type: StreamContentType):
             """Open the requested block; close previous block if switching."""
@@ -97,8 +100,6 @@ class StreamAdapter:
                     async for item in close_active_block():
                         yield item
 
-                    content_index += 1
-
                 elif isinstance(event, ToolCall):
                     async for item in close_active_block():
                         yield item
@@ -110,8 +111,6 @@ class StreamAdapter:
                     )
                     yield delta_block(event.tool_kwargs)
                     yield end_block()
-
-                    content_index += 1
 
                 elif isinstance(event, ToolCallResult):
                     async for item in close_active_block():
@@ -126,8 +125,6 @@ class StreamAdapter:
                     )
                     yield delta_block(normalized)
                     yield end_block()
-
-                    content_index += 1
 
             async for item in close_active_block():
                 yield item
