@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from .base import BaseTool
+from .base import BaseTool, ToolOutput
 
 
 class MultipleSchema(BaseModel):
@@ -13,5 +13,9 @@ class MultipleTool(BaseTool):
     description = "Useful function to multiply two numbers."
     input_schema = MultipleSchema
 
-    def run(self, a: int, b: int) -> int:
-        return a * b
+    def run(self, a: int, b: int) -> ToolOutput:
+        try:
+            result = a * b
+            return ToolOutput(type="json", value=result)
+        except Exception as e:
+            return ToolOutput(type="error-text", value=str(e))

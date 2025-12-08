@@ -4,7 +4,7 @@ from typing import Optional, cast
 from uuid import UUID
 
 from llama_index.core import Settings
-from llama_index.core.agent import ReActAgent
+from llama_index.core.agent import FunctionAgent
 from llama_index.core.chat_engine import SimpleChatEngine
 from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.llms import ChatMessage, MessageRole
@@ -76,7 +76,7 @@ class ChatService:
         chat_history = self._build_chat_history(history)
 
         try:
-            agent = ReActAgent(
+            agent = FunctionAgent(
                 system_prompt=self.system_prompt,
                 tools=[MultipleTool.as_tool()],
                 llm=self.llm,

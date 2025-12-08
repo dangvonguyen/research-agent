@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from typing import Any
 from uuid import UUID
 
 from llama_index.core.agent.workflow import (
@@ -8,6 +9,7 @@ from llama_index.core.agent.workflow import (
     ToolCall,
     ToolCallResult,
 )
+from pydantic import BaseModel
 from workflows.handler import WorkflowHandler
 
 from app.types import (
@@ -43,7 +45,7 @@ class StreamAdapter:
                 **extra,
             )
 
-        def delta_block(delta):
+        def delta_block(delta: str | dict[str, Any]):
             return StreamContentDelta(
                 conversation_id=conversation_id,
                 message_id=message_id,
@@ -115,12 +117,14 @@ class StreamAdapter:
                     async for item in close_active_block():
                         yield item
 
+                    normalized = self.normalize_output(event.tool_output.raw_output)
+
                     yield start_block(
                         StreamContentType.TOOL_RESULT,
                         tool_call_id=event.tool_id,
                         tool_name=event.tool_name,
                     )
-                    yield delta_block(event.tool_output.raw_output)
+                    yield delta_block(normalized)
                     yield end_block()
 
                     content_index += 1
@@ -136,3 +140,10 @@ class StreamAdapter:
             yield StreamError(
                 conversation_id=conversation_id, message_id=message_id, error=str(e)
             )
+
+    def normalize_output(self, raw: Any) -> str | dict[str, Any]:
+        if isinstance(raw, str | dict):
+            return raw
+        elif isinstance(raw, BaseModel):
+            return raw.model_dump()
+        return str(raw)

@@ -57,7 +57,10 @@ class ContentPartBuilder:
 
         elif self.current_type == StreamContentType.TOOL_RESULT:
             # Support batch mode only for now
-            if isinstance(delta, str):
+            if isinstance(delta, dict) and "type" in delta and "value" in delta:
+                # Already wrapped, use as is
+                self.current_data["output"] = delta
+            elif isinstance(delta, str):
                 self.current_data["output"] = {"type": "text", "value": delta}
             else:
                 self.current_data["output"] = {"type": "json", "value": delta}

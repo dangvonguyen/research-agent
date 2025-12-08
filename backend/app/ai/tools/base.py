@@ -3,6 +3,8 @@ from typing import Any
 from llama_index.core.tools import FunctionTool
 from pydantic import BaseModel
 
+from app.types import ToolResultOutput as ToolOutput
+
 
 class BaseTool:
     """Base class for defining tools compatible with LlamaIndex."""
@@ -11,11 +13,11 @@ class BaseTool:
     description: str
     input_schema: type[BaseModel] | None = None
 
-    def run(self, *args: Any, **kwargs: Any) -> Any:
+    def run(self, *args: Any, **kwargs: Any) -> ToolOutput:
         """Synchronous execution entry point for the tool."""
         raise NotImplementedError("Sync run() not implemented.")
 
-    async def arun(self, *args: Any, **kwargs: Any) -> Any:
+    async def arun(self, *args: Any, **kwargs: Any) -> ToolOutput:
         """Asynchronous execution entry point for the tool."""
         raise NotImplementedError("Async arun() not implemented.")
 
