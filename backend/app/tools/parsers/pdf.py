@@ -9,6 +9,7 @@ from markdown_it import MarkdownIt
 
 from app.core.config import settings
 from app.db.models import Paper, PaperContent
+import tiktoken
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,8 @@ class PDFParser:
         self.min_content_length = settings.PDF_MIN_CONTENT_LENGTH
         self.max_chunk_words = settings.PDF_MAX_CHUNK_WORDS
         self.chunk_overlap_words = settings.PDF_CHUNK_OVERLAP_WORDS
+        if not hasattr(self, "_tokenizer"):
+            self._tokenizer = tiktoken.encoding_for_model("gpt-4o-mini")
 
     def get_markdown_content(
         self, pdf_path: str, max_pages: Optional[int] = None
@@ -118,7 +121,6 @@ class PDFParser:
             for section_idx, (section_title, content) in enumerate(sections.items()):
                 # Split section content into chunks
                 chunks = self._split_into_chunks(content)
-
                 # Create PaperContent for each chunk
                 for chunk_idx, chunk_content in enumerate(chunks):
                     word_count = len(chunk_content.split())
@@ -254,7 +256,104 @@ class PDFParser:
             raise Exception("No markdown content found in result")
 
         logger.debug("Received markdown (%d characters)", len(markdown_content))
+
+        # Preprocess markdown to fix footnote superscripts
+        markdown_content = self._preprocess_footnote_sups(markdown_content)
+
         return markdown_content
+
+    def _preprocess_footnote_sups(self, markdown_content: str) -> str:
+        """
+        Preprocess markdown to move footnote superscripts that appear at the start
+        of a line to right after their reference.
+
+        Detects <sup>X</sup> tags that:
+        - Start at the beginning of a line (after line break)
+        - Are NOT followed by a period
+        - Have a matching <sup>X</sup> earlier in the text
+
+        Moves the entire paragraph containing the second sup to right before the first sup.
+
+        Args:
+            markdown_content: The markdown content to preprocess
+
+        Returns:
+            Preprocessed markdown content
+        """
+        lines = markdown_content.split("\n")
+        # Track which lines to skip (footnote paragraphs that will be moved)
+        skip_lines = set()
+        # Track insertions: (line_index, position_in_line, text_to_insert)
+        insertions = []
+
+        # First pass: identify footnote paragraphs and their target positions
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+
+            # Check if line starts with <sup>X</sup> (after any leading whitespace)
+            stripped = line.lstrip()
+            sup_match = re.match(r"^<sup>(\d+)</sup>", stripped)
+
+            if sup_match:
+                sup_num = sup_match.group(1)
+                # Check if NOT followed by a period (after the sup tag)
+                after_sup = stripped[len(f"<sup>{sup_num}</sup>") :].lstrip()
+
+                if not after_sup.startswith("."):
+                    # This is a candidate - find the paragraph containing this sup
+                    paragraph_start = i
+                    paragraph_end = i + 1
+
+                    # Collect the entire paragraph (until next blank line or end)
+                    while paragraph_end < len(lines) and lines[paragraph_end].strip():
+                        paragraph_end += 1
+
+                    paragraph_lines = lines[paragraph_start:paragraph_end]
+                    paragraph_text = "\n".join(paragraph_lines)
+
+                    # Find matching sup earlier in the text (before this position)
+                    # Search backwards from current position
+                    found_match = False
+                    for j in range(i - 1, -1, -1):
+                        if f"<sup>{sup_num}</sup>" in lines[j]:
+                            # Find the position right after the last occurrence of this sup
+                            match_pos = lines[j].rfind(f"<sup>{sup_num}</sup>")
+                            if match_pos != -1:
+                                # Record insertion: add paragraph right after the matching sup
+                                after_sup_pos = match_pos + len(f"<sup>{sup_num}</sup>")
+                                insertions.append(
+                                    (j, after_sup_pos, " " + paragraph_text)
+                                )
+                                found_match = True
+                                break
+
+                    if found_match:
+                        # Mark these lines to skip
+                        for k in range(paragraph_start, paragraph_end):
+                            skip_lines.add(k)
+                        i = paragraph_end
+                        continue
+
+            i += 1
+
+        # Second pass: build result with insertions and skipping moved paragraphs
+        result_lines = []
+        for i, line in enumerate(lines):
+            if i in skip_lines:
+                continue
+
+            # Apply any insertions for this line
+            line_insertions = [(pos, text) for idx, pos, text in insertions if idx == i]
+            if line_insertions:
+                # Sort by position (descending) to insert from end to start
+                line_insertions.sort(reverse=True)
+                for pos, text in line_insertions:
+                    line = line[:pos] + text + line[pos:]
+
+            result_lines.append(line)
+
+        return "\n".join(result_lines)
 
     def _extract_section_number(
         self, section_title: str
@@ -455,24 +554,89 @@ class PDFParser:
 
         return sections
 
-    def _count_words(self, text: str) -> int:
+    def _count_tokens(self, text: str) -> int:
         """
-        Count the number of words in text.
+        """
+
+        return len(self._tokenizer.encode(text))
+
+
+    def _is_table_line(self, line: str) -> bool:
+        """
+        Check if a line is part of a markdown table.
 
         Args:
-            text: Text to count words in
+            line: Line to check
 
         Returns:
-            Number of words
+            True if line is a table line (starts with | and contains multiple |)
         """
-        return len(text.split())
+        stripped = line.strip()
+        # A table line should start with | and contain at least one more |
+        # This handles both data rows and separator rows
+        return stripped.startswith("|") and stripped.count("|") >= 2
+
+    def _split_into_paragraphs(self, content: str) -> list[str]:
+        """
+        Split content into paragraphs, preserving tables as single units.
+
+        Args:
+            content: Content to split
+
+        Returns:
+            List of paragraphs (tables are kept as single units)
+        """
+        if not content.strip():
+            return []
+
+        lines = content.split("\n")
+        paragraphs = []
+        current_paragraph = []
+        in_table = False
+
+        for line in lines:
+            line_stripped = line.strip()
+            is_table_line = self._is_table_line(line)
+
+            if is_table_line:
+                # We're in a table
+                if not in_table:
+                    # Start of a new table - save previous paragraph if any
+                    if current_paragraph:
+                        paragraphs.append("\n".join(current_paragraph))
+                        current_paragraph = []
+                    in_table = True
+                current_paragraph.append(line)
+            else:
+                # Not a table line
+                if in_table:
+                    # End of table - save it as a single paragraph
+                    if current_paragraph:
+                        paragraphs.append("\n".join(current_paragraph))
+                        current_paragraph = []
+                    in_table = False
+
+                if line_stripped:
+                    # Non-empty line - add to current paragraph
+                    current_paragraph.append(line)
+                else:
+                    # Empty line - end of paragraph
+                    if current_paragraph:
+                        paragraphs.append("\n".join(current_paragraph))
+                        current_paragraph = []
+
+        # Add any remaining paragraph
+        if current_paragraph:
+            paragraphs.append("\n".join(current_paragraph))
+
+        return paragraphs
 
     def _split_into_chunks(self, content: str) -> list[str]:
         """
-        Split content into chunks with overlap.
+        Split content into chunks by paragraph, preserving tables.
 
-        Each chunk will have at most max_chunk_words words, with chunk_overlap_words
-        words overlapping between consecutive chunks.
+        Combines multiple paragraphs together until the character limit (500)
+        is exceeded. Tables are never split across chunks.
 
         Args:
             content: Content to split into chunks
@@ -483,37 +647,53 @@ class PDFParser:
         if not content.strip():
             return []
 
-        words = content.split()
-        total_words = len(words)
+        # Split into paragraphs (tables are preserved as single units)
+        paragraphs = self._split_into_paragraphs(content)
 
-        # If content is smaller than max_chunk_words, return as single chunk
-        if total_words <= self.max_chunk_words:
-            return [content]
+        if not paragraphs:
+            return []
 
         chunks = []
-        start_idx = 0
+        current_chunk = []
+        current_chunk_size = 0
 
-        while start_idx < total_words:
-            # Calculate end index for this chunk
-            end_idx = min(start_idx + self.max_chunk_words, total_words)
+        for paragraph in paragraphs:
+            paragraph_size = self._count_tokens(paragraph)
 
-            # Extract chunk
-            chunk_words = words[start_idx:end_idx]
-            chunk_text = " ".join(chunk_words)
-            chunks.append(chunk_text)
+            # If a single paragraph exceeds the limit, add it as its own chunk
+            if paragraph_size > self.max_chunk_words:
+                # Save current chunk if any
+                if current_chunk:
+                    chunks.append("\n\n".join(current_chunk))
+                    current_chunk = []
+                    current_chunk_size = 0
 
-            # Move start index forward, accounting for overlap
-            # If this is not the last chunk, move back by overlap amount
-            if end_idx < total_words:
-                start_idx = end_idx - self.chunk_overlap_words
+                # Add the large paragraph as its own chunk
+                chunks.append(paragraph)
             else:
-                break
+                # Check if adding this paragraph would exceed the limit
+                # Account for the "\n\n" separator between paragraphs
+                separator_size = 2 if current_chunk else 0
+                new_size = current_chunk_size + separator_size + paragraph_size
+
+                if new_size > self.max_chunk_words and current_chunk:
+                    # Current chunk is full, start a new one
+                    chunks.append("\n\n".join(current_chunk))
+                    current_chunk = [paragraph]
+                    current_chunk_size = paragraph_size
+                else:
+                    # Add to current chunk
+                    current_chunk.append(paragraph)
+                    current_chunk_size = new_size
+
+        # Add any remaining chunk
+        if current_chunk:
+            chunks.append("\n\n".join(current_chunk))
 
         logger.debug(
-            "Split content into %d chunks (max %d words, %d overlap)",
+            "Split content into %d chunks (max %d characters, paragraph-based)",
             len(chunks),
             self.max_chunk_words,
-            self.chunk_overlap_words,
         )
 
         return chunks
