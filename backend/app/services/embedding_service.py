@@ -111,8 +111,24 @@ class EmbeddingService:
                     paper_id,
                 )
 
+                # Generate embedding for paper title (once per paper)
+                title_embedding = None
+                if paper.title:
+                    try:
+                        title_embedding = await self.generate_embedding(paper.title)
+                        logger.debug(
+                            "Generated title embedding for paper '%s'", paper.title
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to generate title embedding for paper '%s': %s",
+                            paper.title,
+                            str(e),
+                        )
+
                 # Prepare chunks with embeddings
                 chunks_with_embeddings = []
+                reference_chunks = []  # Store reference sections separately
 
                 for content in paper.contents:
                     # Skip the first section (section_index=0) as it typically contains
@@ -123,6 +139,32 @@ class EmbeddingService:
                             "Skipping embedding for first section (metadata) '%s' of paper '%s'",
                             content.section_name,
                             paper_id,
+                        )
+                        continue
+
+                    # Check if this is a reference section (skip embedding but store metadata)
+                    is_reference = (
+                        content.extra_metadata
+                        and content.extra_metadata.get("is_reference", False)
+                    )
+
+                    if is_reference:
+                        # For reference sections, skip embedding but store metadata
+                        logger.debug(
+                            "Skipping embedding for reference section '%s' of paper '%s'",
+                            content.section_name,
+                            paper_id,
+                        )
+                        # Store reference chunk with metadata but no embeddings
+                        reference_chunks.append(
+                            {
+                                "chunk_id": content.id,
+                                "section_name": content.section_name,
+                                "section_index": content.section_index or 0,
+                                "chunk_index": content.chunk_index or 0,
+                                "content": content.content,
+                                "is_reference": True,
+                            }
                         )
                         continue
 
@@ -146,6 +188,9 @@ class EmbeddingService:
                             "chunk_index": content.chunk_index or 0,
                             "content": content.content,
                             "embedding": embedding,
+                            "title_embedding": title_embedding
+                            if title_embedding
+                            else [],
                         }
 
                         chunks_with_embeddings.append(chunk_data)
@@ -170,26 +215,34 @@ class EmbeddingService:
                 # Commit embedding vectors to database
                 await session.commit()
 
-                if not chunks_with_embeddings:
-                    logger.warning("No embeddings generated for paper '%s'", paper_id)
+                if not chunks_with_embeddings and not reference_chunks:
+                    logger.warning("No chunks to process for paper '%s'", paper_id)
                     return
 
-                # Insert embeddings into Zilliz with metadata
-                zilliz_service.insert_embeddings(
-                    paper_id=paper_id,
-                    paper_title=paper.title,
-                    authors=paper.authors,
-                    venue=paper.venue,
-                    year=paper.year,
-                    collection_names=collection_names,
-                    chunks=chunks_with_embeddings,
-                )
+                # Combine all chunks (with and without embeddings)
+                all_chunks = chunks_with_embeddings.copy()
+                # Add reference chunks without embedding field
+                all_chunks.extend(reference_chunks)
 
-                logger.info(
-                    "Successfully embedded and stored %d chunks for paper '%s' in Zilliz",
-                    len(chunks_with_embeddings),
-                    paper_id,
-                )
+                # Insert all chunks into Zilliz (reference chunks without embedding)
+                if all_chunks:
+                    zilliz_service.insert_embeddings(
+                        paper_id=paper_id,
+                        paper_title=paper.title,
+                        authors=paper.authors,
+                        venue=paper.venue,
+                        year=paper.year,
+                        collection_names=collection_names,
+                        chunks=all_chunks,
+                    )
+
+                    logger.info(
+                        "Successfully stored %d chunks for paper '%s' in Zilliz (%d with embeddings, %d reference sections without embeddings)",
+                        len(all_chunks),
+                        paper_id,
+                        len(chunks_with_embeddings),
+                        len(reference_chunks),
+                    )
 
             except Exception as e:
                 logger.exception(

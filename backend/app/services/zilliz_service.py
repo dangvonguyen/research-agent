@@ -113,6 +113,11 @@ class ZillizService:
                 datatype=DataType.FLOAT_VECTOR,
                 dim=self.vector_dimension,
             )
+            schema.add_field(
+                field_name="title_embedding",
+                datatype=DataType.FLOAT_VECTOR,
+                dim=self.vector_dimension,
+            )
 
             # Create collection with schema
             self.client.create_collection(
@@ -121,10 +126,16 @@ class ZillizService:
                 description="Collection for storing paper content chunks with embeddings and metadata",
             )
 
-            # Create index on embedding field for similarity search
+            # Create index on embedding fields for similarity search
             index_params = self.client.prepare_index_params()
             index_params.add_index(
                 field_name="embedding",
+                index_type="IVF_FLAT",
+                metric_type="L2",
+                params={"nlist": 1024},
+            )
+            index_params.add_index(
+                field_name="title_embedding",
                 index_type="IVF_FLAT",
                 metric_type="L2",
                 params={"nlist": 1024},
@@ -167,13 +178,19 @@ class ZillizService:
 
         Args:
             paper_id: UUID of the paper
+            paper_title: Title of the paper
+            authors: List of authors
+            venue: Venue name
+            year: Publication year
+            collection_names: List of collection names
             chunks: List of chunk dictionaries with keys:
                 - chunk_id: UUID of the chunk
                 - section_name: Name of the section
                 - section_index: Index of the section
                 - chunk_index: Index of the chunk
                 - content: Text content
-                - embedding: Vector embedding (list of floats)
+                - embedding: Vector embedding for chunk content (list of floats)
+                - title_embedding: Vector embedding for paper title (list of floats)
         """
         if not self.endpoint or not self.token:
             logger.debug("Zilliz not configured, skipping embedding insertion")
@@ -195,22 +212,42 @@ class ZillizService:
             paper_id_str = str(paper_id)
 
             for chunk in chunks:
-                data.append(
-                    {
-                        "chunk_id": str(chunk["chunk_id"]),
-                        "paper_id": paper_id_str,
-                        "paper_title": paper_title,
-                        "authors": authors if authors else [],
-                        "venue": venue if venue else "",
-                        "year": year if year else 0,
-                        "collection_names": collection_names,
-                        "section_name": chunk["section_name"],
-                        "section_index": chunk.get("section_index", 0),
-                        "chunk_index": chunk.get("chunk_index", 0),
-                        "content": chunk["content"],
-                        "embedding": chunk["embedding"],
-                    }
-                )
+                chunk_data = {
+                    "chunk_id": str(chunk["chunk_id"]),
+                    "paper_id": paper_id_str,
+                    "paper_title": paper_title,
+                    "authors": authors if authors else [],
+                    "venue": venue if venue else "",
+                    "year": year if year else 0,
+                    "collection_names": collection_names,
+                    "section_name": chunk["section_name"],
+                    "section_index": chunk.get("section_index", 0),
+                    "chunk_index": chunk.get("chunk_index", 0),
+                    "content": chunk["content"],
+                }
+                # Check if this is a reference chunk (has no embeddings)
+                is_reference = chunk.get("is_reference", False)
+
+                if is_reference:
+                    # Reference chunks have no embeddings at all
+                    chunk_data["embedding"] = [0.0] * self.vector_dimension
+                    chunk_data["title_embedding"] = [0.0] * self.vector_dimension
+                else:
+                    # Regular chunks have both embeddings
+                    if "embedding" in chunk and chunk["embedding"]:
+                        chunk_data["embedding"] = chunk["embedding"]
+                    else:
+                        # Use zero vector if content embedding is missing
+                        chunk_data["embedding"] = [0.0] * self.vector_dimension
+
+                    # Add title embedding (should always be present for regular chunks)
+                    if "title_embedding" in chunk and chunk["title_embedding"]:
+                        chunk_data["title_embedding"] = chunk["title_embedding"]
+                    else:
+                        # Use zero vector if title embedding is missing
+                        chunk_data["title_embedding"] = [0.0] * self.vector_dimension
+
+                data.append(chunk_data)
 
             # Insert data using MilvusClient
             self.client.insert(

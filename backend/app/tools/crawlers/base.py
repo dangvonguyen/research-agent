@@ -156,8 +156,30 @@ class BaseCrawler(ABC):
                 async with self.session.get(url, headers=headers) as resp:
                     if resp.status == 200:
                         content: str | bytes | None = None
-                        if mode == "str":
-                            content = await resp.text()
+
+                        # Auto-detect binary content based on Content-Type or URL extension
+                        content_type = resp.headers.get("Content-Type", "").lower()
+                        is_pdf_or_binary = (
+                            mode == "bytes"
+                            or "application/pdf" in content_type
+                            or "application/octet-stream" in content_type
+                            or url.lower().endswith((".pdf", ".zip", ".tar", ".gz"))
+                        )
+
+                        if is_pdf_or_binary:
+                            # Use read() for binary content (PDFs, etc.)
+                            content = await resp.read()
+                        elif mode == "str":
+                            # Try to decode as text, but handle encoding errors gracefully
+                            try:
+                                content = await resp.text()
+                            except UnicodeDecodeError:
+                                # If UTF-8 decoding fails, it's likely binary content
+                                logger.warning(
+                                    "Failed to decode URL %s as UTF-8 text, treating as binary",
+                                    url,
+                                )
+                                content = await resp.read()
                         else:
                             content = await resp.read()
 

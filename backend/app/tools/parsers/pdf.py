@@ -5,11 +5,11 @@ from pathlib import Path
 from typing import Optional
 
 import requests
+import tiktoken
 from markdown_it import MarkdownIt
 
 from app.core.config import settings
 from app.db.models import Paper, PaperContent
-import tiktoken
 
 logger = logging.getLogger(__name__)
 
@@ -119,22 +119,49 @@ class PDFParser:
             # Convert to PaperContent objects with chunking
             contents: list[PaperContent] = []
             for section_idx, (section_title, content) in enumerate(sections.items()):
-                # Split section content into chunks
-                chunks = self._split_into_chunks(content)
-                # Create PaperContent for each chunk
-                for chunk_idx, chunk_content in enumerate(chunks):
-                    word_count = len(chunk_content.split())
+                # Check if this is a reference section
+                is_reference = self._is_reference_section(section_title)
+
+                if is_reference:
+                    # For reference sections, save as a single chunk
+                    # Store section name and content in metadata, don't create embedding
+                    word_count = len(content.split())
                     contents.append(
                         PaperContent(
                             paper_id=paper.id,
                             section_name=section_title,
                             section_index=section_idx,
-                            chunk_index=chunk_idx,
-                            content=chunk_content,
-                            token_count=word_count,  # Using word count as approximation
-                            embedding_vector=None,
+                            chunk_index=0,  # Single chunk, always index 0
+                            content=content,
+                            token_count=word_count,
+                            embedding_vector=None,  # No embedding for references
+                            extra_metadata={
+                                "is_reference": True,
+                            },
                         )
                     )
+                    logger.debug(
+                        "Saved reference section '%s' as single chunk for paper '%s'",
+                        section_title,
+                        paper.title,
+                    )
+                else:
+                    # For regular sections, split into chunks as usual
+                    chunks = self._split_into_chunks(content)
+                    # Create PaperContent for each chunk
+                    for chunk_idx, chunk_content in enumerate(chunks):
+                        word_count = len(chunk_content.split())
+                        contents.append(
+                            PaperContent(
+                                paper_id=paper.id,
+                                section_name=section_title,
+                                section_index=section_idx,
+                                chunk_index=chunk_idx,
+                                content=chunk_content,
+                                token_count=word_count,  # Using word count as approximation
+                                embedding_vector=None,
+                            )
+                        )
 
             logger.info(
                 "Successfully parsed %d sections into %d chunks for paper '%s'",
@@ -260,7 +287,41 @@ class PDFParser:
         # Preprocess markdown to fix footnote superscripts
         markdown_content = self._preprocess_footnote_sups(markdown_content)
 
+        # Save markdown to file
+        self._save_markdown_to_file(pdf_path, markdown_content)
+
         return markdown_content
+
+    # Just for testing purposes, need to comment out before production
+    def _save_markdown_to_file(self, pdf_path: str, markdown_content: str) -> None:
+        """
+        Save markdown content to a file in the same directory as the PDF.
+
+        Args:
+            pdf_path: Path to the original PDF file
+            markdown_content: Markdown content to save
+        """
+        try:
+            pdf_file = Path(pdf_path)
+            # Create markdown filename based on PDF filename
+            markdown_file = pdf_file.with_suffix(".md")
+
+            # Write markdown content to file
+            with open(markdown_file, "w", encoding="utf-8") as f:
+                f.write(markdown_content)
+
+            logger.info(
+                "Saved markdown content to file: %s (%d characters)",
+                markdown_file,
+                len(markdown_content),
+            )
+        except Exception as e:
+            # Log error but don't fail the parsing process
+            logger.warning(
+                "Failed to save markdown to file for PDF '%s': %s",
+                pdf_path,
+                str(e),
+            )
 
     def _preprocess_footnote_sups(self, markdown_content: str) -> str:
         """
@@ -556,10 +617,30 @@ class PDFParser:
 
     def _count_tokens(self, text: str) -> int:
         """
+        Count tokens in text using tiktoken.
         """
-
         return len(self._tokenizer.encode(text))
 
+    def _is_reference_section(self, section_title: str) -> bool:
+        """
+        Check if a section is a reference/bibliography section.
+
+        Args:
+            section_title: Title of the section
+
+        Returns:
+            True if this is a reference section
+        """
+        ref_keywords = [
+            "reference",
+            "references",
+            "bibliography",
+            "bibliographies",
+            "works cited",
+            "citations",
+        ]
+        title_lower = section_title.lower().strip()
+        return any(keyword in title_lower for keyword in ref_keywords)
 
     def _is_table_line(self, line: str) -> bool:
         """
