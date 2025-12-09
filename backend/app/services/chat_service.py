@@ -4,12 +4,11 @@ from typing import Optional, cast
 from uuid import UUID
 
 from llama_index.core import Settings
-from llama_index.core.agent import FunctionAgent
 from llama_index.core.chat_engine import SimpleChatEngine
 from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.llms import ChatMessage, MessageRole
 
-from app.ai.tools.multiple_tool import MultipleTool
+from app.ai.agents.orchestrator import create_orchestrator_agent
 from app.services.llm_service import llm_service
 from app.services.stream_adapter import StreamAdapter
 from app.types import (
@@ -76,14 +75,11 @@ class ChatService:
         chat_history = self._build_chat_history(history)
 
         try:
-            agent = FunctionAgent(
-                system_prompt=self.system_prompt,
-                tools=[MultipleTool.as_tool()],
-                llm=self.llm,
-            )
+            # Create orchestrator agent
+            orchestrator = create_orchestrator_agent(self.llm)
 
-            # Run agent and get workflow handler
-            handler = agent.run(user_msg=user_text, chat_history=chat_history)
+            # Run orchestrator and get workflow handler
+            handler = orchestrator.run(user_msg=user_text, chat_history=chat_history)
 
             # Adapt LlamaIndex workflow events to stream events
             async for event in self.stream_adapter.adapt_stream(
