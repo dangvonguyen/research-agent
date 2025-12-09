@@ -9,6 +9,7 @@ from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.llms import ChatMessage, MessageRole
 
 from app.ai.agents.orchestrator import create_orchestrator_agent
+from app.services.event_multiplexer import EventMultiplexer
 from app.services.llm_service import llm_service
 from app.services.stream_adapter import StreamAdapter
 from app.types import (
@@ -75,17 +76,35 @@ class ChatService:
         chat_history = self._build_chat_history(history)
 
         try:
-            # Create orchestrator agent
-            orchestrator = create_orchestrator_agent(self.llm)
+            # Create multiplexer to organize events
+            multiplexer = EventMultiplexer()
 
-            # Run orchestrator and get workflow handler
+            # Create orchestrator agent
+            orchestrator = create_orchestrator_agent(self.llm, multiplexer.emit_event)
+
+            # Run orchestrator
             handler = orchestrator.run(user_msg=user_text, chat_history=chat_history)
+
+            # Background task: pump orchestrator events
+            async def pump_orchestrator_events():
+                try:
+                    async for event in handler.stream_events():
+                        await multiplexer.emit_event(
+                            event, "orchestrator", "orchestrator"
+                        )
+                finally:
+                    await multiplexer.close()
+
+            pump_task = asyncio.create_task(pump_orchestrator_events())
 
             # Adapt LlamaIndex workflow events to stream events
             async for event in self.stream_adapter.adapt_stream(
-                handler, conversation_id, message_id
+                multiplexer, conversation_id, message_id
             ):
                 yield event
+
+            # Ensure pump task completes
+            await pump_task
 
         except asyncio.CancelledError:
             raise

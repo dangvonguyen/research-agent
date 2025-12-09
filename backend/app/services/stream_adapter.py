@@ -10,8 +10,8 @@ from llama_index.core.agent.workflow import (
     ToolCallResult,
 )
 from pydantic import BaseModel
-from workflows.handler import WorkflowHandler
 
+from app.services.event_multiplexer import EventMultiplexer
 from app.types import (
     StreamContentDelta,
     StreamContentEnd,
@@ -28,13 +28,15 @@ class StreamAdapter:
 
     async def adapt_stream(
         self,
-        handler: WorkflowHandler,
+        multiplexer: EventMultiplexer,
         conversation_id: UUID,
         message_id: UUID,
     ) -> AsyncGenerator[StreamEvent, None]:
         """Adapt LlamaIndex workflow events to StreamEvents."""
         content_index = 0
         current_block_type: StreamContentType | None = None
+        current_agent_name: str | None = None
+        current_agent_type: str | None = None
 
         def start_block(block_type: StreamContentType, **extra):
             return StreamContentStart(
@@ -42,6 +44,8 @@ class StreamAdapter:
                 message_id=message_id,
                 index=content_index,
                 content_type=block_type,
+                agent_name=current_agent_name,
+                agent_type=current_agent_type,
                 **extra,
             )
 
@@ -80,7 +84,11 @@ class StreamAdapter:
                 current_block_type = None
 
         try:
-            async for event in handler.stream_events():
+            async for attributed_event in multiplexer.stream_events():
+                event = attributed_event.event
+                current_agent_name = attributed_event.agent_name
+                current_agent_type = attributed_event.agent_type
+
                 if isinstance(event, AgentInput):
                     pass
 

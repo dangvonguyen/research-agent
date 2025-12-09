@@ -1,10 +1,12 @@
 """Base agent abstraction for building specialized agents."""
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 from llama_index.core.agent.workflow import FunctionAgent
 from llama_index.core.llms import LLM
 from llama_index.core.tools import BaseTool as LlamaBaseTool
+from llama_index.core.workflow.handler import WorkflowHandler
 from pydantic import BaseModel, Field
 
 
@@ -96,3 +98,17 @@ class BaseAgent(ABC):
         """
         agent = self.create(llm)
         return await agent.run(user_msg=user_msg, **kwargs)
+
+    def get_handler(self, llm: LLM, user_msg, **kwargs: Any) -> WorkflowHandler:
+        """Convenience method to create the agent and return its handler.
+
+        Args:
+            llm: Language model to use
+            user_msg: User message to process
+            **kwargs: Additional arguments passed to agent.run()
+
+        Returns:
+            Agent workflow handler
+        """
+        agent = self.create(llm)
+        return agent.run(user_msg=user_msg, **kwargs)

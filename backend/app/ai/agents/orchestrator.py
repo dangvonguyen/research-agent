@@ -1,5 +1,7 @@
 """Orchestrator Agent - coordinates specialized sub-agents."""
 
+from collections.abc import Callable
+
 from llama_index.core.agent.workflow import FunctionAgent
 from llama_index.core.llms import LLM
 
@@ -20,7 +22,7 @@ def initialize_agent_registry() -> None:
     agent_registry.register(WeatherAgent)
 
 
-def create_orchestrator_agent(llm: LLM) -> FunctionAgent:
+def create_orchestrator_agent(llm: LLM, event_callback: Callable) -> FunctionAgent:
     """Create the top-level orchestrator agent.
 
     The orchestrator delegates to specialized sub-agents for domain-specific
@@ -39,7 +41,7 @@ def create_orchestrator_agent(llm: LLM) -> FunctionAgent:
         initialize_agent_registry()
 
     # Get delegation tools from registry
-    tools = agent_registry.create_delegation_tools(llm)
+    tools = agent_registry.create_delegation_tools_with_streaming(llm, event_callback)
 
     return FunctionAgent(
         system_prompt=ORCHESTRATOR_AGENT_PROMPT,

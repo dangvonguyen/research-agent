@@ -3,6 +3,7 @@
 from typing import Any
 
 from app.types import (
+    AgentType,
     MessageContentPart,
     MessageReasoningPart,
     MessageTextPart,
@@ -20,6 +21,12 @@ class ContentPartBuilder:
         self.current_index: int | None = None
         self.current_type: StreamContentType | None = None
         self.current_data: dict[str, Any] = {}
+        self.current_agent_type: str | None = None
+        self.current_tool_name: str | None = None
+
+        # Buffer for sub-agent events
+        self.sub_agent_buffers: list[MessageContentPart] = []
+        self.orchestrator_tool_call_id: str | None = None
 
     def start_content(
         self, content_type: StreamContentType, index: int, **metadata: Any
@@ -31,7 +38,19 @@ class ContentPartBuilder:
 
         self.current_index = index
         self.current_type = content_type
+
+        # Extract agent, tool type for filtering
+        self.current_agent_type = metadata.pop("agent_type", None)
+        self.current_tool_name = metadata.get("tool_name", "")
+
         self.current_data = {"type": content_type.value, **metadata}
+
+        # Track active tool call for orchestrator
+        if (
+            content_type == StreamContentType.TOOL_CALL
+            and self.current_agent_type == AgentType.ORCHESTRATOR
+        ):
+            self.orchestrator_tool_call_id = metadata.get("tool_call_id")
 
         # Initialize accumulator based on type
         if content_type in (StreamContentType.TEXT, StreamContentType.REASONING):
@@ -72,18 +91,31 @@ class ContentPartBuilder:
                 f"End index {index} doesn't match current {self.current_index}"
             )
 
-        # Use provided final content or build from accumulated data
+        # Build from accumulated data
         part = self._build_part_from_data()
 
-        # Store the completed part
-        while len(self.parts) <= index:
-            self.parts.append(None)
-        self.parts[index] = part
+        # Route based on agent type
+        if self.current_agent_type == AgentType.SUB_AGENT:
+            # Buffer sub-agent events under active tool call
+            self.sub_agent_buffers.append(part)
+        else:
+            # Store the completed part
+            while len(self.parts) <= index:
+                self.parts.append(None)
+            self.parts[index] = part
+
+        # Clear tool call context when orchestrator tool result ends
+        if (
+            self.current_type == StreamContentType.TOOL_RESULT
+            and self.current_agent_type == AgentType.ORCHESTRATOR
+        ):
+            self.orchestrator_tool_call_id = None
 
         # Reset current tracking
         self.current_index = None
         self.current_type = None
         self.current_data = {}
+        self.current_agent_type = None
 
     def _finalize_current(self) -> None:
         """Internal method to finalize current part."""
@@ -93,6 +125,31 @@ class ContentPartBuilder:
     def _build_part_from_data(self) -> MessageContentPart:
         """Build a MessageContentPart from current_data."""
         data = self.current_data.copy()
+
+        # Special handling for orchestrator tool results with sub-agent events
+        if (
+            self.current_type == StreamContentType.TOOL_RESULT
+            and self.current_agent_type == AgentType.ORCHESTRATOR
+            and self.orchestrator_tool_call_id is not None
+        ):
+            # Extract original output value
+            original_output = data.get("output", None)
+
+            if original_output is None:
+                raise ValueError("Sub-agent result should be always string for now.")
+
+            # Wrap with sub-agent events
+            data["output"] = {
+                "type": AgentType.SUB_AGENT.value,
+                "value": {
+                    "result": original_output,
+                    "agent_name": data.get("tool_name"),  # Tool name = agent name
+                    "events": self.sub_agent_buffers,
+                },
+            }
+
+            # Clean up buffer
+            self.sub_agent_buffers = []
 
         if self.current_type == StreamContentType.TEXT:
             return MessageTextPart(**data)
