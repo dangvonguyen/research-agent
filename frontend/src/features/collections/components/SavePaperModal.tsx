@@ -44,6 +44,32 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
     year: "",
     keywords: "",
   });
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setIsLoading(false);
+      setUrl("");
+      setQuery("");
+      setMaxResult(5);
+      setSelectedCollectionIds(collectionId ? [collectionId] : []);
+      setSelectedFile(null);
+      setMetadata({
+        title: "",
+        authors: "",
+        abstract: "",
+        doi: "",
+        year: "",
+        keywords: "",
+      });
+      // Clear any pending polling
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+        pollingTimeoutRef.current = null;
+      }
+    }
+  }, [isOpen, collectionId]);
 
   // Fetch collections when modal opens
   useEffect(() => {
@@ -159,6 +185,7 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
               );
             }
 
+            setIsLoading(false);
             onClose();
             // Reset form
             setUrl("");
@@ -172,7 +199,7 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
             setIsLoading(false);
           } else {
             // Job still running, poll again after 2 seconds
-            setTimeout(pollJob, 2000);
+            pollingTimeoutRef.current = setTimeout(pollJob, 2000);
           }
         } catch (error) {
           console.error("Error polling job:", error);
@@ -182,7 +209,7 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
       };
 
       // Start polling after a short delay
-      setTimeout(pollJob, 2000);
+      pollingTimeoutRef.current = setTimeout(pollJob, 2000);
     } catch (error) {
       console.error("Failed to create crawler job:", error);
       toast.error("Failed to create crawler job");
