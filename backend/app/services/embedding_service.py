@@ -126,6 +126,23 @@ class EmbeddingService:
                             str(e),
                         )
 
+                # Generate embedding for paper abstract (once per paper)
+                abstract_embedding = None
+                if paper.abstract:
+                    try:
+                        abstract_embedding = await self.generate_embedding(
+                            paper.abstract
+                        )
+                        logger.debug(
+                            "Generated abstract embedding for paper '%s'", paper.title
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to generate abstract embedding for paper '%s': %s",
+                            paper.title,
+                            str(e),
+                        )
+
                 # Prepare chunks with embeddings
                 chunks_with_embeddings = []
                 reference_chunks = []  # Store reference sections separately
@@ -234,6 +251,7 @@ class EmbeddingService:
                         year=paper.year,
                         collection_names=collection_names,
                         chunks=all_chunks,
+                        abstract_embedding=abstract_embedding,
                     )
 
                     logger.info(

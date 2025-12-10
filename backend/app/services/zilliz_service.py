@@ -53,9 +53,11 @@ class ZillizService:
         """
         Create collection in Zilliz if it doesn't exist (one-time operation).
         Collection schema includes:
-        - Vector field for embeddings
-        - Metadata fields: paper_id, paper_title, authors, venue, year, collection_names,
-          section_name, section_index, chunk_index, content, chunk_id
+        - chunk_content_embedding: Vector embedding for chunk text content
+        - paper_title_embedding: Vector embedding for paper title
+        - abstract_embedding: Vector embedding for paper abstract
+        - Metadata fields: chunk_id, paper_id, paper_title, authors, venue, year,
+          collection_names, section_name, section_index, chunk_index, chunk_content
         """
         if self._collection_created:
             return
@@ -72,6 +74,29 @@ class ZillizService:
             # Check if collection already exists
             if self.client.has_collection(self.collection_name):
                 logger.info("Collection '%s' already exists", self.collection_name)
+                # Verify that abstract_embedding field exists in the schema
+                try:
+                    collection_info = self.client.describe_collection(
+                        self.collection_name
+                    )
+                    schema_fields = collection_info.get("fields", [])
+                    has_abstract_embedding = any(
+                        field.get("name") == "abstract_embedding"
+                        for field in schema_fields
+                    )
+                    if not has_abstract_embedding:
+                        logger.warning(
+                            "Collection '%s' exists but does not have 'abstract_embedding' field in schema. "
+                            "The field will be stored as a dynamic field. To use it as a proper schema field, "
+                            "please drop and recreate the collection.",
+                            self.collection_name,
+                        )
+                except Exception as e:
+                    logger.warning(
+                        "Could not verify schema for collection '%s': %s",
+                        self.collection_name,
+                        str(e),
+                    )
                 self._collection_created = True
                 return
 
@@ -106,36 +131,48 @@ class ZillizService:
             schema.add_field(field_name="section_index", datatype=DataType.INT64)
             schema.add_field(field_name="chunk_index", datatype=DataType.INT64)
             schema.add_field(
-                field_name="content", datatype=DataType.VARCHAR, max_length=65535
+                field_name="chunk_content", datatype=DataType.VARCHAR, max_length=65535
             )
             schema.add_field(
-                field_name="embedding",
+                field_name="chunk_content_embedding",
                 datatype=DataType.FLOAT_VECTOR,
                 dim=self.vector_dimension,
             )
             schema.add_field(
-                field_name="title_embedding",
+                field_name="paper_title_embedding",
                 datatype=DataType.FLOAT_VECTOR,
                 dim=self.vector_dimension,
             )
+            schema.add_field(
+                field_name="abstract_embedding",
+                datatype=DataType.FLOAT_VECTOR,
+                dim=self.vector_dimension,
+            )
+            schema.add_field(field_name="chunk_references", datatype=DataType.JSON)
 
             # Create collection with schema
             self.client.create_collection(
                 collection_name=self.collection_name,
                 schema=schema,
-                description="Collection for storing paper content chunks with embeddings and metadata",
+                description="Collection for storing paper content chunks with chunk_content_embedding, paper_title_embedding, and abstract_embedding vectors, plus metadata fields",
             )
 
             # Create index on embedding fields for similarity search
             index_params = self.client.prepare_index_params()
             index_params.add_index(
-                field_name="embedding",
+                field_name="chunk_content_embedding",
                 index_type="IVF_FLAT",
                 metric_type="L2",
                 params={"nlist": 1024},
             )
             index_params.add_index(
-                field_name="title_embedding",
+                field_name="paper_title_embedding",
+                index_type="IVF_FLAT",
+                metric_type="L2",
+                params={"nlist": 1024},
+            )
+            index_params.add_index(
+                field_name="abstract_embedding",
                 index_type="IVF_FLAT",
                 metric_type="L2",
                 params={"nlist": 1024},
@@ -145,8 +182,15 @@ class ZillizService:
                 index_params=index_params,
             )
 
+            # Verify collection was created successfully
+            if not self.client.has_collection(self.collection_name):
+                raise RuntimeError(
+                    f"Failed to create collection '{self.collection_name}' - collection does not exist after creation"
+                )
+
             logger.info(
-                "Successfully created collection '%s' with schema", self.collection_name
+                "Successfully created collection '%s' with schema (including abstract_embedding)",
+                self.collection_name,
             )
             self._collection_created = True
 
@@ -162,6 +206,25 @@ class ZillizService:
         """Ensure collection exists."""
         if not self._collection_created:
             self.create_collection()
+        else:
+            # Double-check that collection actually exists
+            # (it might have been deleted externally)
+            try:
+                self._ensure_connected()
+                if self.client and not self.client.has_collection(self.collection_name):
+                    logger.warning(
+                        "Collection '%s' was expected to exist but doesn't. Recreating...",
+                        self.collection_name,
+                    )
+                    self._collection_created = False
+                    self.create_collection()
+            except Exception as e:
+                logger.warning(
+                    "Could not verify collection existence, attempting to create: %s",
+                    str(e),
+                )
+                self._collection_created = False
+                self.create_collection()
 
     def insert_embeddings(
         self,
@@ -172,6 +235,7 @@ class ZillizService:
         year: int | None,
         collection_names: list[str],
         chunks: list[dict[str, Any]],
+        abstract_embedding: list[float] | None = None,
     ) -> None:
         """
         Insert paper chunks with embeddings and metadata into Zilliz.
@@ -188,9 +252,10 @@ class ZillizService:
                 - section_name: Name of the section
                 - section_index: Index of the section
                 - chunk_index: Index of the chunk
-                - content: Text content
-                - embedding: Vector embedding for chunk content (list of floats)
-                - title_embedding: Vector embedding for paper title (list of floats)
+                - chunk_content: Text content of the chunk
+                - chunk_content_embedding: Vector embedding for chunk text content (list of floats)
+                - paper_title_embedding: Vector embedding for paper title (list of floats)
+            abstract_embedding: Optional vector embedding for paper abstract (list of floats)
         """
         if not self.endpoint or not self.token:
             logger.debug("Zilliz not configured, skipping embedding insertion")
@@ -205,6 +270,16 @@ class ZillizService:
                 return
 
             self._ensure_collection()
+
+            # Verify collection exists one more time before insertion
+            if not self.client.has_collection(self.collection_name):
+                logger.error(
+                    "Collection '%s' does not exist and could not be created. Aborting insertion.",
+                    self.collection_name,
+                )
+                raise ValueError(
+                    f"Collection '{self.collection_name}' does not exist in Zilliz"
+                )
 
             # Prepare data for insertion
             data = []
@@ -223,29 +298,45 @@ class ZillizService:
                     "section_name": chunk["section_name"],
                     "section_index": chunk.get("section_index", 0),
                     "chunk_index": chunk.get("chunk_index", 0),
-                    "content": chunk["content"],
+                    "chunk_content": chunk["content"],
                 }
                 # Check if this is a reference chunk (has no embeddings)
                 is_reference = chunk.get("is_reference", False)
 
+                # Add abstract embedding (same for all chunks from the same paper)
+                if abstract_embedding:
+                    chunk_data["abstract_embedding"] = abstract_embedding
+                else:
+                    # Use zero vector if abstract embedding is missing
+                    chunk_data["abstract_embedding"] = [0.0] * self.vector_dimension
+
                 if is_reference:
-                    # Reference chunks have no embeddings at all
-                    chunk_data["embedding"] = [0.0] * self.vector_dimension
-                    chunk_data["title_embedding"] = [0.0] * self.vector_dimension
+                    # Reference chunks have no embeddings at all - use zero vectors
+                    chunk_data["chunk_content_embedding"] = [
+                        0.0
+                    ] * self.vector_dimension
+                    chunk_data["paper_title_embedding"] = [0.0] * self.vector_dimension
                 else:
                     # Regular chunks have both embeddings
-                    if "embedding" in chunk and chunk["embedding"]:
-                        chunk_data["embedding"] = chunk["embedding"]
+                    if chunk.get("embedding"):
+                        chunk_data["chunk_content_embedding"] = chunk["embedding"]
                     else:
                         # Use zero vector if content embedding is missing
-                        chunk_data["embedding"] = [0.0] * self.vector_dimension
+                        chunk_data["chunk_content_embedding"] = [
+                            0.0
+                        ] * self.vector_dimension
 
-                    # Add title embedding (should always be present for regular chunks)
-                    if "title_embedding" in chunk and chunk["title_embedding"]:
-                        chunk_data["title_embedding"] = chunk["title_embedding"]
+                    # Add paper title embedding (should always be present for regular chunks)
+                    if chunk.get("title_embedding"):
+                        chunk_data["paper_title_embedding"] = chunk["title_embedding"]
                     else:
                         # Use zero vector if title embedding is missing
-                        chunk_data["title_embedding"] = [0.0] * self.vector_dimension
+                        chunk_data["paper_title_embedding"] = [
+                            0.0
+                        ] * self.vector_dimension
+
+                # Add chunk_references if present (list of reference content strings matched to this chunk)
+                chunk_data["chunk_references"] = chunk.get("chunk_references", [])
 
                 data.append(chunk_data)
 
@@ -313,10 +404,10 @@ class ZillizService:
         output_fields: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """
-        Search for similar chunks using vector similarity.
+        Search for similar chunks using vector similarity on chunk_content_embedding field.
 
         Args:
-            query_vector: Query embedding vector
+            query_vector: Query embedding vector to search against chunk_content_embedding
             limit: Maximum number of results to return
             filter_expr: Optional filter expression (e.g., 'year == 2023')
             output_fields: Optional list of fields to return in results
@@ -351,7 +442,7 @@ class ZillizService:
                     "section_name",
                     "section_index",
                     "chunk_index",
-                    "content",
+                    "chunk_content",
                 ]
 
             # Search parameters

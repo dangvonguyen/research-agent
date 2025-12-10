@@ -22,7 +22,6 @@ class PDFParser:
         self.api_url = settings.DATALAB_API_URL
         self.min_content_length = settings.PDF_MIN_CONTENT_LENGTH
         self.max_chunk_words = settings.PDF_MAX_CHUNK_WORDS
-        self.chunk_overlap_words = settings.PDF_CHUNK_OVERLAP_WORDS
         if not hasattr(self, "_tokenizer"):
             self._tokenizer = tiktoken.encoding_for_model("gpt-4o-mini")
 
@@ -287,41 +286,7 @@ class PDFParser:
         # Preprocess markdown to fix footnote superscripts
         markdown_content = self._preprocess_footnote_sups(markdown_content)
 
-        # Save markdown to file
-        self._save_markdown_to_file(pdf_path, markdown_content)
-
         return markdown_content
-
-    # Just for testing purposes, need to comment out before production
-    def _save_markdown_to_file(self, pdf_path: str, markdown_content: str) -> None:
-        """
-        Save markdown content to a file in the same directory as the PDF.
-
-        Args:
-            pdf_path: Path to the original PDF file
-            markdown_content: Markdown content to save
-        """
-        try:
-            pdf_file = Path(pdf_path)
-            # Create markdown filename based on PDF filename
-            markdown_file = pdf_file.with_suffix(".md")
-
-            # Write markdown content to file
-            with open(markdown_file, "w", encoding="utf-8") as f:
-                f.write(markdown_content)
-
-            logger.info(
-                "Saved markdown content to file: %s (%d characters)",
-                markdown_file,
-                len(markdown_content),
-            )
-        except Exception as e:
-            # Log error but don't fail the parsing process
-            logger.warning(
-                "Failed to save markdown to file for PDF '%s': %s",
-                pdf_path,
-                str(e),
-            )
 
     def _preprocess_footnote_sups(self, markdown_content: str) -> str:
         """
@@ -625,6 +590,10 @@ class PDFParser:
         """
         Check if a section is a reference/bibliography section.
 
+        Reference sections typically start with the keyword and stand alone
+        (e.g., "References", "6. References", "Bibliography").
+        This avoids false positives like "Related References" or "Citations in Literature".
+
         Args:
             section_title: Title of the section
 
@@ -640,7 +609,37 @@ class PDFParser:
             "citations",
         ]
         title_lower = section_title.lower().strip()
-        return any(keyword in title_lower for keyword in ref_keywords)
+
+        # Remove section numbers if present (e.g., "6. References" -> "references")
+        # Pattern: optional numbers/dots at start, then whitespace, then title
+        title_without_number = re.sub(
+            r"^(\d+(?:\.\d+)*)\.?\s*", "", title_lower
+        ).strip()
+
+        # Check if title starts with keyword and stands alone
+        for keyword in ref_keywords:
+            # Exact match after removing numbers
+            if title_without_number == keyword:
+                return True
+
+            # Title starts with keyword
+            if title_without_number.startswith(keyword):
+                # Get what comes after the keyword
+                remaining = title_without_number[len(keyword) :].strip()
+
+                # If nothing after, or only punctuation/whitespace, it's a match
+                if not remaining:
+                    return True
+
+                # Allow trailing punctuation only
+                if remaining in [".", ":", ";", "!", "?"]:
+                    return True
+
+                # Allow "References and Acknowledgments" type patterns but reject "References to..." or "Related References"
+                if remaining.startswith((" and ", " & ", " or ")):
+                    return True
+
+        return False
 
     def _is_table_line(self, line: str) -> bool:
         """
