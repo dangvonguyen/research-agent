@@ -1,4 +1,5 @@
 import type {
+  MessageFilePart,
   MessageReasoningPart,
   MessageTextPart,
   MessageToolCallPart,
@@ -12,6 +13,7 @@ export type { Attachment, Conversation, Message };
 export type {
   MessageReasoningPart,
   MessageTextPart,
+  MessageFilePart,
   MessageToolCallPart,
   MessageToolResultPart,
 };
@@ -19,6 +21,7 @@ export type {
 export type MessageContentPart =
   | MessageTextPart
   | MessageReasoningPart
+  | MessageFilePart
   | MessageToolCallPart
   | MessageToolResultPart;
 
@@ -57,6 +60,8 @@ export interface StreamContentStart extends StreamEventBase {
   index: number;
   tool_call_id?: string | null;
   tool_name?: string | null;
+  agent_name?: string | null;
+  agent_type?: "orchestrator" | "sub-agent" | null;
 }
 
 export interface StreamContentDelta extends StreamEventBase {
@@ -103,10 +108,36 @@ export interface StreamingMetadata {
   isComplete: boolean;
   error?: string | null;
   _buffer?: string; // For accumulating JSON strings
+  agent_type?: "orchestrator" | "sub-agent" | null; // Track which agent produced this content
 }
 
 export interface ChatError extends Error {
   code?: string;
   conversationId?: string;
   messageId?: string;
+}
+
+// Tool UI Types
+export type ToolState =
+  | "input-streaming"
+  | "input-available"
+  | "approval-requested"
+  | "approval-responded"
+  | "output-available"
+  | "output-error"
+  | "output-denied";
+
+export interface ToolUI {
+  toolCallId: string;
+  toolName: string;
+  state: ToolState;
+  input: Record<string, unknown>;
+  output?: unknown;
+  errorText?: string;
+}
+
+export interface SubAgentOutput {
+  result: unknown;
+  agent_name?: string;
+  events?: MessageContentPart[];
 }

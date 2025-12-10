@@ -76,9 +76,13 @@ class ContentPartBuilder:
 
         elif self.current_type == StreamContentType.TOOL_RESULT:
             # Support batch mode only for now
-            if isinstance(delta, dict) and "type" in delta and "value" in delta:
-                # Already wrapped, use as is
+            if (isinstance(delta, dict) and "type" in delta and "value" in delta) or (
+                self.orchestrator_tool_call_id == self.current_data.get("tool_call_id")
+                and isinstance(delta, str)
+            ):
+                # Already wrapped or sub-agent tool result, use as is
                 self.current_data["output"] = delta
+                print(delta)
             elif isinstance(delta, str):
                 self.current_data["output"] = {"type": "text", "value": delta}
             else:

@@ -69,8 +69,14 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
     }
 
     case "CONTENT_START": {
-      const { index, content_type, tool_call_id, tool_name, message_id } =
-        action.payload;
+      const {
+        index,
+        content_type,
+        tool_call_id,
+        tool_name,
+        message_id,
+        agent_type,
+      } = action.payload;
 
       // Create MessageContentPart using API types
       const newPart: MessageContentPart = (() => {
@@ -106,6 +112,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       const newMeta: StreamingMetadata = {
         index,
         isComplete: false,
+        agent_type,
         _buffer:
           content_type === "tool-call" || content_type === "tool-result"
             ? ""
@@ -138,12 +145,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       let updatedPart: MessageContentPart;
       const updatedMeta = { ...meta };
 
-      if (part.type === "text") {
-        updatedPart = {
-          ...part,
-          text: part.text + (delta as string),
-        };
-      } else if (part.type === "reasoning") {
+      if (part.type === "text" || part.type === "reasoning") {
         updatedPart = {
           ...part,
           text: part.text + (delta as string),
@@ -380,6 +382,10 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   const contentParts = useMemo(
     () =>
       Array.from(state.contentParts.entries())
+        .filter(([index]) => {
+          const meta = state.streamingMeta.get(index);
+          return meta && meta.agent_type !== "sub-agent";
+        })
         .sort(([a], [b]) => a - b)
         .map(([, part]) => part),
     [state],

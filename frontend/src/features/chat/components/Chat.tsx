@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
+import type { ToolResultOutput } from "@/api/models";
 import {
   MessageAttachment,
   MessageAttachments,
@@ -10,12 +11,24 @@ import {
   Reasoning,
   ReasoningContent,
   ReasoningTrigger,
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
   Message as UIMessage,
 } from "@/components/ai-elements";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { cn } from "@/lib/utils";
 import { useChat } from "../hooks/useChat";
-import type { Attachment, Message } from "../types";
+import type {
+  Attachment,
+  Message,
+  MessageContentPart,
+  MessageToolResultPart,
+  SubAgentOutput,
+  ToolState,
+} from "../types";
 import ChatComposer from "./ChatComposer";
 
 interface ChatProps {
@@ -107,8 +120,129 @@ function Chat({ id, initialMessages }: ChatProps) {
     }
   };
 
+  const findToolResult = (
+    toolCallId: string,
+    contentParts: MessageContentPart[],
+  ): MessageToolResultPart | undefined => {
+    return contentParts.find((part): part is MessageToolResultPart => {
+      return part.type === "tool-result" && part.tool_call_id === toolCallId;
+    });
+  };
+
+  const getToolState = (
+    result: MessageToolResultPart | undefined,
+    isStreaming: boolean,
+  ): ToolState => {
+    if (!result) {
+      return isStreaming ? "input-streaming" : "input-available";
+    }
+
+    // Check if result has error
+    if (
+      result.output.type === "error-text" ||
+      result.output.type === "error-json"
+    ) {
+      return "output-error";
+    }
+
+    return "output-available";
+  };
+
+  const parseToolOutput = (
+    output: ToolResultOutput,
+  ): {
+    output?: unknown;
+    error?: string;
+    subAgentEvents?: MessageContentPart[];
+  } => {
+    switch (output.type) {
+      case "text":
+        return { output: output.value };
+      case "json":
+        return { output: output.value };
+      case "error-text":
+        return { error: String(output.value) };
+      case "error-json":
+        return {
+          error:
+            typeof output.value === "string"
+              ? output.value
+              : JSON.stringify(output.value),
+        };
+      case "content":
+      case "sub-agent": {
+        const subAgentData = output.value as SubAgentOutput;
+        return {
+          output: subAgentData.result,
+          subAgentEvents: subAgentData.events,
+        };
+      }
+      default:
+        return { output: output.value };
+    }
+  };
+
+  const renderContentPart = (
+    part: MessageContentPart,
+    index: number,
+    message: Message,
+  ) => {
+    switch (part.type) {
+      case "text":
+        return (
+          <MessageResponse key={`${message.id}-${index}`} className="break-all">
+            {part.text}
+          </MessageResponse>
+        );
+      case "reasoning": {
+        const isPartStreaming =
+          status === "streaming" &&
+          message.id === messageId &&
+          index === message.content.length - 1;
+        return (
+          <Reasoning
+            key={`${message.id}-${index}`}
+            defaultOpen={isPartStreaming}
+            isStreaming={isPartStreaming}
+            className="break-all"
+          >
+            <ReasoningTrigger />
+            <ReasoningContent>{part.text}</ReasoningContent>
+          </Reasoning>
+        );
+      }
+      case "tool-call": {
+        const result = findToolResult(part.tool_call_id, message.content);
+        const isPartStreaming =
+          status === "streaming" && message.id === messageId;
+        const toolState = getToolState(result, isPartStreaming);
+
+        const { output, error } = result ? parseToolOutput(result.output) : {};
+
+        return (
+          <Tool key={`${message.id}-${part.tool_call_id}`}>
+            <ToolHeader
+              name={part.tool_name}
+              title={part.tool_name}
+              state={toolState}
+            />
+            <ToolContent className="break-all">
+              <ToolInput input={part.input} />
+              {result && <ToolOutput output={output} errorText={error} />}
+            </ToolContent>
+          </Tool>
+        );
+      }
+      case "tool-result": {
+        return null;
+      }
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="w-full h-screen overflow-y-auto scrollbar-thin">
+    <div className="w-full h-screen overflow-y-scroll scrollbar-thin">
       <div
         className={cn(
           "grid w-full h-screen mx-auto px-8 max-w-208",
@@ -142,35 +276,10 @@ function Chat({ id, initialMessages }: ChatProps) {
                   </MessageAttachments>
                 )}
 
-                <MessageContent>
-                  {message.content.map((part, index) => {
-                    switch (part.type) {
-                      case "text":
-                        return (
-                          <MessageResponse key={`${message.id}-${index}`}>
-                            {part.text}
-                          </MessageResponse>
-                        );
-                      case "reasoning": {
-                        const isPartStreaming =
-                          status === "streaming" &&
-                          index === message.content.length - 1 &&
-                          message.id === messageId;
-                        return (
-                          <Reasoning
-                            key={`${message.id}-${index}`}
-                            defaultOpen={isPartStreaming}
-                            isStreaming={isPartStreaming}
-                          >
-                            <ReasoningTrigger />
-                            <ReasoningContent>{part.text}</ReasoningContent>
-                          </Reasoning>
-                        );
-                      }
-                      default:
-                        return null;
-                    }
-                  })}
+                <MessageContent className="group-[.is-assistant]:w-full">
+                  {message.content.map((part, index) =>
+                    renderContentPart(part, index, message),
+                  )}
                 </MessageContent>
               </UIMessage>
             ))}
