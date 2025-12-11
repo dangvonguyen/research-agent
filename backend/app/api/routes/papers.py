@@ -121,13 +121,16 @@ async def upload_paper(
         parsed_metadata = {}
         parser = PDFParser()
         full_markdown_content = None
+        pdf_conversion_result = None
 
         try:
             # Get full markdown content once (will be reused for content parsing)
             logger.debug("Converting PDF to markdown for '%s'", file.filename)
-            full_markdown_content = parser.get_markdown_content(
+            # Use internal method to get full result with images
+            pdf_conversion_result = parser._convert_pdf_to_markdown(
                 str(file_path), max_pages=None
             )
+            full_markdown_content = pdf_conversion_result.get("markdown", "")
 
             # Extract metadata from full markdown (abstract can be anywhere in document)
             parsed_metadata = paper_service.extract_metadata_from_markdown(
@@ -178,9 +181,11 @@ async def upload_paper(
         # Parse PDF content using the already-converted markdown (avoid re-parsing)
         try:
             logger.info("Parsing PDF content for paper '%s'", paper_orm.id)
-            # Pass the pre-converted markdown to avoid re-parsing the PDF
+            # Pass the pre-converted markdown and result to avoid re-parsing the PDF
             contents = parser.parse_paper(
-                paper_orm, markdown_content=full_markdown_content
+                paper_orm,
+                markdown_content=full_markdown_content,
+                pdf_conversion_result=pdf_conversion_result,
             )
 
             if contents:

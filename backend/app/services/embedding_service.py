@@ -172,6 +172,11 @@ class EmbeddingService:
                             content.section_name,
                             paper_id,
                         )
+                        # Extract image_path from extra_metadata if present
+                        image_path = None
+                        if content.extra_metadata and "image_path" in content.extra_metadata:
+                            image_path = content.extra_metadata["image_path"]
+
                         # Store reference chunk with metadata but no embeddings
                         reference_chunks.append(
                             {
@@ -181,6 +186,7 @@ class EmbeddingService:
                                 "chunk_index": content.chunk_index or 0,
                                 "content": content.content,
                                 "is_reference": True,
+                                "image_path": image_path or "",
                             }
                         )
                         continue
@@ -197,6 +203,11 @@ class EmbeddingService:
                             )
                             continue
 
+                        # Extract image_path from extra_metadata if present
+                        image_path = None
+                        if content.extra_metadata and "image_path" in content.extra_metadata:
+                            image_path = content.extra_metadata["image_path"]
+
                         # Prepare chunk data with metadata
                         chunk_data = {
                             "chunk_id": content.id,
@@ -208,6 +219,7 @@ class EmbeddingService:
                             "title_embedding": title_embedding
                             if title_embedding
                             else [],
+                            "image_path": image_path or "",
                         }
 
                         chunks_with_embeddings.append(chunk_data)

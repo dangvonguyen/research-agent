@@ -298,9 +298,7 @@ class CrawlerService:
                             session.add_all(contents)
                             paper_db_obj.parsed = True
                             papers_to_embed.append(paper_db_obj.id)
-                    logger.info("Before commit")
                     await session.commit()
-                    logger.info("After commit")
 
                     background_tasks = set()
 

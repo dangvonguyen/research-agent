@@ -1,8 +1,10 @@
+import base64
 import logging
 import re
 import time
 from pathlib import Path
 from typing import Optional
+from uuid import UUID
 
 import requests
 import tiktoken
@@ -47,13 +49,144 @@ class PDFParser:
             logger.error("Datalab API credentials not configured.")
             raise ValueError("Datalab API credentials not configured.")
 
-        return self._convert_pdf_to_markdown(pdf_path, max_pages)
+        result = self._convert_pdf_to_markdown(pdf_path, max_pages)
+        return result.get("markdown", "")
+
+    def _save_images(
+        self, images: dict, paper_id: UUID, output_dir: Path
+    ) -> dict[str, str]:
+        """
+        Save images from base64-encoded data to filesystem.
+
+        Args:
+            images: Dict mapping image names to base64-encoded image data
+            paper_id: UUID of the paper
+            output_dir: Base directory where paper images are stored
+
+        Returns:
+            Dict mapping image names to saved file paths (relative to output_dir)
+        """
+        if not images:
+            return {}
+
+        # Create images directory for this paper
+        images_dir = output_dir / str(paper_id) / "images"
+        images_dir.mkdir(parents=True, exist_ok=True)
+
+        saved_paths = {}
+        for image_name, image_data in images.items():
+            try:
+                # Decode base64 image data
+                image_bytes = base64.b64decode(image_data)
+                image_path = images_dir / image_name
+
+                # Write image to file
+                image_path.write_bytes(image_bytes)
+                saved_paths[image_name] = str(image_path.relative_to(output_dir))
+
+                logger.debug("Saved image '%s' to '%s'", image_name, image_path)
+            except Exception as e:
+                logger.warning(
+                    "Failed to save image '%s' for paper '%s': %s",
+                    image_name,
+                    paper_id,
+                    str(e),
+                )
+
+        return saved_paths
+
+    def _extract_image_from_chunk(self, chunk_content: str) -> Optional[str]:
+        """
+        Extract image reference from a chunk if it contains one.
+
+        Args:
+            chunk_content: Markdown content of the chunk
+
+        Returns:
+            Image filename if found, None otherwise
+        """
+        # Pattern to match markdown images: ![](image.jpg) or ![alt](image.jpg)
+        # Also matches: ![alt text](image.jpg) or ![alt text with spaces](image.jpg)
+        pattern = r"!\[([^\]]*)\]\(([^\)]+)\)"
+        matches = re.findall(pattern, chunk_content)
+
+        if matches:
+            # Get the last image reference (most relevant one)
+            # Format: (alt_text, image_path)
+            _, image_path = matches[-1]
+            # Extract just the filename from the path
+            image_name = Path(image_path).name
+            return image_name
+
+        return None
+
+    def _extract_images_from_content(self, content: str) -> list[tuple[str, int]]:
+        """
+        Extract all image references from content with their character positions.
+
+        Args:
+            content: Markdown content
+
+        Returns:
+            List of tuples: (image_filename, character_position)
+        """
+        images = []
+        pattern = r"!\[([^\]]*)\]\(([^\)]+)\)"
+        for match in re.finditer(pattern, content):
+            _, image_path = match.groups()
+            image_name = Path(image_path).name
+            images.append((image_name, match.start()))
+        return images
+
+    def _find_nearest_image(
+        self, chunk_start: int, chunk_end: int, images: list[tuple[str, int]]
+    ) -> Optional[str]:
+        """
+        Find the nearest image to a chunk based on character positions.
+
+        Args:
+            chunk_start: Character position where chunk starts in original content
+            chunk_end: Character position where chunk ends in original content
+            images: List of (image_filename, position) tuples
+
+        Returns:
+            Image filename if found nearby, None otherwise
+        """
+        if not images:
+            return None
+
+        # Find images before or after the chunk (within reasonable distance)
+        # Consider images up to 500 characters before or after the chunk
+        search_range = 500
+        nearest_image = None
+        min_distance = float("inf")
+
+        for image_name, image_pos in images:
+            if image_pos < chunk_start:
+                # Image is before chunk
+                distance = chunk_start - image_pos
+                if distance < search_range and distance < min_distance:
+                    min_distance = distance
+                    nearest_image = image_name
+            elif image_pos > chunk_end:
+                # Image is after chunk
+                distance = image_pos - chunk_end
+                if distance < search_range and distance < min_distance:
+                    min_distance = distance
+                    nearest_image = image_name
+            else:
+                # Image is within chunk
+                nearest_image = image_name
+                break
+
+        return nearest_image
 
     def parse_paper(
         self,
         paper: Paper,
         max_pages: Optional[int] = None,
         markdown_content: Optional[str] = None,
+        pdf_conversion_result: Optional[dict] = None,
     ) -> list[PaperContent]:
         """
         Parse a research paper PDF using datalab API and extract sections.
@@ -94,9 +227,10 @@ class PDFParser:
 
             try:
                 # Convert PDF to markdown using datalab API
-                markdown_content = self._convert_pdf_to_markdown(
+                pdf_conversion_result = self._convert_pdf_to_markdown(
                     paper.file_path, max_pages
                 )
+                markdown_content = pdf_conversion_result.get("markdown", "")
             except Exception as e:
                 logger.exception(
                     "Error converting PDF to markdown for paper '%s': %s",
@@ -111,6 +245,54 @@ class PDFParser:
                     "No markdown content available for paper '%s'", paper.title
                 )
                 return []
+
+            # Save images if we have them from PDF conversion
+            image_paths_map = {}
+            if pdf_conversion_result and pdf_conversion_result.get("images"):
+                images = pdf_conversion_result.get("images", {})
+                # Determine output directory for images (same directory as PDF file)
+                if paper.file_path:
+                    pdf_dir = Path(paper.file_path).parent
+                else:
+                    # Fallback to a default directory
+                    pdf_dir = (
+                        Path(settings.UPLOAD_DIR)
+                        if hasattr(settings, "UPLOAD_DIR")
+                        else Path("uploads")
+                    )
+
+                image_paths_map = self._save_images(images, paper.id, pdf_dir)
+                logger.info(
+                    "Saved %d images for paper '%s'", len(image_paths_map), paper.id
+                )
+
+            # Save markdown to file for debugging
+            if paper.file_path:
+                pdf_dir = Path(paper.file_path).parent
+            else:
+                pdf_dir = (
+                    Path(settings.UPLOAD_DIR)
+                    if hasattr(settings, "UPLOAD_DIR")
+                    else Path("uploads")
+                )
+            markdown_dir = pdf_dir / str(paper.id)
+            markdown_dir.mkdir(parents=True, exist_ok=True)
+            markdown_file = markdown_dir / "markdown.md"
+            markdown_file.write_text(markdown_content, encoding="utf-8")
+            logger.info(
+                "Saved markdown to '%s' for paper '%s'", markdown_file, paper.id
+            )
+
+            # Print image names for debugging
+            if pdf_conversion_result and pdf_conversion_result.get("images"):
+                images = pdf_conversion_result.get("images", {})
+                logger.info(
+                    "Found %d images for paper '%s': %s",
+                    len(images),
+                    paper.id,
+                    ", ".join(images.keys()),
+                )
+                print(f"Images found for paper {paper.id}: {', '.join(images.keys())}")
 
             # Parse markdown into sections
             sections = self._parse_markdown_sections(markdown_content)
@@ -145,11 +327,149 @@ class PDFParser:
                         paper.title,
                     )
                 else:
-                    # For regular sections, split into chunks as usual
-                    chunks = self._split_into_chunks(content)
+                    # For regular sections, extract image positions from original content
+                    images_in_section = self._extract_images_from_content(content)
+                    if images_in_section:
+                        logger.debug(
+                            "Found %d images in section '%s': %s",
+                            len(images_in_section),
+                            section_title,
+                            ", ".join([img[0] for img in images_in_section]),
+                        )
+
+                    # Split content into paragraphs first to track image positions relative to paragraphs
+                    paragraphs = self._split_into_paragraphs(content)
+
+                    # Map images to paragraph indices
+                    image_to_paragraph = {}
+                    current_char_pos = 0
+                    for para_idx, paragraph in enumerate(paragraphs):
+                        para_start = content.find(paragraph, current_char_pos)
+                        if para_start != -1:
+                            para_end = para_start + len(paragraph)
+                            # Check if any image is in this paragraph or immediately before/after
+                            for img_name, img_pos in images_in_section:
+                                if para_start <= img_pos < para_end:
+                                    image_to_paragraph[img_name] = para_idx
+                                    break
+                                # Also check if image is very close (within 50 chars) before or after
+                                if (
+                                    abs(img_pos - para_start) < 50
+                                    or abs(img_pos - para_end) < 50
+                                ):
+                                    image_to_paragraph[img_name] = para_idx
+                                    break
+                            current_char_pos = (
+                                para_end
+                                if para_start != -1
+                                else current_char_pos + len(paragraph)
+                            )
+
+                    # Split into chunks as usual, but track which paragraphs go into each chunk
+                    chunks = []
+                    chunk_paragraph_ranges = []
+
+                    # Build chunks manually while tracking paragraph indices
+                    if not paragraphs:
+                        chunks = []
+                    else:
+                        current_chunk = []
+                        current_chunk_size = 0
+                        current_chunk_start_para = 0
+
+                        for para_idx, paragraph in enumerate(paragraphs):
+                            paragraph_size = self._count_tokens(paragraph)
+
+                            # If a single paragraph exceeds the limit, add it as its own chunk
+                            if paragraph_size > self.max_chunk_words:
+                                # Save current chunk if any
+                                if current_chunk:
+                                    chunks.append("\n\n".join(current_chunk))
+                                    chunk_paragraph_ranges.append(
+                                        (current_chunk_start_para, para_idx - 1)
+                                    )
+                                    current_chunk = []
+                                    current_chunk_size = 0
+
+                                # Add the large paragraph as its own chunk
+                                chunks.append(paragraph)
+                                chunk_paragraph_ranges.append((para_idx, para_idx))
+                            else:
+                                # Check if adding this paragraph would exceed the limit
+                                separator_size = 2 if current_chunk else 0
+                                new_size = (
+                                    current_chunk_size + separator_size + paragraph_size
+                                )
+
+                                if new_size > self.max_chunk_words and current_chunk:
+                                    # Current chunk is full, start a new one
+                                    chunks.append("\n\n".join(current_chunk))
+                                    chunk_paragraph_ranges.append(
+                                        (current_chunk_start_para, para_idx - 1)
+                                    )
+                                    current_chunk = [paragraph]
+                                    current_chunk_size = paragraph_size
+                                    current_chunk_start_para = para_idx
+                                else:
+                                    # Add to current chunk
+                                    if not current_chunk:
+                                        current_chunk_start_para = para_idx
+                                    current_chunk.append(paragraph)
+                                    current_chunk_size = new_size
+
+                        # Add any remaining chunk
+                        if current_chunk:
+                            chunks.append("\n\n".join(current_chunk))
+                            chunk_paragraph_ranges.append(
+                                (current_chunk_start_para, len(paragraphs) - 1)
+                            )
+
                     # Create PaperContent for each chunk
                     for chunk_idx, chunk_content in enumerate(chunks):
                         word_count = len(chunk_content.split())
+
+                        # First, try to extract image from chunk content directly
+                        image_filename = self._extract_image_from_chunk(chunk_content)
+
+                        # If no image in chunk, check images from paragraphs in this chunk range
+                        if not image_filename and chunk_idx < len(
+                            chunk_paragraph_ranges
+                        ):
+                            para_start, para_end = chunk_paragraph_ranges[chunk_idx]
+                            # Also check one paragraph before and after (images might be on adjacent paragraphs)
+                            check_start = max(0, para_start - 1)
+                            check_end = min(len(paragraphs) - 1, para_end + 1)
+
+                            for img_name, para_idx in image_to_paragraph.items():
+                                if check_start <= para_idx <= check_end:
+                                    image_filename = img_name
+                                    logger.debug(
+                                        "Found image '%s' in paragraph %d (range %d-%d) for chunk %d of section '%s'",
+                                        image_filename,
+                                        para_idx,
+                                        check_start,
+                                        check_end,
+                                        chunk_idx,
+                                        section_title,
+                                    )
+                                    break
+
+                        extra_metadata = {}
+                        if image_filename and image_filename in image_paths_map:
+                            extra_metadata["image_path"] = image_paths_map[
+                                image_filename
+                            ]
+                            logger.info(
+                                "Associating image '%s' with chunk %d of section '%s' for paper '%s'",
+                                image_filename,
+                                chunk_idx,
+                                section_title,
+                                paper.id,
+                            )
+                            print(
+                                f"Image '{image_filename}' associated with chunk {chunk_idx} in section '{section_title}'"
+                            )
+
                         contents.append(
                             PaperContent(
                                 paper_id=paper.id,
@@ -159,6 +479,9 @@ class PDFParser:
                                 content=chunk_content,
                                 token_count=word_count,  # Using word count as approximation
                                 embedding_vector=None,
+                                extra_metadata=extra_metadata
+                                if extra_metadata
+                                else None,
                             )
                         )
 
@@ -180,7 +503,7 @@ class PDFParser:
 
     def _convert_pdf_to_markdown(
         self, pdf_path: str, max_pages: Optional[int] = None
-    ) -> str:
+    ) -> dict:
         """
         Convert PDF to markdown using datalab API.
 
@@ -189,7 +512,14 @@ class PDFParser:
             max_pages: Maximum number of pages to process
 
         Returns:
-            Markdown content as string
+            Dictionary with keys:
+                - markdown: Markdown content as string
+                - images: Dict mapping image names to base64-encoded image data
+                - metadata: Dict with metadata
+                - status: Status string
+                - success: Boolean
+                - error: Error message if any
+                - page_count: Number of pages
         """
         logger.debug("Uploading PDF to datalab API: %s", pdf_path)
 
@@ -270,13 +600,6 @@ class PDFParser:
 
         if "markdown" in result:
             markdown_content = result["markdown"]
-        elif "files" in result:
-            markdown_url = result["files"].get("markdown")
-            if markdown_url:
-                md_response = requests.get(markdown_url)
-                markdown_content = md_response.text
-        elif "output" in result:
-            markdown_content = result["output"]
 
         if not markdown_content:
             raise Exception("No markdown content found in result")
@@ -286,7 +609,20 @@ class PDFParser:
         # Preprocess markdown to fix footnote superscripts
         markdown_content = self._preprocess_footnote_sups(markdown_content)
 
-        return markdown_content
+        # Extract images from result
+        images = result.get("images", {})
+        metadata = result.get("metadata", {})
+        page_count = result.get("page_count", 0)
+
+        return {
+            "markdown": markdown_content,
+            "images": images,
+            "metadata": metadata,
+            "status": result.get("status", "complete"),
+            "success": result.get("success", True),
+            "error": result.get("error", ""),
+            "page_count": page_count,
+        }
 
     def _preprocess_footnote_sups(self, markdown_content: str) -> str:
         """
@@ -405,15 +741,105 @@ class PDFParser:
             return False
         return child_num[:-1] == parent_num
 
-    def _extract_text_from_inline(self, inline_token) -> str:
-        """Extract text from an inline token."""
-        text = ""
-        for child in inline_token.children or []:
-            if child.type == "text" or child.type == "code_inline":
-                text += child.content
-            elif child.type == "softbreak":
-                text += " "
-        return text
+    def _extract_markdown_from_inline(self, inline_token) -> str:
+        """
+        Extract markdown syntax from an inline token, preserving images, links, and formatting.
+
+        Args:
+            inline_token: Inline token from MarkdownIt
+
+        Returns:
+            Markdown string preserving all inline elements
+        """
+        if not inline_token.children:
+            return inline_token.content if hasattr(inline_token, "content") else ""
+
+        parts = []
+        for child in inline_token.children:
+            if child.type == "text":
+                parts.append(child.content if hasattr(child, "content") else "")
+            elif child.type == "code_inline":
+                content = child.content if hasattr(child, "content") else ""
+                parts.append(f"`{content}`")
+            elif child.type == "image":
+                # Extract image markdown: ![alt](src)
+                attrs = child.attrs if hasattr(child, "attrs") else []
+                alt = ""
+                src = ""
+                for attr_name, attr_value in attrs:
+                    if attr_name == "alt":
+                        alt = attr_value
+                    elif attr_name == "src":
+                        src = attr_value
+                parts.append(f"![{alt}]({src})")
+            elif child.type == "link_open":
+                # Extract link markdown: [text](href)
+                attrs = child.attrs if hasattr(child, "attrs") else []
+                href = ""
+                for attr_name, attr_value in attrs:
+                    if attr_name == "href":
+                        href = attr_value
+                        break
+                # Find the link text in following tokens until link_close
+                link_text = ""
+                link_text_tokens = []
+                idx = inline_token.children.index(child) + 1
+                while idx < len(inline_token.children):
+                    sibling = inline_token.children[idx]
+                    if sibling.type == "link_close":
+                        break
+                    if sibling.type == "text":
+                        link_text_tokens.append(
+                            sibling.content if hasattr(sibling, "content") else ""
+                        )
+                    elif sibling.type == "code_inline":
+                        # Preserve formatting inside links
+                        link_text_tokens.append(
+                            f"`{sibling.content if hasattr(sibling, 'content') else ''}`"
+                        )
+                    idx += 1
+                link_text = "".join(link_text_tokens)
+                parts.append(f"[{link_text}]({href})")
+            elif child.type == "strong_open":
+                # Extract bold text
+                strong_parts = []
+                idx = inline_token.children.index(child) + 1
+                while idx < len(inline_token.children):
+                    sibling = inline_token.children[idx]
+                    if sibling.type == "strong_close":
+                        break
+                    if sibling.type == "text":
+                        strong_parts.append(
+                            sibling.content if hasattr(sibling, "content") else ""
+                        )
+                    idx += 1
+                parts.append(f"**{''.join(strong_parts)}**")
+            elif child.type == "em_open":
+                # Extract italic text
+                em_parts = []
+                idx = inline_token.children.index(child) + 1
+                while idx < len(inline_token.children):
+                    sibling = inline_token.children[idx]
+                    if sibling.type == "em_close":
+                        break
+                    if sibling.type == "text":
+                        em_parts.append(
+                            sibling.content if hasattr(sibling, "content") else ""
+                        )
+                    idx += 1
+                parts.append(f"*{''.join(em_parts)}*")
+            elif child.type in ["softbreak", "hardbreak"]:
+                parts.append("\n")
+            elif child.type in [
+                "link_close",
+                "strong_close",
+                "em_close",
+                "image_close",
+            ]:
+                # Skip close tokens, already handled
+                pass
+
+        return "".join(parts)
 
     def _extract_content_from_token(self, tokens: list, start_idx: int) -> str:
         """Extract content from a token and its children."""
@@ -427,7 +853,9 @@ class PDFParser:
             idx = start_idx + 1
             while idx < len(tokens) and tokens[idx].type != "paragraph_close":
                 if tokens[idx].type == "inline":
-                    content_parts.append(self._extract_text_from_inline(tokens[idx]))
+                    content_parts.append(
+                        self._extract_markdown_from_inline(tokens[idx])
+                    )
                 idx += 1
         elif token.type in ["bullet_list_open", "ordered_list_open"]:
             idx = start_idx + 1
@@ -446,7 +874,7 @@ class PDFParser:
                     ):
                         if tokens[item_idx].type == "inline":
                             item_parts.append(
-                                self._extract_text_from_inline(tokens[item_idx])
+                                self._extract_markdown_from_inline(tokens[item_idx])
                             )
                         item_idx += 1
                     if item_parts:
@@ -457,77 +885,65 @@ class PDFParser:
 
     def _parse_markdown_sections(self, markdown_text: str) -> dict[str, str]:
         """
-        Parse markdown text into sections and their content.
+        Parse markdown text into sections and their content, preserving all markdown syntax.
+        Uses raw markdown extraction to preserve images, tables, code blocks, etc.
         Merges short parent sections with their first child section.
 
         Args:
             markdown_text: The markdown content to parse
 
         Returns:
-            Dictionary with section titles as keys and content as values
+            Dictionary with section titles as keys and content as values (preserving markdown)
         """
-        md = MarkdownIt()
-        tokens = md.parse(markdown_text)
+        # Find all headings in the raw markdown text using regex
+        # Pattern matches markdown headings: # Heading, ## Heading, etc.
+        heading_pattern = r"^(#{1,6})\s+(.+)$"
+        lines = markdown_text.split("\n")
 
+        heading_positions = []  # List of (line_number, heading_level, heading_text)
+        for line_num, line in enumerate(lines):
+            match = re.match(heading_pattern, line)
+            if match:
+                heading_level = len(match.group(1))  # Number of # characters
+                heading_text = match.group(2).strip()
+                heading_positions.append((line_num, heading_level, heading_text))
+
+        if not heading_positions:
+            # No headings found, treat entire document as one section
+            return {"": markdown_text.strip()}
+
+        # Extract section content as raw markdown between headings
         sections_data = []
-        current_section = None
-        current_content = []
-        current_level = None
-        current_numbers = None
+        for idx, (line_num, heading_level, heading_text) in enumerate(
+            heading_positions
+        ):
+            # Determine section boundaries
+            start_line = line_num + 1  # Content starts after heading line
+            if idx + 1 < len(heading_positions):
+                end_line = heading_positions[idx + 1][0]  # Until next heading
+            else:
+                end_line = len(lines)  # Until end of document
 
-        i = 0
-        while i < len(tokens):
-            token = tokens[i]
+            # Extract raw markdown content
+            section_lines = lines[start_line:end_line]
+            section_content = "\n".join(section_lines).strip()
 
-            if token.type == "heading_open":
-                if current_section is not None and current_content:
-                    sections_data.append(
-                        {
-                            "title": current_section,
-                            "content": "\n\n".join(current_content).strip(),
-                            "level": current_level,
-                            "numbers": current_numbers,
-                        }
+            # Extract section number if present
+            section_info = self._extract_section_number(heading_text)
+            if section_info:
+                current_level, current_numbers, title_text = section_info
+                if title_text:
+                    heading_text = (
+                        f"{'.'.join(map(str, current_numbers))}. {title_text}"
                     )
+            else:
+                current_level = heading_level
+                current_numbers = None
 
-                heading_level = int(token.tag[1])
-
-                if i + 1 < len(tokens) and tokens[i + 1].type == "inline":
-                    inline_token = tokens[i + 1]
-                    heading_text = self._extract_text_from_inline(inline_token)
-                    current_section = heading_text.strip()
-                    current_content = []
-
-                    section_info = self._extract_section_number(current_section)
-                    if section_info:
-                        current_level, current_numbers, title_text = section_info
-                        if title_text:
-                            current_section = (
-                                f"{'.'.join(map(str, current_numbers))}. {title_text}"
-                            )
-                    else:
-                        current_level = heading_level
-                        current_numbers = None
-
-                    i += 2
-                    continue
-
-            if current_section is not None and token.type in [
-                "paragraph_open",
-                "bullet_list_open",
-                "ordered_list_open",
-            ]:
-                content = self._extract_content_from_token(tokens, i)
-                if content:
-                    current_content.append(content)
-
-            i += 1
-
-        if current_section is not None and current_content:
             sections_data.append(
                 {
-                    "title": current_section,
-                    "content": "\n\n".join(current_content).strip(),
+                    "title": heading_text,
+                    "content": section_content,
                     "level": current_level,
                     "numbers": current_numbers,
                 }
@@ -656,15 +1072,31 @@ class PDFParser:
         # This handles both data rows and separator rows
         return stripped.startswith("|") and stripped.count("|") >= 2
 
+    def _is_image_line(self, line: str) -> bool:
+        """
+        Check if a line is just an image reference.
+
+        Args:
+            line: Line to check
+
+        Returns:
+            True if line is just an image reference (e.g., ![](image.jpg))
+        """
+        stripped = line.strip()
+        pattern = r"^!\[([^\]]*)\]\(([^\)]+)\)\s*$"
+        return bool(re.match(pattern, stripped))
+
     def _split_into_paragraphs(self, content: str) -> list[str]:
         """
         Split content into paragraphs, preserving tables as single units.
+        Image-only paragraphs are attached to the previous paragraph to ensure
+        they're included in chunks.
 
         Args:
             content: Content to split
 
         Returns:
-            List of paragraphs (tables are kept as single units)
+            List of paragraphs (tables are kept as single units, images attached to previous paragraph)
         """
         if not content.strip():
             return []
@@ -677,6 +1109,7 @@ class PDFParser:
         for line in lines:
             line_stripped = line.strip()
             is_table_line = self._is_table_line(line)
+            is_image_line = self._is_image_line(line)
 
             if is_table_line:
                 # We're in a table
@@ -697,17 +1130,50 @@ class PDFParser:
                     in_table = False
 
                 if line_stripped:
-                    # Non-empty line - add to current paragraph
-                    current_paragraph.append(line)
+                    if is_image_line:
+                        # Image line - attach to current paragraph if it exists,
+                        # otherwise save it to attach to next paragraph
+                        if current_paragraph:
+                            # Attach image to current paragraph
+                            current_paragraph.append(line)
+                        else:
+                            # No current paragraph - save to attach to next paragraph
+                            # Use a temporary marker to track this
+                            if not hasattr(self, "_pending_image"):
+                                self._pending_image = []
+                            self._pending_image.append(line)
+                    else:
+                        # Non-empty, non-image line
+                        if hasattr(self, "_pending_image") and self._pending_image:
+                            # Attach pending images to start of this paragraph
+                            current_paragraph.extend(self._pending_image)
+                            self._pending_image = []
+                        current_paragraph.append(line)
                 else:
                     # Empty line - end of paragraph
                     if current_paragraph:
+                        # If we have pending images, attach them before ending
+                        if hasattr(self, "_pending_image") and self._pending_image:
+                            current_paragraph.extend(self._pending_image)
+                            self._pending_image = []
                         paragraphs.append("\n".join(current_paragraph))
                         current_paragraph = []
 
         # Add any remaining paragraph
         if current_paragraph:
+            # Attach any pending images
+            if hasattr(self, "_pending_image") and self._pending_image:
+                current_paragraph.extend(self._pending_image)
+                self._pending_image = []
             paragraphs.append("\n".join(current_paragraph))
+        elif hasattr(self, "_pending_image") and self._pending_image:
+            # Image at the very end with no following paragraph - include it
+            paragraphs.append("\n".join(self._pending_image))
+            self._pending_image = []
+
+        # Clean up
+        if hasattr(self, "_pending_image"):
+            delattr(self, "_pending_image")
 
         return paragraphs
 

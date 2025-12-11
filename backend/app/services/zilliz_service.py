@@ -149,6 +149,9 @@ class ZillizService:
                 dim=self.vector_dimension,
             )
             schema.add_field(field_name="chunk_references", datatype=DataType.JSON)
+            schema.add_field(
+                field_name="image_path", datatype=DataType.VARCHAR, max_length=512
+            )
 
             # Create collection with schema
             self.client.create_collection(
@@ -338,6 +341,10 @@ class ZillizService:
                 # Add chunk_references if present (list of reference content strings matched to this chunk)
                 chunk_data["chunk_references"] = chunk.get("chunk_references", [])
 
+                # Add image_path if present
+                image_path = chunk.get("image_path", "")
+                chunk_data["image_path"] = image_path if image_path else ""
+
                 data.append(chunk_data)
 
             # Insert data using MilvusClient
@@ -443,6 +450,7 @@ class ZillizService:
                     "section_index",
                     "chunk_index",
                     "chunk_content",
+                    "image_path",
                 ]
 
             # Search parameters
