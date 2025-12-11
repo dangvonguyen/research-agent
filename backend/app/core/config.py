@@ -104,14 +104,19 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024  # 50MB
 
-    # Default LLM settings
+    # LLM settings
     DEFAULT_LLM_MODEL: str = "models/gemini-2.5-flash"
     DEFAULT_LLM_PROVIDER: str = "gemini"
+    TIMEOUT: Optional[float] = None
+    MAX_TOKENS: Optional[int] = None
 
     # LLM Provider API Keys
     ANTHROPIC_API_KEY: Optional[str] = None
     GEMINI_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
+
+    # Ollama settings
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
 
 
 # Load settings from environment

@@ -276,7 +276,7 @@ class MessageToolResultPart(BaseModel):
 class ToolResultOutput(BaseModel):
     """Result of a tool call. Supports multiple output types."""
 
-    type: Literal["text", "json", "error-text", "error-json", "content"]
+    type: Literal["text", "json", "error-text", "error-json", "content", "sub-agent"]
     value: Any
 
 
@@ -360,6 +360,13 @@ class StreamContentType(str, Enum):
     TOOL_RESULT = "tool-result"
 
 
+class AgentType(str, Enum):
+    """Types of agents."""
+
+    ORCHESTRATOR = "orchestrator"
+    SUB_AGENT = "sub-agent"
+
+
 # Base class with shared metadata
 class StreamEventBase(BaseModel):
     """Base streaming event with common metadata."""
@@ -379,6 +386,10 @@ class StreamContentStart(StreamEventBase):
     # Tool-specific metadata (only for tool_call/tool_result)
     tool_call_id: str | None = None
     tool_name: str | None = None
+
+    # Agent metadata
+    agent_name: str | None = None
+    agent_type: AgentType | None = None
 
 
 class StreamContentDelta(StreamEventBase):

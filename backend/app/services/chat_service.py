@@ -5,28 +5,25 @@ from uuid import UUID
 
 from llama_index.core import Settings
 from llama_index.core.chat_engine import SimpleChatEngine
-from llama_index.core.chat_engine.types import (
-    AgentChatResponse,
-    StreamingAgentChatResponse,
-)
+from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.llms import ChatMessage, MessageRole
 
+from app.ai.agents.orchestrator import create_orchestrator_agent
+from app.services.event_multiplexer import EventMultiplexer
 from app.services.llm_service import llm_service
+from app.services.stream_adapter import StreamAdapter
 from app.types import (
     MessageContentPart,
     MessageDB,
     Role,
-    StreamContentDelta,
-    StreamContentEnd,
-    StreamContentStart,
-    StreamContentType,
+    StreamError,
     StreamEvent,
 )
 from app.utils.content_util import extract_text_from_content
 
 
 class ChatService:
-    """Service for handling chat operations with LlamaIndex integration."""
+    """Service for handling chat operations with agent and AI tool support."""
 
     def __init__(self, system_prompt: Optional[str] = None):
         # Configure LlamaIndex settings
@@ -38,6 +35,8 @@ class ChatService:
             "You are a helpful AI assistant. Provide clear, accurate, "
             "and helpful responses to user queries."
         )
+
+        self.stream_adapter = StreamAdapter()
 
         # Initialize chat engine
         self.chat_engine = SimpleChatEngine.from_defaults(
@@ -69,55 +68,54 @@ class ChatService:
         conversation_id: UUID,
         message_id: UUID,
     ) -> AsyncGenerator[StreamEvent, None]:
-        """Stream chat response as typed events."""
+        """Stream chat response with AI tool support."""
         # Extract text from content parts
         user_text = extract_text_from_content(user_message)
 
         # Build conversation history
         chat_history = self._build_chat_history(history)
 
-        # Reset chat engine to clear previous state
-        self.chat_engine.reset()
-        response = cast(
-            StreamingAgentChatResponse,
-            await self.chat_engine.astream_chat(user_text, chat_history),
-        )
-
-        response_gen = response.async_response_gen()
-
         try:
-            # Announce text content starting
-            yield StreamContentStart(
-                conversation_id=conversation_id,
-                message_id=message_id,
-                content_type=StreamContentType.TEXT,
-                index=0,
-            )
+            # Create multiplexer to organize events
+            multiplexer = EventMultiplexer()
 
-            # Stream text chunks as deltas
-            async for chunk in response_gen:
-                yield StreamContentDelta(
-                    conversation_id=conversation_id,
-                    message_id=message_id,
-                    index=0,
-                    delta=chunk,
-                )
+            # Create orchestrator agent
+            orchestrator = create_orchestrator_agent(self.llm, multiplexer.emit_event)
 
-            # Finalize text content
-            yield StreamContentEnd(
-                conversation_id=conversation_id,
-                message_id=message_id,
-                index=0,
-            )
+            # Run orchestrator
+            handler = orchestrator.run(user_msg=user_text, chat_history=chat_history)
+
+            # Background task: pump orchestrator events
+            async def pump_orchestrator_events():
+                try:
+                    async for event in handler.stream_events():
+                        await multiplexer.emit_event(
+                            event, "orchestrator", "orchestrator"
+                        )
+                finally:
+                    await multiplexer.close()
+
+            pump_task = asyncio.create_task(pump_orchestrator_events())
+
+            # Adapt LlamaIndex workflow events to stream events
+            async for event in self.stream_adapter.adapt_stream(
+                multiplexer, conversation_id, message_id
+            ):
+                yield event
+
+            # Ensure pump task completes
+            await pump_task
 
         except asyncio.CancelledError:
-            # Close the response generator to stop the LLM stream
-            await response_gen.aclose()
             raise
 
-        except Exception:
-            # Close generator on any error
-            await response_gen.aclose()
+        except Exception as e:
+            # Error handling
+            yield StreamError(
+                conversation_id=conversation_id,
+                message_id=message_id,
+                error=str(e),
+            )
             raise
 
     def _build_chat_history(

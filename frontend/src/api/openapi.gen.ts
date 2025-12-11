@@ -1005,7 +1005,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "text" | "json" | "error-text" | "error-json" | "content";
+            type: "text" | "json" | "error-text" | "error-json" | "content" | "sub-agent";
             /** Value */
             value: unknown;
         };
