@@ -8,7 +8,8 @@ from typing import Literal, Self, cast
 import aiofiles
 import aiohttp
 
-from app.types import PaperCreate, PaperSource
+from app.db.models import Paper
+from app.types import PaperSource
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ class BaseCrawler(ABC):
         self.visited_urls: set[str] = set()
         self._last_request_time: float = 0.0
 
-        config_dict = (dict(locals()))
+        config_dict = dict(locals())
         config_dict.pop("self")
         logger.debug(
             "Initialized %s with settings: %s",
@@ -111,7 +112,10 @@ class BaseCrawler(ABC):
 
         logger.warning(
             "Request failed: %s, backing off for %.2f seconds (attempt %d/%d)",
-            reason, final_delay, attempt + 1, self.max_attempts,
+            reason,
+            final_delay,
+            attempt + 1,
+            self.max_attempts,
         )
         await asyncio.sleep(final_delay)
 
@@ -134,7 +138,10 @@ class BaseCrawler(ABC):
             }
 
             logger.debug(
-                "Fetching URL %s (attempt %d/%d)", url, attempt + 1, self.max_attempts,
+                "Fetching URL %s (attempt %d/%d)",
+                url,
+                attempt + 1,
+                self.max_attempts,
             )
 
             async with self.semaphore:
@@ -149,8 +156,30 @@ class BaseCrawler(ABC):
                 async with self.session.get(url, headers=headers) as resp:
                     if resp.status == 200:
                         content: str | bytes | None = None
-                        if mode == "str":
-                            content = await resp.text()
+
+                        # Auto-detect binary content based on Content-Type or URL extension
+                        content_type = resp.headers.get("Content-Type", "").lower()
+                        is_pdf_or_binary = (
+                            mode == "bytes"
+                            or "application/pdf" in content_type
+                            or "application/octet-stream" in content_type
+                            or url.lower().endswith((".pdf", ".zip", ".tar", ".gz"))
+                        )
+
+                        if is_pdf_or_binary:
+                            # Use read() for binary content (PDFs, etc.)
+                            content = await resp.read()
+                        elif mode == "str":
+                            # Try to decode as text, but handle encoding errors gracefully
+                            try:
+                                content = await resp.text()
+                            except UnicodeDecodeError:
+                                # If UTF-8 decoding fails, it's likely binary content
+                                logger.warning(
+                                    "Failed to decode URL %s as UTF-8 text, treating as binary",
+                                    url,
+                                )
+                                content = await resp.read()
                         else:
                             content = await resp.read()
 
@@ -159,7 +188,10 @@ class BaseCrawler(ABC):
 
                     logger.warning(
                         "HTTP error %d for URL %s (attempt %d/%d)",
-                        resp.status, url, attempt + 1, self.max_attempts,
+                        resp.status,
+                        url,
+                        attempt + 1,
+                        self.max_attempts,
                     )
 
                     # Check if we should retry
@@ -168,7 +200,8 @@ class BaseCrawler(ABC):
                     else:
                         logger.debug(
                             "Client error %d for URL %s - not retrying",
-                            resp.status, url,
+                            resp.status,
+                            url,
                         )
                         return None
 
@@ -182,7 +215,9 @@ class BaseCrawler(ABC):
         except asyncio.TimeoutError:  # noqa: UP041
             logger.warning(
                 "Timeout fetching URL %s (attempt %d/%d): %s",
-                url, attempt + 1, self.max_attempts,
+                url,
+                attempt + 1,
+                self.max_attempts,
             )
             if attempt < self.max_attempts - 1:
                 await self._backoff(attempt, "timeout")
@@ -192,7 +227,10 @@ class BaseCrawler(ABC):
         except Exception as e:
             logger.exception(
                 "Unexpected error fetching URL %s (attempt %d/%d): %s",
-                url, attempt + 1, self.max_attempts, str(e),
+                url,
+                attempt + 1,
+                self.max_attempts,
+                str(e),
             )
             if attempt < self.max_attempts - 1:
                 await self._backoff(attempt, f"unexpected error: {e}")
@@ -210,8 +248,9 @@ class BaseCrawler(ABC):
             logger.debug("Skipping already visited URL %s", url)
             return None
 
-        # Mark as visited
-        self.visited_urls.add(url)
+        # Mark as visited if downloaded
+        if mode == "bytes":
+            self.visited_urls.add(url)
 
         # Fetch with retry
         logger.debug("Fetching URL %s", url)
@@ -224,27 +263,29 @@ class BaseCrawler(ABC):
 
         return content
 
-    async def download_pdf(self, paper: PaperCreate) -> None:
+    async def download_pdf(self, paper: Paper) -> None:
         """
         Download a paper's PDF.
         """
-        if not paper.pdf_url or not paper.local_pdf_path:
-            logger.warning("No PDF URL available for paper '%s'", paper.source_id)
+        if not paper.source_url or not paper.file_path:
+            logger.warning("No PDF URL available for paper '%s'", paper.title)
             return
 
         # Get filepath for the PDF
-        filepath = Path(paper.local_pdf_path)
+        filepath = Path(paper.file_path)
 
         # Skip if already downloaded
         if filepath.exists():
-            logger.debug("PDF already exists for paper '%s': %s", paper.source_id, filepath)
+            logger.debug("PDF already exists for paper '%s': %s", paper.title, filepath)
             return
 
-        logger.debug("Downloading PDF for paper '%s'", paper.source_id)
-        pdf_content = cast(bytes | None, await self.fetch_url(paper.pdf_url, "bytes"))
+        logger.debug("Downloading PDF for paper '%s'", paper.title)
+        pdf_content = cast(
+            bytes | None, await self.fetch_url(paper.source_url, "bytes")
+        )
 
         if not pdf_content:
-            logger.warning("Failed to download PDF for paper '%s'", paper.source_id)
+            logger.warning("Failed to download PDF for paper '%s'", paper.title)
             return
 
         try:
@@ -253,10 +294,11 @@ class BaseCrawler(ABC):
 
             logger.info(
                 "Successfully downloaded PDF for paper '%s' to %s",
-                paper.source_id, filepath,
+                paper.title,
+                filepath,
             )
         except Exception as e:
-            logger.error("Error saving PDF for paper '%s': %s", paper.source_id, str(e))
+            logger.error("Error saving PDF for paper '%s': %s", paper.title, str(e))
 
     @abstractmethod
     async def crawl(
@@ -264,7 +306,7 @@ class BaseCrawler(ABC):
         query: str | None = None,
         urls: list[str] | None = None,
         max_papers: int | None = None,
-    ) -> list[PaperCreate]:
+    ) -> list[Paper]:
         """
         Crawl the specified URLs and/or query and extract paper information.
         """

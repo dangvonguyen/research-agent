@@ -1,6 +1,6 @@
 import { MessagesSquare, SquarePen } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { apiClient } from "@/api";
 import {
   Sidebar,
@@ -8,24 +8,30 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { Conversation } from "@/types";
 import {
+  CollectionsSection,
   RecentChatsSection,
   SearchChatsDialog,
-  SidebarSettings,
   SidebarButton,
   SidebarLogo,
+  SidebarSettings,
   useSidebarActions,
   useSidebarInteractions,
 } from "./sidebar";
 
 function AppSidebar() {
   const { chatId } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [chatData, setChatData] = useState<Conversation[]>([]);
 
@@ -43,19 +49,41 @@ function AppSidebar() {
     useSidebarInteractions();
 
   useEffect(() => {
+    // Only fetch conversations when on chat pages
+    const isChatPage =
+      location.pathname === "/" || location.pathname.startsWith("/chat");
+    if (!isChatPage) {
+      return;
+    }
+
+    let isMounted = true;
+    let isFetching = false;
+
     const fetchConversations = async () => {
+      // Prevent duplicate concurrent calls
+      if (isFetching) return;
+      isFetching = true;
+
       try {
         const chats = await apiClient.conversations
           .list()
           .then((res) => res.data);
-        setChatData(chats);
+        if (isMounted) {
+          setChatData(chats);
+        }
       } catch (error) {
         console.error("Failed to fetch conversations:", error);
+      } finally {
+        isFetching = false;
       }
     };
 
     fetchConversations();
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [location.pathname]);
 
   const handleDeleteChat = useCallback(
     async (conversation: Conversation) => {
@@ -63,11 +91,11 @@ function AppSidebar() {
 
       if (deleted) {
         setChatData((prev) =>
-          prev.filter((chat) => chat.id !== conversation.id),
+          prev.filter((chat) => chat.id !== conversation.id)
         );
       }
     },
-    [chatId, deleteChat],
+    [chatId, deleteChat]
   );
 
   const handleRenameChat = useCallback(
@@ -77,12 +105,12 @@ function AppSidebar() {
       if (newName) {
         setChatData((prev) =>
           prev.map((chat) =>
-            chat.id === conversation.id ? { ...chat, name: newName } : chat,
-          ),
+            chat.id === conversation.id ? { ...chat, name: newName } : chat
+          )
         );
       }
     },
-    [renameChat],
+    [renameChat]
   );
 
   return (
@@ -93,7 +121,7 @@ function AppSidebar() {
             <SidebarMenu
               className={cn(
                 "flex flex-row items-center gap-2 transition-all duration-300",
-                open && "justify-between",
+                open && "justify-between"
               )}
               {...headerHandlers}
             >
@@ -110,27 +138,62 @@ function AppSidebar() {
         className={cn("gap-0", !open && "cursor-e-resize")}
         onClick={handleEmptySpaceClick}
       >
+        {/* Collections Section - At the top */}
+        <CollectionsSection />
+
+        {/* Chatbot Section - Parent of new chat, search chat, and recent chat */}
         <SidebarGroup>
-          <SidebarMenu>
-            <SidebarButton
-              icon={<SquarePen />}
-              label="New chat"
-              onClick={handleNewChat}
-            />
-            <SidebarButton
-              icon={<MessagesSquare />}
-              label="Search chats"
-              onClick={handleSearchChats}
-            />
+          <SidebarMenu className="gap-2">
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => navigate("/")}
+                isActive={
+                  location.pathname === "/" ||
+                  location.pathname.startsWith("/chat")
+                }
+                tooltip="Chatbot"
+                className="group/button cursor-pointer"
+              >
+                <MessagesSquare className="h-4 w-4" />
+                <span className="text-sm">Chatbot</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
-        <RecentChatsSection
-          chatData={chatData}
-          activeChatId={chatId}
-          onSelectChat={handleSelectChat}
-          onDeleteChat={handleDeleteChat}
-          onRenameChat={handleRenameChat}
-        />
+
+        {/* Chat Actions - Only show in Chatbot view */}
+        {(location.pathname === "/" ||
+          location.pathname.startsWith("/chat")) && (
+          <SidebarGroup>
+            {/* <SidebarGroupLabel>Chatbot</SidebarGroupLabel> */}
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-2">
+                <SidebarButton
+                  icon={<SquarePen />}
+                  label="New chat"
+                  onClick={handleNewChat}
+                />
+                <SidebarButton
+                  icon={<MessagesSquare />}
+                  label="Search chats"
+                  onClick={handleSearchChats}
+                />
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Recent Chats - Only show in Chatbot view */}
+        {(location.pathname === "/" ||
+          location.pathname.startsWith("/chat")) && (
+          <RecentChatsSection
+            chatData={chatData}
+            activeChatId={chatId}
+            onSelectChat={handleSelectChat}
+            onDeleteChat={handleDeleteChat}
+            onRenameChat={handleRenameChat}
+          />
+        )}
       </SidebarContent>
 
       <SidebarFooter>

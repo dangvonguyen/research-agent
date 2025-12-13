@@ -172,7 +172,6 @@ class LLMService:
         """Get the default LLM."""
         return self._default_llm
 
-
 # Global service instance
 llm_service = LLMService()
 default_llm = llm_service.get_default_llm()

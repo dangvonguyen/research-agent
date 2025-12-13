@@ -1,0 +1,176 @@
+"""Add paper, crawler, paper, collection models
+
+Revision ID: d7b3b946338c
+Revises: 29fe1954e0b1
+Create Date: 2025-12-13 16:36:57.539120
+
+"""
+
+from collections.abc import Sequence
+from typing import Union
+
+import sqlalchemy as sa
+from alembic import op
+from sqlalchemy.dialects import postgresql
+
+# revision identifiers, used by Alembic.
+revision: str = "d7b3b946338c"
+down_revision: Union[str, Sequence[str], None] = "29fe1954e0b1"
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def upgrade() -> None:
+    """Upgrade schema."""
+    op.create_table(
+        "collection",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(op.f("ix_collection_name"), "collection", ["name"], unique=False)
+    op.create_index(
+        op.f("ix_collection_updated_at"), "collection", ["updated_at"], unique=False
+    )
+    op.create_table(
+        "crawler_config",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column(
+            "source", sa.Enum("ACL_ANTHOLOGY", name="papersource"), nullable=False
+        ),
+        sa.Column("rate_limit", sa.Integer(), nullable=False),
+        sa.Column("max_delay", sa.Integer(), nullable=False),
+        sa.Column("max_attempts", sa.Integer(), nullable=False),
+        sa.Column("max_concurrent", sa.Integer(), nullable=False),
+        sa.Column("output_dir", sa.String(length=512), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_crawler_config_name"), "crawler_config", ["name"], unique=True
+    )
+    op.create_table(
+        "crawler_job",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("config_name", sa.String(length=255), nullable=False),
+        sa.Column("urls", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column("query", sa.Text(), nullable=True),
+        sa.Column("max_papers", sa.Integer(), nullable=True),
+        sa.Column(
+            "status",
+            sa.Enum("PENDING", "RUNNING", "COMPLETED", "FAILED", name="jobstatus"),
+            nullable=False,
+        ),
+        sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("error_message", sa.Text(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_crawler_job_config_name"), "crawler_job", ["config_name"], unique=False
+    )
+    op.create_index(
+        op.f("ix_crawler_job_status"), "crawler_job", ["status"], unique=False
+    )
+    op.create_index(
+        op.f("ix_crawler_job_updated_at"), "crawler_job", ["updated_at"], unique=False
+    )
+    op.create_table(
+        "paper",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("title", sa.String(length=512), nullable=False),
+        sa.Column("authors", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column("year", sa.Integer(), nullable=True),
+        sa.Column("venue", sa.String(length=255), nullable=True),
+        sa.Column("abstract", sa.Text(), nullable=True),
+        sa.Column(
+            "source_type", sa.Enum("upload", "url", name="source_type"), nullable=False
+        ),
+        sa.Column("source_url", sa.Text(), nullable=True),
+        sa.Column("file_path", sa.Text(), nullable=True),
+        sa.Column("job_id", sa.UUID(), nullable=True),
+        sa.Column("parsed", sa.Boolean(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["job_id"], ["crawler_job.id"], ondelete="SET NULL"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(op.f("ix_paper_job_id"), "paper", ["job_id"], unique=False)
+    op.create_table(
+        "paper_collection",
+        sa.Column("paper_id", sa.UUID(), nullable=False),
+        sa.Column("collection_id", sa.UUID(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["collection_id"], ["collection.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["paper_id"], ["paper.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("paper_id", "collection_id"),
+    )
+    op.create_table(
+        "paper_content",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("paper_id", sa.UUID(), nullable=False),
+        sa.Column("section_name", sa.String(length=255), nullable=False),
+        sa.Column("section_index", sa.Integer(), nullable=True),
+        sa.Column("chunk_index", sa.Integer(), nullable=True),
+        sa.Column("content", sa.Text(), nullable=False),
+        sa.Column("token_count", sa.Integer(), nullable=True),
+        sa.Column(
+            "embedding_vector", postgresql.JSONB(astext_type=sa.Text()), nullable=True
+        ),
+        sa.Column(
+            "extra_metadata", postgresql.JSONB(astext_type=sa.Text()), nullable=True
+        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["paper_id"], ["paper.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_paper_content_paper_id"), "paper_content", ["paper_id"], unique=False
+    )
+    op.create_index(
+        "ix_papercontent_paper_section_chunk",
+        "paper_content",
+        ["paper_id", "section_index", "chunk_index"],
+        unique=False,
+    )
+    op.drop_index(
+        op.f("ix_message_content_tool_calls"),
+        table_name="message",
+        postgresql_ops={"content": "jsonb_path_ops"},
+        postgresql_using="gin",
+    )
+
+
+def downgrade() -> None:
+    """Downgrade schema."""
+    op.create_index(
+        op.f("ix_message_content_tool_calls"),
+        "message",
+        ["content"],
+        unique=False,
+        postgresql_ops={"content": "jsonb_path_ops"},
+        postgresql_using="gin",
+    )
+    op.drop_index("ix_papercontent_paper_section_chunk", table_name="paper_content")
+    op.drop_index(op.f("ix_paper_content_paper_id"), table_name="paper_content")
+    op.drop_table("paper_content")
+    op.drop_table("paper_collection")
+    op.drop_index(op.f("ix_paper_job_id"), table_name="paper")
+    op.drop_table("paper")
+    op.drop_index(op.f("ix_crawler_job_updated_at"), table_name="crawler_job")
+    op.drop_index(op.f("ix_crawler_job_status"), table_name="crawler_job")
+    op.drop_index(op.f("ix_crawler_job_config_name"), table_name="crawler_job")
+    op.drop_table("crawler_job")
+    op.drop_index(op.f("ix_crawler_config_name"), table_name="crawler_config")
+    op.drop_table("crawler_config")
+    op.drop_index(op.f("ix_collection_updated_at"), table_name="collection")
+    op.drop_index(op.f("ix_collection_name"), table_name="collection")
+    op.drop_table("collection")

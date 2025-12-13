@@ -100,6 +100,15 @@ class Settings(BaseSettings):
     def POSTGRES_URI_SAFE(self) -> str:
         return sanitize_db_uri(self.POSTGRES_URI)
 
+    # Datalab API settings for PDF parsing
+    DATALAB_API_KEY: Optional[str] = None
+    DATALAB_API_URL: Optional[str] = None
+
+    # PDF parsing settings
+    PDF_MIN_CONTENT_LENGTH: int  # Minimum content length for a section
+    PDF_MAX_CHUNK_WORDS: int  # Maximum words per chunk
+    PDF_CHUNK_OVERLAP_WORDS: int  # Overlap between chunks in words
+
     # File upload settings
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024  # 50MB
@@ -117,6 +126,12 @@ class Settings(BaseSettings):
 
     # Ollama settings
     OLLAMA_BASE_URL: str = "http://localhost:11434"
+
+    # Zilliz vector database settings
+    ZILLIZ_ENDPOINT: Optional[str] = None
+    ZILLIZ_TOKEN: Optional[str] = None
+    ZILLIZ_COLLECTION_NAME: str = "paper_chunks"
+    ZILLIZ_VECTOR_DIMENSION: int = 1536
 
 
 # Load settings from environment

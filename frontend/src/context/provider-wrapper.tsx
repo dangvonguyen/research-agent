@@ -1,6 +1,9 @@
 import type { ComponentType, ReactNode } from "react";
 
-type ProviderConfig = readonly [ComponentType<any>, any];
+type ProviderConfig = readonly [
+  ComponentType<Record<string, unknown>>,
+  Record<string, unknown>,
+];
 
 interface ProviderWrapperProps {
   providers: readonly ProviderConfig[];

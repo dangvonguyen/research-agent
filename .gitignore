@@ -4,3 +4,6 @@
 !.env.example
 .venv/
 frontend/node_modules/
+
+# Crawler output
+backend/crawled_papers/

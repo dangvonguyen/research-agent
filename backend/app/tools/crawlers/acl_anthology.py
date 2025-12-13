@@ -4,7 +4,7 @@ from typing import Any, cast
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
 
-from app.types import PaperCreate, PaperSource
+from app.db.models import Paper
 from app.utils.bulk_run import bulk_run
 
 from .base import BaseCrawler
@@ -27,7 +27,7 @@ class ACLAnthologyCrawler(BaseCrawler):
 
         logger.debug("Initialized ACL Anthology crawler")
 
-    async def extract_paper_metadata(self, paper_id: str) -> PaperCreate | None:
+    async def extract_paper_metadata(self, paper_id: str) -> Paper | None:
         """
         Extract paper metadata from a paper page.
         """
@@ -41,16 +41,15 @@ class ACLAnthologyCrawler(BaseCrawler):
 
         paper = self.parser.parse_paper_page(html_content, paper_id)
         if paper:
-            paper.url = paper_url
-            paper.local_pdf_path = str(self.output_dir / f"{paper_id}.pdf")
-            logger.debug(
-                "Successfully extracted metadata for paper '%s'", paper.source_id
-            )
+            paper.source_url = f"{paper_url}.pdf"
+            paper.file_path = str(self.output_dir / f"{paper_id}.pdf")
+
+            logger.debug("Successfully extracted metadata for paper '%s'", paper.title)
         else:
             logger.warning("Failed to parse paper page for paper '%s'", paper_id)
         return paper
 
-    async def process_paper_page(self, url: str) -> PaperCreate | None:
+    async def process_paper_page(self, url: str) -> Paper | None:
         """
         Process a single paper: extract metadata and prepare for download.
         """
@@ -60,20 +59,21 @@ class ACLAnthologyCrawler(BaseCrawler):
 
         paper = await self.extract_paper_metadata(paper_id)
         if paper:
-            logger.debug("Successfully processed paper '%s'", paper.source_id)
+            logger.debug("Successfully processed paper '%s'", paper.title)
         else:
             logger.warning("Failed to process paper page with URL %s", url)
         return paper
 
     async def process_conference_page(
         self, url: str, max_papers: int | None = None
-    ) -> list[PaperCreate]:
+    ) -> list[Paper]:
         """
         Process a conference page and extract papers.
         """
         logger.debug(
             "Processing conference page with URL %s (max papers: %s)",
-            url, str(max_papers),
+            url,
+            str(max_papers),
         )
 
         base_url, conf_id = self.parser.parse_acl_url(url)
@@ -99,7 +99,8 @@ class ACLAnthologyCrawler(BaseCrawler):
         )
         logger.debug(
             "Extracting metadata for %d papers from conference page with URL %s",
-            len(paper_ids), url,
+            len(paper_ids),
+            url,
         )
 
         if max_papers:
@@ -107,7 +108,8 @@ class ACLAnthologyCrawler(BaseCrawler):
 
         logger.debug(
             "Limiting papers to %d from conference page with URL %s",
-            len(paper_ids), url,
+            len(paper_ids),
+            url,
         )
 
         results = await bulk_run(self.extract_paper_metadata, paper_ids)
@@ -115,13 +117,15 @@ class ACLAnthologyCrawler(BaseCrawler):
 
         logger.info(
             "Successfully extracted metadata for %d/%d papers from conference page with URL %s",
-            len(papers), len(paper_ids), url,
+            len(papers),
+            len(paper_ids),
+            url,
         )
         return papers
 
     async def process_search_page(
         self, url: str, max_papers: int | None = None
-    ) -> list[PaperCreate]:
+    ) -> list[Paper]:
         """
         Process a search query page and extract papers.
         """
@@ -138,7 +142,8 @@ class ACLAnthologyCrawler(BaseCrawler):
         logger.info("Found %d papers from search page with URL %s", len(paper_ids), url)
         logger.debug(
             "Extracting metadata for %d papers from search page with URL %s",
-            len(paper_ids), url,
+            len(paper_ids),
+            url,
         )
 
         if max_papers:
@@ -146,7 +151,8 @@ class ACLAnthologyCrawler(BaseCrawler):
 
         logger.debug(
             "Limiting papers to %d from search page with URL %s",
-            len(paper_ids), url,
+            len(paper_ids),
+            url,
         )
 
         results = await bulk_run(self.extract_paper_metadata, paper_ids)
@@ -154,20 +160,32 @@ class ACLAnthologyCrawler(BaseCrawler):
 
         logger.info(
             "Successfully extracted metadata for %d/%d papers from search page with URL %s",
-            len(papers), len(paper_ids), url,
+            len(papers),
+            len(paper_ids),
+            url,
         )
         return papers
 
     async def process_search_query(
         self, query: str, max_papers: int | None = None
-    ) -> list[PaperCreate]:
+    ) -> list[Paper]:
         """
         Process a search query and extract papers.
         """
-        logger.debug("Processing search query '%s' (max papers: %s)", query, str(max_papers))
+        logger.debug(
+            "Processing search query '%s' (max papers: %s)", query, str(max_papers)
+        )
+
+        # Clean and URL-encode the query
+        # Remove quotes if LLM added them, and clean up the query
+        cleaned_query = query.strip().strip('"').strip("'")
+        # URL encode the query properly
+        from urllib.parse import quote_plus
+
+        encoded_query = quote_plus(cleaned_query)
 
         # Prepare search URL
-        search_url = f"{self.BASE_URL}/search/?q={query.replace(' ', '+')}"
+        search_url = f"{self.BASE_URL}/search/?q={encoded_query}"
 
         return await self.process_search_page(search_url, max_papers)
 
@@ -176,15 +194,63 @@ class ACLAnthologyCrawler(BaseCrawler):
     ) -> list[str]:
         """
         Find paper IDs from a search page using browser automation.
+        Falls back to direct HTTP fetch if Playwright fails.
         """
         logger.debug(
             "Finding paper IDs from search page with URL %s (attempt %d/%d)",
-            url, attempt + 1, self.max_attempts,
+            url,
+            attempt + 1,
+            self.max_attempts,
         )
 
+        paper_ids = []
+
+        # First, try direct HTTP fetch (works for some search results)
         try:
-            # Use Playwright to render the page and extract paper IDs
-            paper_ids = []
+            logger.debug("Attempting direct HTTP fetch for search page: %s", url)
+            html_content = cast(str | None, await self.fetch_url(url))
+            if html_content:
+                direct_ids = self.parser.parse_search_page(html_content)
+                if direct_ids:
+                    logger.info(
+                        "Found %d paper IDs using direct HTTP fetch from search page",
+                        len(direct_ids),
+                    )
+                    # Limit to max_papers if specified
+                    if max_papers:
+                        return direct_ids[:max_papers]
+                    return direct_ids
+                else:
+                    logger.debug(
+                        "Direct HTTP fetch returned no results, trying Playwright"
+                    )
+        except Exception as e:
+            logger.debug("Direct HTTP fetch failed, trying Playwright: %s", str(e))
+
+        # Fallback to Playwright for JavaScript-rendered content
+        try:
+            # Try to use Playwright with proper event loop handling for Windows
+            import platform
+
+            # On Windows, try to use ProactorEventLoop if available
+            if platform.system() == "Windows":
+                try:
+                    import asyncio
+
+                    if isinstance(
+                        asyncio.get_event_loop_policy(),
+                        asyncio.WindowsSelectorEventLoopPolicy,
+                    ):
+                        logger.debug(
+                            "Switching to ProactorEventLoop for Windows compatibility"
+                        )
+                        asyncio.set_event_loop_policy(
+                            asyncio.WindowsProactorEventLoopPolicy()
+                        )
+                except Exception as loop_error:
+                    logger.warning(
+                        "Could not switch event loop policy: %s", str(loop_error)
+                    )
 
             async with async_playwright() as playwright:
                 browser = await playwright.chromium.launch(headless=True)
@@ -192,7 +258,7 @@ class ACLAnthologyCrawler(BaseCrawler):
 
                 try:
                     # Load initial search page
-                    logger.debug("Loading search page with URL %s", url)
+                    logger.debug("Loading search page with Playwright: %s", url)
                     await page.goto(url, wait_until="domcontentloaded", timeout=30000)
                     await page.wait_for_selector(".gsc-result", timeout=10000)
 
@@ -225,15 +291,22 @@ class ACLAnthologyCrawler(BaseCrawler):
 
                         logger.debug(
                             "Page %d: Found %d paper IDs from search page with URL %s",
-                            page_num, len(current_ids), url,
+                            page_num,
+                            len(current_ids),
+                            url,
                         )
+
+                        # Stop if we have enough papers
+                        if max_papers and len(paper_ids) >= max_papers:
+                            paper_ids = paper_ids[:max_papers]
+                            break
 
                         # Rate limiting delay
                         await page.wait_for_timeout(3000)
 
                 except Exception as e:
                     logger.error(
-                        "Error processing search page with URL %s: %s", url, str(e)
+                        "Error processing search page with Playwright: %s", str(e)
                     )
                     raise
 
@@ -242,10 +315,21 @@ class ACLAnthologyCrawler(BaseCrawler):
 
             return paper_ids
 
+        except NotImplementedError as e:
+            logger.error(
+                "Playwright not supported on this platform (likely Windows with Python 3.13): %s. "
+                "Search functionality requires browser automation which is not available.",
+                str(e),
+            )
+            # Return empty list - search won't work without Playwright
+            return []
         except Exception as e:
             logger.error(
                 "Error finding paper IDs from search page with URL %s (attempt %d/%d): %s",
-                url, attempt + 1, self.max_attempts, str(e),
+                url,
+                attempt + 1,
+                self.max_attempts,
+                str(e),
             )
             if attempt < self.max_attempts - 1:
                 await self._backoff(attempt, "Error finding paper IDs from search")
@@ -253,13 +337,13 @@ class ACLAnthologyCrawler(BaseCrawler):
             else:
                 logger.error(
                     "Max retries reached for finding paper IDs from search page with URL %s (attempt %d/%d)",
-                    url, attempt + 1, self.max_attempts,
+                    url,
+                    attempt + 1,
+                    self.max_attempts,
                 )
                 return []
 
-    async def process_url(
-        self, url: str, max_papers: int | None = None
-    ) -> list[PaperCreate]:
+    async def process_url(self, url: str, max_papers: int | None = None) -> list[Paper]:
         """
         Process a single URL and return extracted papers.
         """
@@ -281,16 +365,18 @@ class ACLAnthologyCrawler(BaseCrawler):
         query: str | None = None,
         urls: list[str] | None = None,
         max_papers: int | None = None,
-    ) -> list[PaperCreate]:
+    ) -> list[Paper]:
         """
         Crawl a list of ACL Anthology URLs and/or query and extract paper information.
         """
         urls = urls or []
-        papers: list[PaperCreate] = []
+        papers: list[Paper] = []
 
         logger.debug(
             "Starting crawl of %d URLs and query '%s' (max papers: %s)",
-            len(urls), query, str(max_papers),
+            len(urls),
+            query,
+            str(max_papers),
         )
 
         for url in urls:
@@ -312,7 +398,9 @@ class ACLAnthologyCrawler(BaseCrawler):
         logger.info("Crawling completed, found %d papers", len(papers))
         return papers
 
-    def _should_stop_crawling(self, papers: list[PaperCreate], max_papers: int | None) -> bool:
+    def _should_stop_crawling(
+        self, papers: list[Paper], max_papers: int | None
+    ) -> bool:
         """
         Check if we should stop crawling based current page count.
         """
@@ -323,7 +411,7 @@ class ACLAnthologyParser:
     """Parser for ACL Anthology HTML content."""
 
     @staticmethod
-    def parse_paper_page(html_content: str, paper_id: str) -> PaperCreate | None:
+    def parse_paper_page(html_content: str, paper_id: str) -> Paper | None:
         """
         Parse a paper page and extract metadata.
         """
@@ -376,21 +464,36 @@ class ACLAnthologyParser:
             venues = venue.split("|") if venue else []
             logger.debug("Found venues for paper '%s': %s", paper_id, venues)
 
-            paper = PaperCreate(
+            # Build download URL (PDF if available, otherwise paper page)
+            if pdf_url:
+                download_url = (
+                    pdf_url
+                    if pdf_url.startswith("http")
+                    else f"{ACLAnthologyCrawler.BASE_URL}{pdf_url}"
+                )
+            else:
+                download_url = f"{ACLAnthologyCrawler.BASE_URL}/{paper_id}"
+
+            paper = Paper(
                 title=title,
                 authors=authors,
-                source=PaperSource.ACL_ANTHOLOGY,
-                source_id=paper_id,
                 year=year,
-                pdf_url=pdf_url,
-                venues=venues,
+                venue=venues[0] if venues else None,
+                abstract=None,
+                source_type="url",
+                source_url=download_url,
+                file_path=None,
+                job_id=None,
+                parsed=False,
             )
 
             logger.debug("Successfully parsed paper '%s'", paper_id)
             return paper
 
         except Exception as e:
-            logger.exception("Error parsing paper page for paper '%s': %s", paper_id, str(e))
+            logger.exception(
+                "Error parsing paper page for paper '%s': %s", paper_id, str(e)
+            )
             return None
 
     @staticmethod

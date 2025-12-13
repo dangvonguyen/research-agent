@@ -10,9 +10,8 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api import api_router
 from app.core.config import settings
-from app.core.mongodb import mongodb
 from app.logging import setup_logging
-from app.repos import create_indexes
+from app.services.crawler import crawler_service
 
 
 @asynccontextmanager
@@ -24,32 +23,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa
     setup_logging()
     logger = logging.getLogger(__name__)
 
-    # start_time = time.time()
-    # logger.info(
-    #     "Starting application '%s' (version %s)",
-    #     settings.PROJECT_NAME, settings.API_V1_STR,
-    # )
+    start_time = time.time()
+    logger.info(
+        "Starting application '%s' (version %s)",
+        settings.PROJECT_NAME,
+        settings.API_V1_STR,
+    )
 
-    # # Connect to MongoDB
-    # logger.info("Establishing connection to MongoDB at %s", settings.MONGODB_URI_SAFE)
-    # await mongodb.connect()
+    # Initialize default crawler configurations
+    try:
+        await crawler_service.initialize_default_configs()
+    except Exception as e:
+        logger.error("Failed to initialize default crawler configs: %s", str(e))
+        # Don't fail startup if config initialization fails
 
-    # # Create database indexes
-    # logger.info("Creating database indexes")
-    # await create_indexes()
-    # logger.info("Successfully created database indexes")
-
-    # startup_time = time.time() - start_time
-    # logger.info(
-    #     "Application startup completed successfully in %.2f seconds", startup_time
-    # )
+    startup_time = time.time() - start_time
+    logger.info(
+        "Application startup completed successfully in %.2f seconds", startup_time
+    )
 
     yield
-
-    # # Shutdown process
-    # logger.info("Beginning application shutdown process")
-    # await mongodb.disconnect()
-    # logger.info("Application '%s' shutdown completed", settings.PROJECT_NAME)
 
 
 app = FastAPI(

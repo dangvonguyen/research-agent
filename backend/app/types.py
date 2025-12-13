@@ -91,9 +91,9 @@ class CrawlerConfig(BaseDocument, CrawlerConfigBase):
 class CrawlerJobBase(BaseModel):
     """Base model for crawler jobs."""
 
-    config_name: str
-    query: str | None = None
+    config_name: str = Field(default="default_acl_anthology")
     urls: list[HttpUrl] | None = None
+    query: str | None = Field(default=None)
     max_papers: int | None = Field(default=None, ge=0)
 
 
@@ -106,7 +106,6 @@ class CrawlerJobCreate(BaseCreate, CrawlerJobBase):
 class CrawlerJobUpdate(BaseUpdate):
     """Model for updating an existing crawler job."""
 
-    query: str | None = None
     urls: list[HttpUrl] | None = None
     max_papers: int | None = Field(default=None, ge=0)
 
@@ -120,30 +119,76 @@ class CrawlerJob(BaseDocument, CrawlerJobBase):
     status: JobStatus = JobStatus.PENDING
 
 
-class PaperSection(BaseModel):
-    """
-    Model for representing a section of a research paper.
-    """
+class CrawlerConfigResponse(BaseModel):
+    """Response model for crawler configuration from SQLAlchemy."""
 
-    title: str
+    id: UUID
+    name: str
+    source: PaperSource
+    rate_limit: int
+    max_delay: int
+    max_attempts: int
+    max_concurrent: int
+    output_dir: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {
+        "from_attributes": True,
+    }
+
+
+class CrawlerJobResponse(BaseModel):
+    """Response model for crawler job from SQLAlchemy."""
+
+    id: UUID
+    config_name: str
+    urls: list[str] | None = None
+    max_papers: int | None = None
+    status: JobStatus
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    error_message: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {
+        "from_attributes": True,
+    }
+
+
+class PaperContent(BaseModel):
+    """Model for paper content matching database PaperContent structure."""
+
+    id: UUID
+    paper_id: UUID
+    section_name: str
+    section_index: int | None = None
+    chunk_index: int | None = None
     content: str
-    level: int = 1
+    token_count: int | None = None
+    embedding_vector: list[float] | None = None
+    extra_metadata: dict | None = None
+    created_at: datetime
+
+    model_config = {
+        "from_attributes": True,
+    }
 
 
 class PaperBase(BaseModel):
-    """Base model for paper metadata."""
+    """Base model for paper matching database structure (for create/update operations)."""
 
     title: str
-    authors: list[str]
-    source: PaperSource
-    source_id: str
+    authors: list[str] | None = None
     year: int | None = None
-    url: str | None = None
-    pdf_url: str | None = None
-    local_pdf_path: str | None = None
-    venues: list[str] = Field(default_factory=list)
-    sections: dict[str, PaperSection] = Field(default_factory=dict)
-    job_id: str | None = None
+    venue: str | None = None
+    abstract: str | None = None
+    source_type: str  # "url" or "upload"
+    source_url: str | None = None
+    file_path: str | None = None
+    contents: list[PaperContent] = Field(default_factory=list)
+    job_id: UUID | None = None
 
 
 class PaperCreate(BaseCreate, PaperBase):
@@ -157,21 +202,121 @@ class PaperUpdate(BaseUpdate):
 
     title: str | None = None
     authors: list[str] | None = None
-    source: PaperSource | None = None
-    source_id: str | None = None
     year: int | None = None
-    url: str | None = None
-    pdf_url: str | None = None
-    local_pdf_path: str | None = None
-    venues: list[str] | None = None
-    sections: dict[str, PaperSection] | None = None
-    job_id: str | None = None
+    venue: str | None = None
+    abstract: str | None = None
+    source_type: str | None = None
+    source_url: str | None = None
+    file_path: str | None = None
+    contents: list[PaperContent] | None = None
+    job_id: UUID | None = None
 
 
-class Paper(BaseDocument, PaperBase):
-    """Model for paper stored in database."""
+class PaperResponse(BaseModel):
+    """Response model for paper matching ORM Paper structure (for API responses)."""
+
+    id: UUID
+    title: str
+    authors: list[str] | None = None
+    year: int | None = None
+    venue: str | None = None
+    abstract: str | None = None
+    source_type: str
+    source_url: str | None = None
+    file_path: str | None = None
+    job_id: UUID | None = None
+    parsed: bool
+    created_at: datetime
+    updated_at: datetime
+    contents: list[PaperContent] = Field(default_factory=list)
+    collection_ids: list[UUID] = Field(
+        default_factory=list, description="IDs of collections this paper belongs to"
+    )
+    collection_names: list[str] = Field(
+        default_factory=list, description="Names of collections this paper belongs to"
+    )
+
+    model_config = {
+        "from_attributes": True,
+    }
+
+    @classmethod
+    def from_orm_with_collections(cls, paper_orm) -> "PaperResponse":
+        """
+        Create PaperResponse from ORM Paper, extracting collection information.
+        This method handles the collections relationship properly.
+        """
+        # Extract collection info if available
+        collection_ids = []
+        collection_names = []
+        if hasattr(paper_orm, "collections") and paper_orm.collections:
+            collection_ids = [c.id for c in paper_orm.collections]
+            collection_names = [c.name for c in paper_orm.collections]
+
+        # Extract contents if available
+        contents = []
+        if hasattr(paper_orm, "contents") and paper_orm.contents:
+            contents = [PaperContent.model_validate(c) for c in paper_orm.contents]
+
+        return cls(
+            id=paper_orm.id,
+            title=paper_orm.title,
+            authors=paper_orm.authors,
+            year=paper_orm.year,
+            venue=paper_orm.venue,
+            abstract=paper_orm.abstract,
+            source_type=paper_orm.source_type,
+            source_url=paper_orm.source_url,
+            file_path=paper_orm.file_path,
+            job_id=paper_orm.job_id,
+            parsed=paper_orm.parsed,
+            created_at=paper_orm.created_at,
+            updated_at=paper_orm.updated_at,
+            contents=contents,
+            collection_ids=collection_ids,
+            collection_names=collection_names,
+        )
+
+
+class Paper(BaseDocument, PaperResponse):
+    """Model for paper stored in database (MongoDB)."""
 
     pass
+
+
+class CollectionBase(BaseModel):
+    """Base model for collection matching database structure."""
+
+    name: str
+    description: str | None = None
+
+
+class CollectionCreate(BaseCreate, CollectionBase):
+    """Model for creating a new collection."""
+
+    pass
+
+
+class CollectionUpdate(BaseUpdate):
+    """Model for updating an existing collection."""
+
+    name: str | None = None
+    description: str | None = None
+
+
+class CollectionResponse(BaseModel):
+    """Response model for collection matching ORM Collection structure."""
+
+    id: UUID
+    name: str
+    description: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    paper_count: int = 0
+
+    model_config = {
+        "from_attributes": True,
+    }
 
 
 class OperationResponse(BaseModel):
@@ -199,6 +344,20 @@ class DeleteResponse(OperationResponse):
     """Response model for delete operations."""
 
     deleted_count: int
+
+
+class PapersPerMonthResponse(BaseModel):
+    """Response model for papers per month analytics."""
+
+    month: int = Field(description="Month number (1-12)")
+    papers: int = Field(description="Number of papers created in this month")
+
+
+class PapersByCollectionResponse(BaseModel):
+    """Response model for papers by collection analytics."""
+
+    name: str = Field(description="Collection name")
+    value: int = Field(description="Number of papers in this collection")
 
 
 class ConversationBase(BaseModel):

@@ -30,7 +30,7 @@ class MongoDBManger:
             self.client = AsyncMongoClient(
                 settings.MONGODB_URI,
                 maxPoolSize=50,  # Maximum connections in pool
-                minPoolSize=5,   # Minimum connections to maintain
+                minPoolSize=5,  # Minimum connections to maintain
             )
 
             # Explicitly connect to verify connection
@@ -39,12 +39,15 @@ class MongoDBManger:
 
             # Get database reference
             self.database = self.client[settings.MONGODB_DATABASE]
-            logger.debug("Database reference created for: %s", settings.MONGODB_DATABASE)
+            logger.debug(
+                "Database reference created for: %s", settings.MONGODB_DATABASE
+            )
 
             # Test the database connection
             await self.database.command("ping")
             logger.info(
-                "Connected successfully to MongoDB database: %s", settings.MONGODB_DATABASE
+                "Connected successfully to MongoDB database: %s",
+                settings.MONGODB_DATABASE,
             )
 
         except Exception as e:

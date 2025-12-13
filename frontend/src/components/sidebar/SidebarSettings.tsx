@@ -1,4 +1,4 @@
-import { Monitor, Moon, Settings, Sun } from "lucide-react"
+import { Monitor, Moon, Settings, Sun } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,19 +10,23 @@ import {
   DropdownMenuTrigger,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui"
-import { useTheme } from "@/context/theme-provider"
-import type { Theme } from "@/context/theme-provider"
+} from "@/components/ui";
+import type { Theme } from "@/context/theme-provider";
+import { useTheme } from "@/context/theme-provider";
 
 export const SidebarSettings = () => {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme } = useTheme();
 
   const themeOptions: { value: Theme; label: string; icon: React.ReactNode }[] =
     [
       { value: "light", label: "Light", icon: <Sun className="h-4 w-4" /> },
       { value: "dark", label: "Dark", icon: <Moon className="h-4 w-4" /> },
-      { value: "system", label: "System", icon: <Monitor className="h-4 w-4" /> },
-    ]
+      {
+        value: "system",
+        label: "System",
+        icon: <Monitor className="h-4 w-4" />,
+      },
+    ];
 
   return (
     <SidebarMenuItem>
@@ -69,5 +73,5 @@ export const SidebarSettings = () => {
         </DropdownMenuContent>
       </DropdownMenu>
     </SidebarMenuItem>
-  )
-}
+  );
+};
