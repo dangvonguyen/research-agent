@@ -306,15 +306,39 @@ export interface paths {
         };
         /**
          * Get Papers
-         * @description List all papers.
+         * @description List all papers from Postgres.
          */
         get: operations["get_papers_api_v1_papers_get"];
         put?: never;
         /**
          * Create Paper
-         * @description Create a new paper.
+         * @description Create a new paper stored in Postgres.
          */
         post: operations["create_paper_api_v1_papers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/papers/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Paper
+         * @description Upload a PDF paper file with optional metadata.
+         *
+         *     If metadata is provided by the user, it will be used.
+         *     If metadata is missing, it will be extracted from the PDF.
+         *     User-provided metadata takes precedence over extracted metadata.
+         */
+        post: operations["upload_paper_api_v1_papers_upload_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -330,23 +354,181 @@ export interface paths {
         };
         /**
          * Get Paper
-         * @description Get a specific paper.
+         * @description Get a specific paper from Postgres.
          */
         get: operations["get_paper_api_v1_papers__paper_id__get"];
         put?: never;
         post?: never;
         /**
          * Delete Paper
-         * @description Delete a paper.
+         * @description Delete a paper from Postgres.
          */
         delete: operations["delete_paper_api_v1_papers__paper_id__delete"];
         options?: never;
         head?: never;
         /**
          * Update Paper
-         * @description Update a paper.
+         * @description Update a paper in Postgres.
          */
         patch: operations["update_paper_api_v1_papers__paper_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/papers/by-job/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Papers By Job
+         * @description Get all papers created by a specific crawler job.
+         */
+        get: operations["get_papers_by_job_api_v1_papers_by_job__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/papers/analytics/papers-per-month": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Papers Per Month
+         * @description Get count of papers per month for analytics.
+         *     Returns list of dicts with 'month' (1-12) and 'papers' (count).
+         */
+        get: operations["get_papers_per_month_api_v1_papers_analytics_papers_per_month_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Collections
+         * @description List all collections.
+         */
+        get: operations["get_collections_api_v1_collections_get"];
+        put?: never;
+        /**
+         * Create Collection
+         * @description Create a new collection.
+         */
+        post: operations["create_collection_api_v1_collections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/collections/{collection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Collection
+         * @description Get a specific collection.
+         */
+        get: operations["get_collection_api_v1_collections__collection_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Collection
+         * @description Delete a collection.
+         */
+        delete: operations["delete_collection_api_v1_collections__collection_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Collection
+         * @description Update a collection.
+         */
+        patch: operations["update_collection_api_v1_collections__collection_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/collections/{collection_id}/papers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Collection Papers
+         * @description Get all papers in a collection.
+         */
+        get: operations["get_collection_papers_api_v1_collections__collection_id__papers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/collections/{collection_id}/papers/{paper_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Paper To Collection
+         * @description Add a paper to a collection.
+         */
+        post: operations["add_paper_to_collection_api_v1_collections__collection_id__papers__paper_id__post"];
+        /**
+         * Remove Paper From Collection
+         * @description Remove a paper from a collection.
+         */
+        delete: operations["remove_paper_from_collection_api_v1_collections__collection_id__papers__paper_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/collections/analytics/papers-by-collection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Papers By Collection
+         * @description Get count of papers per collection for analytics.
+         *     Returns list of dicts with 'name' (collection name) and 'value' (paper count).
+         */
+        get: operations["get_papers_by_collection_api_v1_collections_analytics_papers_by_collection_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/uploads": {
@@ -430,6 +612,32 @@ export interface components {
             /** Files */
             files: string[];
         };
+        /** Body_upload_paper_api_v1_papers_upload_post */
+        Body_upload_paper_api_v1_papers_upload_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
+            /** Title */
+            title?: string | null;
+            /** Abstract */
+            abstract?: string | null;
+            /** Doi */
+            doi?: string | null;
+            /** Year */
+            year?: number | null;
+            /**
+             * Authors
+             * @description Comma-separated
+             */
+            authors?: string | null;
+            /**
+             * Keywords
+             * @description Comma-separated
+             */
+            keywords?: string | null;
+        };
         /**
          * ChatRequest
          * @description Model for chat request.
@@ -456,6 +664,56 @@ export interface components {
             metadata: {
                 [key: string]: unknown;
             };
+        };
+        /**
+         * CollectionCreate
+         * @description Model for creating a new collection.
+         */
+        CollectionCreate: {
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+        };
+        /**
+         * CollectionResponse
+         * @description Response model for collection matching ORM Collection structure.
+         */
+        CollectionResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Paper Count
+             * @default 0
+             */
+            paper_count: number;
+        };
+        /**
+         * CollectionUpdate
+         * @description Model for updating an existing collection.
+         */
+        CollectionUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
         };
         /**
          * ConversationCreate
@@ -499,52 +757,6 @@ export interface components {
             name?: string | null;
         };
         /**
-         * CrawlerConfig
-         * @description Model for crawler configuration stored in database.
-         */
-        CrawlerConfig: {
-            /** Name */
-            name: string;
-            source: components["schemas"]["PaperSource"];
-            /**
-             * Rate Limit
-             * @default 10
-             */
-            rate_limit: number;
-            /**
-             * Max Delay
-             * @default 60
-             */
-            max_delay: number;
-            /**
-             * Max Attempts
-             * @default 3
-             */
-            max_attempts: number;
-            /**
-             * Max Concurrent
-             * @default 10
-             */
-            max_concurrent: number;
-            /**
-             * Output Dir
-             * @default crawled_papers
-             */
-            output_dir: string;
-            /** Id */
-            _id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-        };
-        /**
          * CrawlerConfigCreate
          * @description Model for creating a new crawler configuration.
          */
@@ -579,6 +791,40 @@ export interface components {
             output_dir: string;
         };
         /**
+         * CrawlerConfigResponse
+         * @description Response model for crawler configuration from SQLAlchemy.
+         */
+        CrawlerConfigResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            source: components["schemas"]["PaperSource"];
+            /** Rate Limit */
+            rate_limit: number;
+            /** Max Delay */
+            max_delay: number;
+            /** Max Attempts */
+            max_attempts: number;
+            /** Max Concurrent */
+            max_concurrent: number;
+            /** Output Dir */
+            output_dir: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
          * CrawlerConfigUpdate
          * @description Model for updating an existing crawler configuration.
          */
@@ -598,20 +844,45 @@ export interface components {
             output_dir?: string | null;
         };
         /**
-         * CrawlerJob
-         * @description Model for crawler job stored in database.
+         * CrawlerJobCreate
+         * @description Model for creating a new crawler job.
          */
-        CrawlerJob: {
-            /** Config Name */
+        CrawlerJobCreate: {
+            /**
+             * Config Name
+             * @default default_acl_anthology
+             */
             config_name: string;
+            /** Urls */
+            urls?: string[] | null;
             /** Query */
             query?: string | null;
+            /** Max Papers */
+            max_papers?: number | null;
+        };
+        /**
+         * CrawlerJobResponse
+         * @description Response model for crawler job from SQLAlchemy.
+         */
+        CrawlerJobResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Config Name */
+            config_name: string;
             /** Urls */
             urls?: string[] | null;
             /** Max Papers */
             max_papers?: number | null;
-            /** Id */
-            _id: string;
+            status: components["schemas"]["JobStatus"];
+            /** Started At */
+            started_at?: string | null;
+            /** Completed At */
+            completed_at?: string | null;
+            /** Error Message */
+            error_message?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -622,36 +893,12 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
-            /** Started At */
-            started_at?: string | null;
-            /** Completed At */
-            completed_at?: string | null;
-            /** Error Message */
-            error_message?: string | null;
-            /** @default pending */
-            status: components["schemas"]["JobStatus"];
-        };
-        /**
-         * CrawlerJobCreate
-         * @description Model for creating a new crawler job.
-         */
-        CrawlerJobCreate: {
-            /** Config Name */
-            config_name: string;
-            /** Query */
-            query?: string | null;
-            /** Urls */
-            urls?: string[] | null;
-            /** Max Papers */
-            max_papers?: number | null;
         };
         /**
          * CrawlerJobUpdate
          * @description Model for updating an existing crawler job.
          */
         CrawlerJobUpdate: {
-            /** Query */
-            query?: string | null;
             /** Urls */
             urls?: string[] | null;
             /** Max Papers */
@@ -819,35 +1066,98 @@ export interface components {
             output: components["schemas"]["ToolResultOutput"];
         };
         /**
-         * Paper
-         * @description Model for paper stored in database.
+         * PaperContent
+         * @description Model for paper content matching database PaperContent structure.
          */
-        Paper: {
+        PaperContent: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Paper Id
+             * Format: uuid
+             */
+            paper_id: string;
+            /** Section Name */
+            section_name: string;
+            /** Section Index */
+            section_index?: number | null;
+            /** Chunk Index */
+            chunk_index?: number | null;
+            /** Content */
+            content: string;
+            /** Token Count */
+            token_count?: number | null;
+            /** Embedding Vector */
+            embedding_vector?: number[] | null;
+            /** Extra Metadata */
+            extra_metadata?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * PaperCreate
+         * @description Model for creating a new paper.
+         */
+        PaperCreate: {
             /** Title */
             title: string;
             /** Authors */
-            authors: string[];
-            source: components["schemas"]["PaperSource"];
-            /** Source Id */
-            source_id: string;
+            authors?: string[] | null;
             /** Year */
             year?: number | null;
-            /** Url */
-            url?: string | null;
-            /** Pdf Url */
-            pdf_url?: string | null;
-            /** Local Pdf Path */
-            local_pdf_path?: string | null;
-            /** Venues */
-            venues?: string[];
-            /** Sections */
-            sections?: {
-                [key: string]: components["schemas"]["PaperSection"];
-            };
+            /** Venue */
+            venue?: string | null;
+            /** Abstract */
+            abstract?: string | null;
+            /** Source Type */
+            source_type: string;
+            /** Source Url */
+            source_url?: string | null;
+            /** File Path */
+            file_path?: string | null;
+            /** Contents */
+            contents?: components["schemas"]["PaperContent"][];
             /** Job Id */
             job_id?: string | null;
-            /** Id */
-            _id: string;
+        };
+        /**
+         * PaperResponse
+         * @description Response model for paper matching ORM Paper structure (for API responses).
+         */
+        PaperResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Authors */
+            authors?: string[] | null;
+            /** Year */
+            year?: number | null;
+            /** Venue */
+            venue?: string | null;
+            /** Abstract */
+            abstract?: string | null;
+            /** Source Type */
+            source_type: string;
+            /** Source Url */
+            source_url?: string | null;
+            /** File Path */
+            file_path?: string | null;
+            /** Job Id */
+            job_id?: string | null;
+            /** Parsed */
+            parsed: boolean;
             /**
              * Created At
              * Format: date-time
@@ -858,50 +1168,18 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
-        };
-        /**
-         * PaperCreate
-         * @description Model for creating a new paper.
-         */
-        PaperCreate: {
-            /** Title */
-            title: string;
-            /** Authors */
-            authors: string[];
-            source: components["schemas"]["PaperSource"];
-            /** Source Id */
-            source_id: string;
-            /** Year */
-            year?: number | null;
-            /** Url */
-            url?: string | null;
-            /** Pdf Url */
-            pdf_url?: string | null;
-            /** Local Pdf Path */
-            local_pdf_path?: string | null;
-            /** Venues */
-            venues?: string[];
-            /** Sections */
-            sections?: {
-                [key: string]: components["schemas"]["PaperSection"];
-            };
-            /** Job Id */
-            job_id?: string | null;
-        };
-        /**
-         * PaperSection
-         * @description Model for representing a section of a research paper.
-         */
-        PaperSection: {
-            /** Title */
-            title: string;
-            /** Content */
-            content: string;
+            /** Contents */
+            contents?: components["schemas"]["PaperContent"][];
             /**
-             * Level
-             * @default 1
+             * Collection Ids
+             * @description IDs of collections this paper belongs to
              */
-            level: number;
+            collection_ids?: string[];
+            /**
+             * Collection Names
+             * @description Names of collections this paper belongs to
+             */
+            collection_names?: string[];
         };
         /**
          * PaperSource
@@ -918,23 +1196,20 @@ export interface components {
             title?: string | null;
             /** Authors */
             authors?: string[] | null;
-            source?: components["schemas"]["PaperSource"] | null;
-            /** Source Id */
-            source_id?: string | null;
             /** Year */
             year?: number | null;
-            /** Url */
-            url?: string | null;
-            /** Pdf Url */
-            pdf_url?: string | null;
-            /** Local Pdf Path */
-            local_pdf_path?: string | null;
-            /** Venues */
-            venues?: string[] | null;
-            /** Sections */
-            sections?: {
-                [key: string]: components["schemas"]["PaperSection"];
-            } | null;
+            /** Venue */
+            venue?: string | null;
+            /** Abstract */
+            abstract?: string | null;
+            /** Source Type */
+            source_type?: string | null;
+            /** Source Url */
+            source_url?: string | null;
+            /** File Path */
+            file_path?: string | null;
+            /** Contents */
+            contents?: components["schemas"]["PaperContent"][] | null;
             /** Job Id */
             job_id?: string | null;
         };
@@ -1418,7 +1693,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CrawlerConfig"][];
+                    "application/json": components["schemas"]["CrawlerConfigResponse"][];
                 };
             };
             /** @description Validation Error */
@@ -1482,7 +1757,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CrawlerConfig"];
+                    "application/json": components["schemas"]["CrawlerConfigResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1579,7 +1854,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CrawlerConfig"];
+                    "application/json": components["schemas"]["CrawlerConfigResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1612,7 +1887,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CrawlerJob"][];
+                    "application/json": components["schemas"]["CrawlerJobResponse"][];
                 };
             };
             /** @description Validation Error */
@@ -1676,7 +1951,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CrawlerJob"];
+                    "application/json": components["schemas"]["CrawlerJobResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1758,10 +2033,7 @@ export interface operations {
     };
     get_papers_api_v1_papers_get: {
         parameters: {
-            query?: {
-                skip?: number;
-                limit?: number;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -1774,16 +2046,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Paper"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["PaperResponse"][];
                 };
             };
         };
@@ -1798,6 +2061,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PaperCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_paper_api_v1_papers_upload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_paper_api_v1_papers_upload_post"];
             };
         };
         responses: {
@@ -1838,7 +2134,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Paper"];
+                    "application/json": components["schemas"]["PaperResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1914,6 +2210,337 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_papers_by_job_api_v1_papers_by_job__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaperResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_papers_per_month_api_v1_papers_analytics_papers_per_month_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_collections_api_v1_collections_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionResponse"][];
+                };
+            };
+        };
+    };
+    create_collection_api_v1_collections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_collection_api_v1_collections__collection_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_collection_api_v1_collections__collection_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_collection_api_v1_collections__collection_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_collection_papers_api_v1_collections__collection_id__papers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaperResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_paper_to_collection_api_v1_collections__collection_id__papers__paper_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+                paper_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_paper_from_collection_api_v1_collections__collection_id__papers__paper_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+                paper_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_papers_by_collection_api_v1_collections_analytics_papers_by_collection_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
         };
