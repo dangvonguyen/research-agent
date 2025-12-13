@@ -4,22 +4,22 @@ import { getApiConfig } from "./config";
 import type {
   ChatRequest,
   ChatResponse,
-  Collection,
+  CollectionResponse,
   CollectionCreate,
   CollectionUpdate,
   ConversationCreate,
   ConversationUpdate,
-  CrawlerConfig,
+  CrawlerConfigResponse,
   CrawlerConfigCreate,
   CrawlerConfigUpdate,
-  CrawlerJob,
+  CrawlerJobResponse,
   CrawlerJobCreate,
   CrawlerJobUpdate,
   CreateResponse,
   DeleteResponse,
   JobStatus,
   MessageCreate,
-  Paper,
+  PaperResponse,
   PaperCreate,
   PaperUpdate,
   Response_ConversationDB_,
@@ -274,7 +274,7 @@ export const apiClient = {
 
   // Crawler Configs
   crawlerConfigs: {
-    list: (skip?: number, limit?: number): Promise<CrawlerConfig[]> =>
+    list: (skip?: number, limit?: number): Promise<CrawlerConfigResponse[]> =>
       apiCall(
         "/api/v1/crawlers/configs",
         "GET",
@@ -290,7 +290,7 @@ export const apiClient = {
         { body },
       ),
 
-    getById: (configId: string): Promise<CrawlerConfig> =>
+    getById: (configId: string): Promise<CrawlerConfigResponse> =>
       apiCall(
         "/api/v1/crawlers/configs/{config_id}",
         "GET",
@@ -298,7 +298,7 @@ export const apiClient = {
         { params: { path: { config_id: configId } } },
       ),
 
-    getByName: (name: string): Promise<CrawlerConfig> =>
+    getByName: (name: string): Promise<CrawlerConfigResponse> =>
       apiCall(
         "/api/v1/crawlers/configs/name/{name}",
         "GET",
@@ -332,7 +332,7 @@ export const apiClient = {
       skip?: number,
       limit?: number,
       status?: JobStatus,
-    ): Promise<CrawlerJob[]> =>
+    ): Promise<CrawlerJobResponse[]> =>
       apiCall("/api/v1/crawlers/jobs", "GET", "Failed to fetch crawler jobs", {
         params: { query: { skip, limit, status } },
       }),
@@ -342,7 +342,7 @@ export const apiClient = {
         body,
       }),
 
-    getById: (jobId: string): Promise<CrawlerJob> =>
+    getById: (jobId: string): Promise<CrawlerJobResponse> =>
       apiCall(
         "/api/v1/crawlers/jobs/{job_id}",
         "GET",
@@ -395,7 +395,7 @@ export const apiClient = {
       skip?: number,
       limit?: number,
       status?: JobStatus,
-    ): Promise<Paper[]> =>
+    ): Promise<PaperResponse[]> =>
       apiCall("/api/v1/papers", "GET", "Failed to fetch papers", {
         params: { query: { skip, limit, status } },
       }),
@@ -403,7 +403,7 @@ export const apiClient = {
     create: (body: PaperCreate): Promise<CreateResponse> =>
       apiCall("/api/v1/papers", "POST", "Failed to create paper", { body }),
 
-    getById: (paperId: string): Promise<Paper> =>
+    getById: (paperId: string): Promise<PaperResponse> =>
       apiCall("/api/v1/papers/{paper_id}", "GET", "Failed to fetch paper", {
         params: { path: { paper_id: paperId } },
       }),
@@ -469,7 +469,7 @@ export const apiClient = {
         },
       ),
 
-    getByJobId: (jobId: string): Promise<Paper[]> =>
+    getByJobId: (jobId: string): Promise<PaperResponse[]> =>
       apiCall(
         "/api/v1/papers/by-job/{job_id}",
         "GET",
@@ -482,7 +482,7 @@ export const apiClient = {
 
   // Collections
   collections: {
-    list: (skip?: number, limit?: number): Promise<Collection[]> =>
+    list: (skip?: number, limit?: number): Promise<CollectionResponse[]> =>
       apiCall("/api/v1/collections", "GET", "Failed to fetch collections", {
         params: { query: { skip, limit } },
       }),
@@ -492,7 +492,7 @@ export const apiClient = {
         body,
       }),
 
-    getById: (collectionId: string): Promise<Collection> =>
+    getById: (collectionId: string): Promise<CollectionResponse> =>
       apiCall(
         "/api/v1/collections/{collection_id}",
         "GET",
@@ -526,7 +526,7 @@ export const apiClient = {
         },
       ),
 
-    getPapers: (collectionId: string): Promise<Paper[]> =>
+    getPapers: (collectionId: string): Promise<PaperResponse[]> =>
       apiCall(
         "/api/v1/collections/{collection_id}/papers",
         "GET",
