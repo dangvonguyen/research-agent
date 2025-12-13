@@ -467,6 +467,7 @@ class ZillizService:
                 search_params=search_params,
                 filter=filter_expr,
                 output_fields=output_fields,
+                anns_field="chunk_content_embedding",
             )
 
             # Format results

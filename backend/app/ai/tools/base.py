@@ -21,11 +21,8 @@ class BaseTool:
         """Asynchronous execution entry point for the tool."""
         raise NotImplementedError("Async arun() not implemented.")
 
-    @classmethod
-    def as_tool(cls) -> FunctionTool:
+    def as_tool(self) -> FunctionTool:
         """Convert to a LlamaIndex tool for agent integration."""
-        self = cls if isinstance(cls, BaseTool) else cls()
-
         # Check which method the subclass implemented
         has_run = "run" in self.__class__.__dict__
         has_arun = "arun" in self.__class__.__dict__

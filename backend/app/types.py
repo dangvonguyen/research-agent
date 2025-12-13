@@ -360,6 +360,19 @@ class PapersByCollectionResponse(BaseModel):
     value: int = Field(description="Number of papers in this collection")
 
 
+class CitationMetadata(BaseModel):
+    """Metadata for a cited source in RAG responses."""
+
+    paper_id: UUID
+    title: str
+    authors: list[str] | None = None
+    venue: str | None = None
+    year: int | None = None
+    section_name: str
+    chunk_content: str
+    relevance_score: float
+
+
 class ConversationBase(BaseModel):
     """Base model for conversations."""
 
