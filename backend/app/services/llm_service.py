@@ -172,64 +172,6 @@ class LLMService:
         """Get the default LLM."""
         return self._default_llm
 
-    async def enhance_search_keywords(self, user_query: str) -> str:
-        """
-        Enhance user query by extracting and improving keywords for paper search.
-
-        Args:
-            user_query: The user's search query/question
-
-        Returns:
-            Enhanced keywords string optimized for paper search
-        """
-        try:
-            llm = self.get_default_llm()
-            if not llm:
-                # Fallback: create a default LLM if none is set
-                llm = self.create_llm(
-                    model_name="gpt-3.5-turbo", provider="openai", temperature=0.3
-                )
-                if not llm:
-                    logger.warning("No LLM available, returning original query")
-                    return user_query.strip()
-
-            prompt = f"""You are a research assistant helping to find academic papers.
-Extract and enhance the key search terms from the following user query to optimize it for searching academic paper databases.
-
-User query: "{user_query}"
-
-Please:
-1. Extract the main keywords and concepts
-2. Expand with relevant synonyms and related terms
-3. Remove unnecessary words
-4. Format as a concise search query (3-5 key terms maximum)
-5. Keep it focused on the core research topic
-6. Do NOT add quotes, brackets, or any special formatting - just return the plain search terms
-
-Return ONLY the enhanced search query as plain text, nothing else. Do not include explanations, quotes, or additional text."""
-
-            response = await llm.acomplete(prompt)
-            enhanced_query = response.text.strip()
-
-            # Remove any quotes that the LLM might have added
-            enhanced_query = enhanced_query.strip('"').strip("'").strip()
-
-            # Fallback to original if enhancement failed or is empty
-            if not enhanced_query or len(enhanced_query) < 3:
-                logger.warning(
-                    "LLM enhancement produced empty/invalid result, using original query"
-                )
-                return user_query.strip()
-
-            logger.info(f"Enhanced query: '{user_query}' -> '{enhanced_query}'")
-            return enhanced_query
-
-        except Exception as e:
-            logger.exception(f"Error enhancing search keywords: {e}")
-            # Fallback to original query on error
-            return user_query.strip()
-
-
 # Global service instance
 llm_service = LLMService()
 default_llm = llm_service.get_default_llm()
