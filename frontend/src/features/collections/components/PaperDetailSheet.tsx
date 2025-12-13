@@ -11,7 +11,6 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
-import type { Collection } from "@/api/models";
 import {
   Button,
   Dialog,
@@ -19,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui";
-import type { Paper } from "../types";
+import type { Collection, Paper } from "../types";
 
 interface PaperDetailSheetProps {
   paper: Paper;
@@ -43,7 +42,15 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
       const fetchCollections = async () => {
         try {
           const data = await apiClient.collections.list();
-          setCollections(data);
+          const formattedCollections: Collection[] = data.map((c) => ({
+            id: c.id,
+            name: c.name,
+            description: c.description || "",
+            paperCount: c.paper_count,
+            lastUpdated: c.updated_at,
+            paper_count: c.paper_count,
+          }));
+          setCollections(formattedCollections);
           // Pre-select collections that already contain this paper
           if (paper.collectionIds && paper.collectionIds.length > 0) {
             setSelectedCollectionIds(paper.collectionIds);
