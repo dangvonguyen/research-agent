@@ -6,6 +6,7 @@ from llama_index.core import Settings
 from llama_index.core.llms import LLM
 from llama_index.llms.anthropic import Anthropic
 from llama_index.llms.gemini import Gemini
+from llama_index.llms.ollama import Ollama
 from llama_index.llms.openai import OpenAI
 from pydantic import BaseModel, Field
 
@@ -20,6 +21,7 @@ class LLMProvider(str, Enum):
     ANTHROPIC = "anthropic"
     GEMINI = "gemini"
     OPENAI = "openai"
+    OLLAMA = "ollama"
 
 
 class LLMModel(BaseModel):
@@ -43,17 +45,18 @@ class LLMFactory:
         LLMProvider.ANTHROPIC: {
             "llm_class": Anthropic,
             "api_key_attr": "ANTHROPIC_API_KEY",
-            "provider_name": "Anthropic",
         },
         LLMProvider.GEMINI: {
             "llm_class": Gemini,
             "api_key_attr": "GEMINI_API_KEY",
-            "provider_name": "Gemini",
         },
         LLMProvider.OPENAI: {
             "llm_class": OpenAI,
             "api_key_attr": "OPENAI_API_KEY",
-            "provider_name": "OpenAI",
+        },
+        LLMProvider.OLLAMA: {
+            "llm_class": Ollama,
+            "base_url_attr": "OLLAMA_BASE_URL",
         },
     }
 
@@ -87,12 +90,33 @@ class LLMFactory:
         """Create LLM instance."""
         config = LLMFactory._PROVIDER_CONFIG[model.provider]
         llm_class = cast(type[LLM], config["llm_class"])
-        api_key_attr = cast(str, config["api_key_attr"])
-        provider_name = cast(str, config["provider_name"])
+        provider_name = llm_class.__name__
 
-        # Get API key from settings
-        api_key = getattr(settings, api_key_attr, None)
+        if model.provider == LLMProvider.OLLAMA:
+            base_url = getattr(settings, config["base_url_attr"], None)
+            if not base_url:
+                raise ValueError(
+                    f"{provider_name} base URL is required for model {model.model_name}"
+                )
 
+            kwargs = {
+                "model": model.model_name,
+                "base_url": base_url,
+                "temperature": model.temperature,
+            }
+
+            if settings.TIMEOUT is not None:
+                kwargs["request_timeout"] = settings.TIMEOUT
+            if model.max_tokens or settings.MAX_TOKENS:
+                kwargs["context_window"] = model.max_tokens or settings.MAX_TOKENS
+
+            # User overrides
+            kwargs.update(model.additional_kwargs)
+
+            return llm_class(**kwargs)
+
+        # Api-key based providers
+        api_key = getattr(settings, config["api_key_attr"], None)
         if not api_key:
             raise ValueError(
                 f"{provider_name} API key is required for model {model.model_name}"
@@ -105,6 +129,9 @@ class LLMFactory:
             "temperature": model.temperature,
             "max_tokens": model.max_tokens,
         }
+
+        if settings.TIMEOUT is not None:
+            kwargs["timeout"] = settings.TIMEOUT
 
         # Add provider-specific supported parameters
         kwargs.update(model.additional_kwargs)

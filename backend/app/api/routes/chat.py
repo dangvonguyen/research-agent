@@ -99,6 +99,8 @@ async def stream_chat(
                         event.index,
                         tool_call_id=event.tool_call_id,
                         tool_name=event.tool_name,
+                        agent_name=event.agent_name,
+                        agent_type=event.agent_type,
                     )
 
                 elif isinstance(event, StreamContentDelta):

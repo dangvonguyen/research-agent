@@ -1,9 +1,9 @@
 """Assembles streaming deltas into complete content parts."""
 
-import json
 from typing import Any
 
 from app.types import (
+    AgentType,
     MessageContentPart,
     MessageReasoningPart,
     MessageTextPart,
@@ -21,6 +21,12 @@ class ContentPartBuilder:
         self.current_index: int | None = None
         self.current_type: StreamContentType | None = None
         self.current_data: dict[str, Any] = {}
+        self.current_agent_type: str | None = None
+        self.current_tool_name: str | None = None
+
+        # Buffer for sub-agent events
+        self.sub_agent_buffers: list[MessageContentPart] = []
+        self.orchestrator_tool_call_id: str | None = None
 
     def start_content(
         self, content_type: StreamContentType, index: int, **metadata: Any
@@ -32,17 +38,23 @@ class ContentPartBuilder:
 
         self.current_index = index
         self.current_type = content_type
+
+        # Extract agent, tool type for filtering
+        self.current_agent_type = metadata.pop("agent_type", None)
+        self.current_tool_name = metadata.get("tool_name", "")
+
         self.current_data = {"type": content_type.value, **metadata}
+
+        # Track active tool call for orchestrator
+        if (
+            content_type == StreamContentType.TOOL_CALL
+            and self.current_agent_type == AgentType.ORCHESTRATOR
+        ):
+            self.orchestrator_tool_call_id = metadata.get("tool_call_id")
 
         # Initialize accumulator based on type
         if content_type in (StreamContentType.TEXT, StreamContentType.REASONING):
             self.current_data["text"] = ""
-        elif content_type == StreamContentType.TOOL_CALL:
-            self.current_data["input"] = {}
-            self.current_data["input_buffer"] = ""  # For partial JSON
-        elif content_type == StreamContentType.TOOL_RESULT:
-            self.current_data["output"] = None
-            self.current_data["output_buffer"] = ""  # For partial JSON
 
     def add_delta(self, index: int, delta: str | dict[str, Any]) -> None:
         """Add incremental update to current content part."""
@@ -56,33 +68,25 @@ class ContentPartBuilder:
             self.current_data["text"] += delta
 
         elif self.current_type == StreamContentType.TOOL_CALL:
-            # Accumulate JSON chunks for tool call input
+            # Support batch mode only for now
             if isinstance(delta, str):
-                self.current_data["input_buffer"] += delta
-                # Try to parse accumulated JSON
-                try:
-                    self.current_data["input"] = json.loads(
-                        self.current_data["input_buffer"]
-                    )
-                except json.JSONDecodeError:
-                    pass  # Wait for more data
+                self.current_data["input"] = {}
             else:
-                # Complete dict update
-                self.current_data["input"].update(delta)
+                self.current_data["input"] = delta
 
         elif self.current_type == StreamContentType.TOOL_RESULT:
-            # Accumulate tool result output
-            if isinstance(delta, str):
-                self.current_data["output_buffer"] += delta
-                # Try to parse accumulated JSON
-                try:
-                    parsed = json.loads(self.current_data["output_buffer"])
-                    self.current_data["output"] = parsed
-                except json.JSONDecodeError:
-                    pass  # Wait for more data
-            else:
-                # Complete dict update
+            # Support batch mode only for now
+            if (isinstance(delta, dict) and "type" in delta and "value" in delta) or (
+                self.orchestrator_tool_call_id == self.current_data.get("tool_call_id")
+                and isinstance(delta, str)
+            ):
+                # Already wrapped or sub-agent tool result, use as is
                 self.current_data["output"] = delta
+                print(delta)
+            elif isinstance(delta, str):
+                self.current_data["output"] = {"type": "text", "value": delta}
+            else:
+                self.current_data["output"] = {"type": "json", "value": delta}
 
     def end_content(self, index: int) -> None:
         """Finalize current content part."""
@@ -91,18 +95,31 @@ class ContentPartBuilder:
                 f"End index {index} doesn't match current {self.current_index}"
             )
 
-        # Use provided final content or build from accumulated data
+        # Build from accumulated data
         part = self._build_part_from_data()
 
-        # Store the completed part
-        while len(self.parts) <= index:
-            self.parts.append(None)
-        self.parts[index] = part
+        # Route based on agent type
+        if self.current_agent_type == AgentType.SUB_AGENT:
+            # Buffer sub-agent events under active tool call
+            self.sub_agent_buffers.append(part)
+        else:
+            # Store the completed part
+            while len(self.parts) <= index:
+                self.parts.append(None)
+            self.parts[index] = part
+
+        # Clear tool call context when orchestrator tool result ends
+        if (
+            self.current_type == StreamContentType.TOOL_RESULT
+            and self.current_agent_type == AgentType.ORCHESTRATOR
+        ):
+            self.orchestrator_tool_call_id = None
 
         # Reset current tracking
         self.current_index = None
         self.current_type = None
         self.current_data = {}
+        self.current_agent_type = None
 
     def _finalize_current(self) -> None:
         """Internal method to finalize current part."""
@@ -113,9 +130,30 @@ class ContentPartBuilder:
         """Build a MessageContentPart from current_data."""
         data = self.current_data.copy()
 
-        # Clean up internal fields
-        data.pop("input_buffer", None)
-        data.pop("output_buffer", None)
+        # Special handling for orchestrator tool results with sub-agent events
+        if (
+            self.current_type == StreamContentType.TOOL_RESULT
+            and self.current_agent_type == AgentType.ORCHESTRATOR
+            and self.orchestrator_tool_call_id is not None
+        ):
+            # Extract original output value
+            original_output = data.get("output", None)
+
+            if original_output is None:
+                raise ValueError("Sub-agent result should be always string for now.")
+
+            # Wrap with sub-agent events
+            data["output"] = {
+                "type": AgentType.SUB_AGENT.value,
+                "value": {
+                    "result": original_output,
+                    "agent_name": data.get("tool_name"),  # Tool name = agent name
+                    "events": self.sub_agent_buffers,
+                },
+            }
+
+            # Clean up buffer
+            self.sub_agent_buffers = []
 
         if self.current_type == StreamContentType.TEXT:
             return MessageTextPart(**data)
