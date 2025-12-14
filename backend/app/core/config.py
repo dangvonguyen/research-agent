@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated, Any, Optional
 
-from pydantic import AnyUrl, BeforeValidator, MongoDsn, PostgresDsn, computed_field
+from pydantic import AnyUrl, BeforeValidator, PostgresDsn, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.logging import sanitize_db_uri
@@ -44,37 +44,6 @@ class Settings(BaseSettings):
     def all_cors_origins(self) -> list[str]:
         """Get normalized list of CORS origins."""
         return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS]
-
-    # Database settings
-    MONGODB_SERVER: str
-    MONGODB_PORT: int
-    MONGODB_ROOT_USERNAME: str | None = None
-    MONGODB_ROOT_PASSWORD: str | None = None
-    MONGODB_DATABASE: str
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def MONGODB_URI(self) -> str:
-        query = (
-            "authSource=admin"
-            if self.MONGODB_ROOT_USERNAME is not None
-            and self.MONGODB_ROOT_PASSWORD is not None
-            else None
-        )
-        return MongoDsn.build(
-            scheme="mongodb",
-            username=self.MONGODB_ROOT_USERNAME,
-            password=self.MONGODB_ROOT_PASSWORD,
-            host=self.MONGODB_SERVER,
-            port=self.MONGODB_PORT,
-            path=self.MONGODB_DATABASE,
-            query=query,
-        ).encoded_string()
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def MONGODB_URI_SAFE(self) -> str:
-        return sanitize_db_uri(self.MONGODB_URI)
 
     # Postgres settings
     POSTGRES_SERVER: str
@@ -146,11 +115,6 @@ logger.debug(
     "API settings: API_V1_STR=%s, DEBUG=%s",
     settings.API_V1_STR,
     settings.DEBUG,
-)
-logger.debug(
-    "MongoDB settings: database=%s, URI=%s",
-    settings.MONGODB_DATABASE,
-    settings.MONGODB_URI_SAFE,
 )
 logger.debug(
     "Postgres settings: database=%s, URI=%s",

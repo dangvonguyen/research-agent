@@ -91,13 +91,4 @@ async def health_check() -> dict[str, str]:
     """
     Health check endpoints.
     """
-    # logger = logging.getLogger(__name__)
-    # db_status = await mongodb.health_check()
-    # status = "healthy" if db_status else "database_error"
-
-    # if db_status:
-    #     logger.debug("Health check passed: API and database connection OK")
-    # else:
-    #     logger.warning("Health check detected: database connection issue")
-
     return {"status": "healthy"}

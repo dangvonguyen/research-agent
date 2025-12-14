@@ -279,7 +279,7 @@ class PaperResponse(BaseModel):
 
 
 class Paper(BaseDocument, PaperResponse):
-    """Model for paper stored in database (MongoDB)."""
+    """Model for paper stored in database."""
 
     pass
 
