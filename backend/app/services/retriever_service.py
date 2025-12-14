@@ -23,7 +23,7 @@ class ZillizRetriever(BaseRetriever):
         self,
         top_k: int = 10,
         collection_names: list[str] | None = None,
-        metadata_filters: str | None = None,
+        metadata_filter: str | None = None,
     ):
         """Initialize ZillizRetriever.
 
@@ -35,7 +35,7 @@ class ZillizRetriever(BaseRetriever):
         super().__init__()
         self.top_k = top_k
         self.collection_names = collection_names
-        self.metadata_filters = metadata_filters
+        self.metadata_filter = metadata_filter
 
     async def _aretrieve(self, query_bundle: QueryBundle) -> list[NodeWithScore]:
         """Retrieve relevant chunks asynchronously.
@@ -78,13 +78,13 @@ class ZillizRetriever(BaseRetriever):
                     collection_filter = f"({' || '.join(collection_filters)})"
 
             # Use metadata_filters directly as provided by agent (unchanged)
-            if self.metadata_filters:
+            if self.metadata_filter:
                 if collection_filter:
                     # Combine collection filter with metadata filter using AND
-                    filter_expr = f"({collection_filter}) && ({self.metadata_filters})"
+                    filter_expr = f"({collection_filter}) && ({self.metadata_filter})"
                 else:
                     # Use metadata filter directly
-                    filter_expr = self.metadata_filters
+                    filter_expr = self.metadata_filter
             elif collection_filter:
                 # Use collection filter only
                 filter_expr = collection_filter

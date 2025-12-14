@@ -9,7 +9,7 @@ from app.types import ToolResultOutput as ToolOutput
 logger = logging.getLogger(__name__)
 
 
-class DenseRetrievalInput(BaseModel):
+class DenseRetrieverInput(BaseModel):
     """Input schema for DenseRetrievalTool."""
 
     query: str = Field(description="The query to retrieve relevant context for")
@@ -23,7 +23,7 @@ class DenseRetrievalInput(BaseModel):
         default=None,
         description="Optional list of collection names to filter the retrieval",
     )
-    metadata_filters: str | None = Field(
+    metadata_filter: str | None = Field(
         default=None,
         description=(
             "Optional Milvus filter expression string. "
@@ -34,7 +34,7 @@ class DenseRetrievalInput(BaseModel):
     )
 
 
-class DenseRetrievalTool(BaseTool):
+class DenseRetrieverTool(BaseTool):
     """Tool for retrieving relevant paper chunks without synthesis.
 
     This tool performs pure retrieval without response generation:
@@ -51,7 +51,7 @@ class DenseRetrievalTool(BaseTool):
         "(paper title, authors, venue, section name) and relevance scores. "
         "You can filter results by collection names and/or metadata fields (year, venue, section_name, etc.). "
     )
-    input_schema = DenseRetrievalInput
+    input_schema = DenseRetrieverInput
 
     def __init__(self, rag_service: RAGService):
         """Initialize DenseRetrievalTool.
@@ -66,7 +66,7 @@ class DenseRetrievalTool(BaseTool):
         query: str,
         top_k: int = 10,
         collection_names: list[str] | None = None,
-        metadata_filters: str | None = None,
+        metadata_filter: str | None = None,
     ) -> ToolOutput:
         """Retrieve relevant chunks without synthesis.
 
@@ -74,7 +74,7 @@ class DenseRetrievalTool(BaseTool):
             query: The query to retrieve relevant context for
             top_k: Maximum number of chunks to retrieve (default: 10)
             collection_names: Optional list of collection names to filter by
-            metadata_filters: Optional filter expression string (e.g., 'year == 2023')
+            metadata_filter: Optional filter expression string (e.g., 'year == 2023')
 
         Returns:
             ToolOutput with JSON containing chunks and metadata
@@ -85,7 +85,7 @@ class DenseRetrievalTool(BaseTool):
                 query=query,
                 top_k=top_k,
                 collection_names=collection_names,
-                metadata_filters=metadata_filters,
+                metadata_filter=metadata_filter,
             )
 
             # Format chunks for JSON output
@@ -123,10 +123,7 @@ class DenseRetrievalTool(BaseTool):
                 query,
             )
 
-            return ToolOutput(
-                type="json",
-                value=response_data,
-            )
+            return ToolOutput(type="json", value=response_data)
 
         except Exception as e:
             logger.exception("DenseRetrievalTool failed: %s", str(e))
@@ -135,7 +132,4 @@ class DenseRetrievalTool(BaseTool):
                 "query": query,
                 "message": "Failed to retrieve context. Please try again.",
             }
-            return ToolOutput(
-                type="error-json",
-                value=error_data,
-            )
+            return ToolOutput(type="error-json", value=error_data)

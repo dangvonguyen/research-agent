@@ -5,7 +5,7 @@ from llama_index.core.llms import LLM
 from llama_index.core.tools import BaseTool as LlamaBaseTool
 
 from app.ai.prompts import ANALYSIS_AGENT_PROMPT
-from app.ai.tools.retrieval import DenseRetrievalTool
+from app.ai.tools.retrieval import DenseRetrieverTool
 from app.services.rag_service import RAGService
 
 from .base import BaseAgent
@@ -70,7 +70,7 @@ class AnalysisAgent(BaseAgent):
             ValueError: If LLM has not been set via create() method
         """
         rag_service = self._get_rag_service()
-        dense_retrieval_tool = DenseRetrievalTool(rag_service=rag_service)
+        dense_retrieval_tool = DenseRetrieverTool(rag_service=rag_service)
         return [dense_retrieval_tool.as_tool()]
 
     def get_system_prompt(self) -> str:
