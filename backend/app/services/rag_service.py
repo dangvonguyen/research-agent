@@ -179,8 +179,8 @@ class RAGService:
     async def retrieve_chunks(
         self,
         query: str,
-        collection_names: list[str] | None = None,
         top_k: int = 10,
+        collection_names: list[str] | None = None,
         metadata_filters: str | None = None,
     ) -> list[dict[str, Any]]:
         """Retrieve relevant chunks without synthesis.
@@ -194,22 +194,15 @@ class RAGService:
         Returns:
             List of retrieved chunks with metadata
         """
-        # Allow empty query if filters are provided
-        if (
-            (not query or not query.strip())
-            and not metadata_filters
-            and not collection_names
-        ):
-            logger.warning(
-                "Empty query provided without any filters to retrieve_context_only"
-            )
+        if not query or not query.strip():
+            logger.warning("Empty query provided to retrieve_context_only")
             return []
 
         try:
             # Create retriever
             retriever = ZillizRetriever(
-                collection_names=collection_names,
                 top_k=top_k,
+                collection_names=collection_names,
                 metadata_filters=metadata_filters,
             )
 

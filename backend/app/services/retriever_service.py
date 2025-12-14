@@ -21,8 +21,8 @@ class ZillizRetriever(BaseRetriever):
 
     def __init__(
         self,
-        collection_names: list[str] | None = None,
         top_k: int = 10,
+        collection_names: list[str] | None = None,
         metadata_filters: str | None = None,
     ):
         """Initialize ZillizRetriever.
@@ -33,8 +33,8 @@ class ZillizRetriever(BaseRetriever):
             metadata_filters: Optional filter expression string (e.g., 'year == 2023')
         """
         super().__init__()
-        self.collection_names = collection_names
         self.top_k = top_k
+        self.collection_names = collection_names
         self.metadata_filters = metadata_filters
 
     async def _aretrieve(self, query_bundle: QueryBundle) -> list[NodeWithScore]:
@@ -48,23 +48,17 @@ class ZillizRetriever(BaseRetriever):
         """
         query_text = query_bundle.query_str
 
-        try:
-            # Generate embedding for query, or use zero vector if query is empty
-            if query_text and query_text.strip():
-                query_embedding = await embedding_service.generate_embedding(query_text)
-                if not query_embedding:
-                    logger.warning("Failed to generate query embedding")
-                    return []
-            else:
-                # Empty query but filters provided - use zero vector
-                # Import here to avoid circular dependency
-                from app.core.config import settings
+        if not query_text or not query_text.strip():
+            logger.warning("Empty query provided to retriever")
+            return []
 
-                query_embedding = [0.0] * settings.ZILLIZ_VECTOR_DIMENSION
-                logger.info(
-                    "Using zero vector for empty query with filters: %s",
-                    self.metadata_filters or self.collection_names,
-                )
+        try:
+            # Generate embedding for query
+            query_embedding = await embedding_service.generate_embedding(query_text)
+
+            if not query_embedding:
+                logger.warning("Failed to generate query embedding")
+                return []
 
             # Build filter expression
             filter_expr = None

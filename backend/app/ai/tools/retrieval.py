@@ -12,14 +12,7 @@ logger = logging.getLogger(__name__)
 class DenseRetrievalInput(BaseModel):
     """Input schema for DenseRetrievalTool."""
 
-    query: str | None = Field(
-        default=None,
-        description=(
-            "Optional query string to retrieve relevant context for. "
-            "If not provided, results will be filtered by metadata_filters and/or collection_names only. "
-            "Use None or empty string when you only want to filter by metadata (e.g., 'list all papers in 2020')."
-        ),
-    )
+    query: str = Field(description="The query to retrieve relevant context for")
     top_k: int = Field(
         default=10,
         ge=1,
@@ -33,12 +26,10 @@ class DenseRetrievalInput(BaseModel):
     metadata_filters: str | None = Field(
         default=None,
         description=(
-            "Optional filter expression string for metadata filtering. "
-            "This is a filter expression that will be passed directly to the database. "
-            "Examples: 'year == 2023', 'venue == \"ACL\"', 'section_name == \"Introduction\"', "
-            "'year == 2023 && venue == \"ACL\"'. "
+            "Optional Milvus filter expression string. "
+            "Examples: 'year == 2023', 'venue == \"ACL\"', 'year == 2023 AND venue == \"ACL\"'. "
             "Supported fields: paper_id, paper_title, venue, year, section_name, section_index, chunk_index. "
-            "For string fields, use double quotes. Multiple conditions can be combined with && (AND) or || (OR)."
+            "Logical operators must use Milvus syntax: AND, OR, NOT. String values require double quotes."
         ),
     )
 
@@ -59,8 +50,6 @@ class DenseRetrievalTool(BaseTool):
         "The tool performs semantic search and returns matching chunks with metadata "
         "(paper title, authors, venue, section name) and relevance scores. "
         "You can filter results by collection names and/or metadata fields (year, venue, section_name, etc.). "
-        "The query parameter is optional - you can use only metadata filters to retrieve papers "
-        "(e.g., 'list all papers in 2020' would use query=None and metadata_filters='year == 2020')."
     )
     input_schema = DenseRetrievalInput
 
@@ -74,15 +63,15 @@ class DenseRetrievalTool(BaseTool):
 
     async def arun(
         self,
-        query: str | None = None,
-        collection_names: list[str] | None = None,
+        query: str,
         top_k: int = 10,
+        collection_names: list[str] | None = None,
         metadata_filters: str | None = None,
     ) -> ToolOutput:
         """Retrieve relevant chunks without synthesis.
 
         Args:
-            query: Optional query string to retrieve relevant context for
+            query: The query to retrieve relevant context for
             top_k: Maximum number of chunks to retrieve (default: 10)
             collection_names: Optional list of collection names to filter by
             metadata_filters: Optional filter expression string (e.g., 'year == 2023')
@@ -93,9 +82,9 @@ class DenseRetrievalTool(BaseTool):
         try:
             # Retrieve context only
             chunks = await self.rag_service.retrieve_chunks(
-                query=query or "",
-                collection_names=collection_names,
+                query=query,
                 top_k=top_k,
+                collection_names=collection_names,
                 metadata_filters=metadata_filters,
             )
 
@@ -128,11 +117,10 @@ class DenseRetrievalTool(BaseTool):
                 "num_chunks": len(formatted_chunks),
             }
 
-            query_str = query[:100] if query else "(no query, filter only)"
-            logger.info(
+            logger.debug(
                 "DenseRetrievalTool completed: %d chunks for query: %s",
                 len(formatted_chunks),
-                query_str,
+                query,
             )
 
             return ToolOutput(
