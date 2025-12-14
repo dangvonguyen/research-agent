@@ -1,9 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 
-type ProviderConfig = readonly [
-  ComponentType<Record<string, unknown>>,
-  Record<string, unknown>,
-];
+// biome-ignore lint/suspicious/noExplicitAny: Any props types
+type ProviderConfig = readonly [ComponentType<any>, any];
 
 interface ProviderWrapperProps {
   providers: readonly ProviderConfig[];
