@@ -15,14 +15,7 @@ class MetadataRetrieverInput(BaseModel):
     """Input schema for MetadataRetrieverTool."""
 
     metadata_filter: str = Field(
-        description=(
-            "Metadata filter expression using Zilliz syntax. "
-            "Examples: "
-            "'year == 2023', "
-            "'paper_id == \"uuid-here\"', "
-            "'year >= 2020 AND year <= 2023', "
-            "'json_contains(collection_names, \"AI\")'"
-        )
+        description=("Metadata filter expression using Zilliz syntax.")
     )
     limit: int = Field(
         default=10,
@@ -42,27 +35,48 @@ class MetadataRetrieverInput(BaseModel):
 
 
 class MetadataRetrieverTool(BaseTool):
-    """Tool for retrieving chunks using metadata filters only.
+    """Retrieve document chunks using metadata-only filtering.
 
-    This tool filters chunks by metadata fields without performing semantic similarity
-    search. More efficient when you know exactly what you're looking for based on
-    metadata.
+    This tool performs structured retrieval using metadata fields and does NOT
+    use vector similarity or relevance ranking. Results are returned in storage
+    order and are best suited for exact-match or constrained queries.
 
-    Use cases:
-    - Get all chunks from a specific paper
-    - Find chunks from a specific year or venue
-    - Filter by author, collection, or section
-    - Retrieve chunks matching complex metadata criteria
+    Typical use cases:
+    - Retrieve all chunks belonging to a specific paper or document
+    - Filter content by year, venue, author, or section
+    - Fetch sections or ranges of chunks using pagination
+    - Apply complex boolean metadata expressions supported by Zilliz
+
+    Not recommended when:
+    - The query is semantic or exploratory in nature
+    - Relevance ranking or similarity scoring is required
     """
 
     name = "metadata_search"
-    description = (
-        "Retrieve chunks by filtering metadata fields without semantic search. "
-        "Use this when you need chunks matching specific metadata criteria "
-        "(year, venue, paper_id, collection, section, etc.) without relevance ranking. "
-        "More efficient than semantic search for known metadata values. "
-    )
     input_schema = MetadataRetrieverInput
+    description = """Structured metadata-only retrieval over document chunks. No semantic search and no relevance ranking; results follow storage order.
+
+Use when:
+- You know exact metadata constraints (paper, year, venue, section)
+- You need deterministic or paginated access to chunks
+- You want efficient filtering without vector similarity
+
+Do NOT use when:
+- The query is semantic or exploratory
+- Relevance ranking or similarity scoring is needed
+
+Metadata filtering:
+- Supported fields: paper_id, paper_title, authors, venue, year, section_name, section_index, chunk_index, chunk_id
+- Do not invent field names.
+
+Filter syntax:
+- Zilliz boolean expressions
+- Operators: AND / OR / NOT
+- String values must use double quotes
+
+Example:
+paper_id == "abc123" AND section_name == "Methods"
+"""
 
     async def arun(
         self,
@@ -92,7 +106,6 @@ class MetadataRetrieverTool(BaseTool):
                     "authors",
                     "venue",
                     "year",
-                    "collection_names",
                     "section_name",
                     "section_index",
                     "chunk_index",

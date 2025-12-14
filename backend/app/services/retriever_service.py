@@ -141,6 +141,7 @@ class ZillizRetriever(BaseRetriever):
                     id_=node_id,
                     text=chunk_content,
                     metadata={
+                        "chunk_id": node_id,
                         "paper_id": paper_id,
                         "paper_title": paper_title,
                         "authors": authors,
