@@ -82,7 +82,6 @@ class ContentPartBuilder:
             ):
                 # Already wrapped or sub-agent tool result, use as is
                 self.current_data["output"] = delta
-                print(delta)
             elif isinstance(delta, str):
                 self.current_data["output"] = {"type": "text", "value": delta}
             else:

@@ -181,19 +181,28 @@ class RAGService:
         query: str,
         collection_names: list[str] | None = None,
         top_k: int = 10,
+        metadata_filters: str | None = None,
     ) -> list[dict[str, Any]]:
         """Retrieve relevant chunks without synthesis.
 
         Args:
-            query: Search query
+            query: Search query (can be empty string if only filtering by metadata)
             collection_names: Optional list of collection names to filter by
             top_k: Maximum number of chunks to retrieve (default: 10)
+            metadata_filters: Optional filter expression string (e.g., 'year == 2023')
 
         Returns:
             List of retrieved chunks with metadata
         """
-        if not query or not query.strip():
-            logger.warning("Empty query provided to retrieve_context_only")
+        # Allow empty query if filters are provided
+        if (
+            (not query or not query.strip())
+            and not metadata_filters
+            and not collection_names
+        ):
+            logger.warning(
+                "Empty query provided without any filters to retrieve_context_only"
+            )
             return []
 
         try:
@@ -201,6 +210,7 @@ class RAGService:
             retriever = ZillizRetriever(
                 collection_names=collection_names,
                 top_k=top_k,
+                metadata_filters=metadata_filters,
             )
 
             # Retrieve chunks

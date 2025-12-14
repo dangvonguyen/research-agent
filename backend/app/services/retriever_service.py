@@ -23,16 +23,19 @@ class ZillizRetriever(BaseRetriever):
         self,
         collection_names: list[str] | None = None,
         top_k: int = 10,
+        metadata_filters: str | None = None,
     ):
         """Initialize ZillizRetriever.
 
         Args:
             collection_names: Optional list of collection names to filter by
             top_k: Maximum number of results to return (default: 10)
+            metadata_filters: Optional filter expression string (e.g., 'year == 2023')
         """
         super().__init__()
         self.collection_names = collection_names
         self.top_k = top_k
+        self.metadata_filters = metadata_filters
 
     async def _aretrieve(self, query_bundle: QueryBundle) -> list[NodeWithScore]:
         """Retrieve relevant chunks asynchronously.
@@ -45,20 +48,29 @@ class ZillizRetriever(BaseRetriever):
         """
         query_text = query_bundle.query_str
 
-        if not query_text or not query_text.strip():
-            logger.warning("Empty query provided to retriever")
-            return []
-
         try:
-            # Generate embedding for query
-            query_embedding = await embedding_service.generate_embedding(query_text)
+            # Generate embedding for query, or use zero vector if query is empty
+            if query_text and query_text.strip():
+                query_embedding = await embedding_service.generate_embedding(query_text)
+                if not query_embedding:
+                    logger.warning("Failed to generate query embedding")
+                    return []
+            else:
+                # Empty query but filters provided - use zero vector
+                # Import here to avoid circular dependency
+                from app.core.config import settings
 
-            if not query_embedding:
-                logger.warning("Failed to generate query embedding")
-                return []
+                query_embedding = [0.0] * settings.ZILLIZ_VECTOR_DIMENSION
+                logger.info(
+                    "Using zero vector for empty query with filters: %s",
+                    self.metadata_filters or self.collection_names,
+                )
 
-            # Build filter expression for collection filtering
+            # Build filter expression
             filter_expr = None
+
+            # Build collection name filter if provided
+            collection_filter = None
             if self.collection_names:
                 # Build JSON filter for collection_names array field
                 # Format: json_contains(collection_names, '"collection_name"')
@@ -66,7 +78,22 @@ class ZillizRetriever(BaseRetriever):
                     f'json_contains(collection_names, \\"{name}\\")'
                     for name in self.collection_names
                 ]
-                filter_expr = " || ".join(collection_filters)
+                if len(collection_filters) == 1:
+                    collection_filter = collection_filters[0]
+                else:
+                    collection_filter = f"({' || '.join(collection_filters)})"
+
+            # Use metadata_filters directly as provided by agent (unchanged)
+            if self.metadata_filters:
+                if collection_filter:
+                    # Combine collection filter with metadata filter using AND
+                    filter_expr = f"({collection_filter}) && ({self.metadata_filters})"
+                else:
+                    # Use metadata filter directly
+                    filter_expr = self.metadata_filters
+            elif collection_filter:
+                # Use collection filter only
+                filter_expr = collection_filter
 
             # Search Zilliz
             search_results = zilliz_service.search(
