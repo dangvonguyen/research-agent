@@ -373,6 +373,15 @@ class CitationMetadata(BaseModel):
     relevance_score: float
 
 
+class RAGSearchResult(BaseModel):
+    """Result from RAG search operation."""
+
+    query: str
+    response: str
+    citations: list[CitationMetadata]
+    source_nodes: list[dict[str, Any]]
+
+
 class ConversationBase(BaseModel):
     """Base model for conversations."""
 
