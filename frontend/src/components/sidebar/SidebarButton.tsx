@@ -5,9 +5,15 @@ interface SidebarButtonProps {
   icon: ReactNode;
   label: string;
   onClick: () => void;
+  isActive?: boolean;
 }
 
-export const SidebarButton = ({ icon, label, onClick }: SidebarButtonProps) => {
+export const SidebarButton = ({
+  icon,
+  label,
+  onClick,
+  isActive = false,
+}: SidebarButtonProps) => {
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
@@ -18,6 +24,7 @@ export const SidebarButton = ({ icon, label, onClick }: SidebarButtonProps) => {
     <SidebarMenuItem>
       <SidebarMenuButton
         onClick={handleClick}
+        isActive={isActive}
         tooltip={label}
         className="group/button cursor-pointer"
       >
