@@ -1,4 +1,4 @@
-import type { Collection as APICollection } from "@/api";
+import type { CollectionResponse as APICollection } from "@/api";
 
 export interface Collection
   extends Omit<APICollection, "created_at" | "updated_at"> {

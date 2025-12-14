@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import apiClient from "@/api/client";
-import type { Collection } from "@/api/models";
 import {
   Button,
   Dialog,
@@ -11,12 +10,14 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  Label,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
   Textarea,
 } from "@/components/ui";
+import type { Collection } from "../types";
 
 interface SavePaperModalProps {
   isOpen: boolean;
@@ -77,7 +78,15 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
       const fetchCollections = async () => {
         try {
           const data = await apiClient.collections.list();
-          setCollections(data);
+          const formattedCollections: Collection[] = data.map((c) => ({
+            id: c.id,
+            name: c.name,
+            description: c.description || "",
+            paperCount: c.paper_count,
+            lastUpdated: c.updated_at,
+            paper_count: c.paper_count,
+          }));
+          setCollections(formattedCollections);
           // Set default collection to current collection if available
           if (collectionId && selectedCollectionIds.length === 0) {
             setSelectedCollectionIds([collectionId]);
@@ -225,129 +234,55 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto min-h-0">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="query" className="flex items-center gap-2">
-              <Search className="h-4 w-4" />
-              Write Query
-            </TabsTrigger>
-            <TabsTrigger value="url" className="flex items-center gap-2">
-              <LinkIcon className="h-4 w-4" />
-              Insert URL
-            </TabsTrigger>
-            <TabsTrigger value="upload" className="flex items-center gap-2">
-              <Upload className="h-4 w-4" />
-              Upload PDF
-            </TabsTrigger>
-          </TabsList>
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="query" className="flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Write Query
+              </TabsTrigger>
+              <TabsTrigger value="url" className="flex items-center gap-2">
+                <LinkIcon className="h-4 w-4" />
+                Insert URL
+              </TabsTrigger>
+              <TabsTrigger value="upload" className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                Upload PDF
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="query" className="space-y-4">
-            <Textarea
-              placeholder="Enter title, keywords, or question to search for papers..."
-              className="min-h-24"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-muted-foreground whitespace-nowrap">
-                Max Result:
-              </label>
-              <Input
-                type="number"
-                min="1"
-                value={maxResult}
-                onChange={(e) => setMaxResult(parseInt(e.target.value) || 1)}
-                className="w-20"
+            <TabsContent value="query" className="space-y-4">
+              <Textarea
+                placeholder="Enter title, keywords, or question to search for papers..."
+                className="min-h-24"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
               />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Select Collections (optional, multiple allowed)
-              </label>
-              <div className="border border-border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
-                {collections.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No collections available
-                  </p>
-                ) : (
-                  collections.map((collection) => (
-                    <label
-                      key={collection.id}
-                      className="flex items-center space-x-2 cursor-pointer hover:bg-secondary p-2 rounded transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedCollectionIds.includes(collection.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedCollectionIds([
-                              ...selectedCollectionIds,
-                              collection.id,
-                            ]);
-                          } else {
-                            setSelectedCollectionIds(
-                              selectedCollectionIds.filter(
-                                (id) => id !== collection.id,
-                              ),
-                            );
-                          }
-                        }}
-                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                      />
-                      <span className="text-sm">{collection.name}</span>
-                      {collection.description && (
-                        <span className="text-xs text-muted-foreground">
-                          - {collection.description}
-                        </span>
-                      )}
-                    </label>
-                  ))
-                )}
-              </div>
-              {selectedCollectionIds.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {selectedCollectionIds.length} collection
-                  {selectedCollectionIds.length !== 1 ? "s" : ""} selected
-                </p>
-              )}
-            </div>
-            <Button
-              className="w-full"
-              onClick={handleGetPapers}
-              disabled={isLoading || !query.trim()}
-            >
-              {isLoading ? "Searching..." : "Search Papers"}
-            </Button>
-          </TabsContent>
-
-          <TabsContent value="url" className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <Label
+                  htmlFor="query-max-result"
+                  className="text-sm text-muted-foreground whitespace-nowrap"
+                >
+                  Max Result:
+                </Label>
                 <Input
-                  placeholder="Paste paper URL (arXiv, DOI, etc.)"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  className="flex-1"
+                  id="query-max-result"
+                  type="number"
+                  min="1"
+                  value={maxResult}
+                  onChange={(e) =>
+                    setMaxResult(parseInt(e.target.value, 10) || 1)
+                  }
+                  className="w-20"
                 />
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-muted-foreground whitespace-nowrap">
-                    Max Result:
-                  </label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={maxResult}
-                    onChange={(e) =>
-                      setMaxResult(parseInt(e.target.value) || 5)
-                    }
-                    className="w-20"
-                  />
-                </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">
+                <Label className="text-sm font-medium">
                   Select Collections (optional, multiple allowed)
-                </label>
+                </Label>
                 <div className="border border-border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
                   {collections.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
@@ -398,235 +333,326 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                 )}
               </div>
               <Button
+                className="w-full"
                 onClick={handleGetPapers}
-                disabled={isLoading || !url.trim()}
-                className="w-full"
+                disabled={isLoading || !query.trim()}
               >
-                {isLoading ? "Processing..." : "Get Papers"}
+                {isLoading ? "Searching..." : "Search Papers"}
               </Button>
-            </div>
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="upload" className="space-y-4">
-            <div
-              className="rounded-lg border-2 border-dashed border-border p-8 text-center cursor-pointer hover:border-primary/60 hover:bg-accent/40 transition-colors"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-              <p className="font-medium text-foreground">
-                Drag and drop your PDF here
-              </p>
-              <Input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    setSelectedFile(file);
-                  }
-                }}
-              />
-              {selectedFile && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  {selectedFile.name}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-4 border-t pt-4">
-              <h3 className="font-semibold">Metadata</h3>
-              <div className="grid gap-3">
-                <Input
-                  placeholder="Title"
-                  value={metadata.title}
-                  onChange={(e) =>
-                    setMetadata({ ...metadata, title: e.target.value })
-                  }
-                />
-                <Input
-                  placeholder="Authors"
-                  value={metadata.authors}
-                  onChange={(e) =>
-                    setMetadata({ ...metadata, authors: e.target.value })
-                  }
-                />
-                <Textarea
-                  placeholder="Abstract"
-                  value={metadata.abstract}
-                  onChange={(e) =>
-                    setMetadata({ ...metadata, abstract: e.target.value })
-                  }
-                />
-                <div className="grid grid-cols-2 gap-2">
+            <TabsContent value="url" className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex gap-2">
                   <Input
-                    placeholder="DOI"
-                    value={metadata.doi}
-                    onChange={(e) =>
-                      setMetadata({ ...metadata, doi: e.target.value })
-                    }
+                    placeholder="Paste paper URL (arXiv, DOI, etc.)"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    className="flex-1"
                   />
-                  <Input
-                    placeholder="Year"
-                    type="number"
-                    value={metadata.year}
-                    onChange={(e) =>
-                      setMetadata({ ...metadata, year: e.target.value })
-                    }
-                  />
+                  <div className="flex items-center gap-2">
+                    <Label
+                      htmlFor="url-max-result"
+                      className="text-sm text-muted-foreground whitespace-nowrap"
+                    >
+                      Max Result:
+                    </Label>
+                    <Input
+                      id="url-max-result"
+                      type="number"
+                      min="1"
+                      value={maxResult}
+                      onChange={(e) =>
+                        setMaxResult(parseInt(e.target.value, 10) || 5)
+                      }
+                      className="w-20"
+                    />
+                  </div>
                 </div>
-                <Input
-                  placeholder="Keywords (comma-separated)"
-                  value={metadata.keywords}
-                  onChange={(e) =>
-                    setMetadata({ ...metadata, keywords: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Select Collections (multiple allowed)
-                </label>
-                <div className="border border-border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
-                  {collections.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      No collections available
-                    </p>
-                  ) : (
-                    collections.map((collection) => (
-                      <label
-                        key={collection.id}
-                        className="flex items-center space-x-2 cursor-pointer hover:bg-secondary p-2 rounded transition-colors"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedCollectionIds.includes(
-                            collection.id,
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    Select Collections (optional, multiple allowed)
+                  </Label>
+                  <div className="border border-border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                    {collections.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No collections available
+                      </p>
+                    ) : (
+                      collections.map((collection) => (
+                        <label
+                          key={collection.id}
+                          className="flex items-center space-x-2 cursor-pointer hover:bg-secondary p-2 rounded transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedCollectionIds.includes(
+                              collection.id,
+                            )}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedCollectionIds([
+                                  ...selectedCollectionIds,
+                                  collection.id,
+                                ]);
+                              } else {
+                                setSelectedCollectionIds(
+                                  selectedCollectionIds.filter(
+                                    (id) => id !== collection.id,
+                                  ),
+                                );
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                          />
+                          <span className="text-sm">{collection.name}</span>
+                          {collection.description && (
+                            <span className="text-xs text-muted-foreground">
+                              - {collection.description}
+                            </span>
                           )}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedCollectionIds([
-                                ...selectedCollectionIds,
-                                collection.id,
-                              ]);
-                            } else {
-                              setSelectedCollectionIds(
-                                selectedCollectionIds.filter(
-                                  (id) => id !== collection.id,
-                                ),
-                              );
-                            }
-                          }}
-                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                        />
-                        <span className="text-sm">{collection.name}</span>
-                        {collection.description && (
-                          <span className="text-xs text-muted-foreground">
-                            - {collection.description}
-                          </span>
-                        )}
-                      </label>
-                    ))
+                        </label>
+                      ))
+                    )}
+                  </div>
+                  {selectedCollectionIds.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {selectedCollectionIds.length} collection
+                      {selectedCollectionIds.length !== 1 ? "s" : ""} selected
+                    </p>
                   )}
                 </div>
-                {selectedCollectionIds.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    {selectedCollectionIds.length} collection
-                    {selectedCollectionIds.length !== 1 ? "s" : ""} selected
+                <Button
+                  onClick={handleGetPapers}
+                  disabled={isLoading || !url.trim()}
+                  className="w-full"
+                >
+                  {isLoading ? "Processing..." : "Get Papers"}
+                </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="upload" className="space-y-4">
+              <button
+                type="button"
+                className="w-full rounded-lg border-2 border-dashed border-border p-8 text-center cursor-pointer hover:border-primary/60 hover:bg-accent/40 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+                <p className="font-medium text-foreground">
+                  Drag and drop your PDF here
+                </p>
+                <Input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setSelectedFile(file);
+                    }
+                  }}
+                />
+                {selectedFile && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {selectedFile.name}
                   </p>
                 )}
-              </div>
-              <Button
-                onClick={async () => {
-                  if (!selectedFile) {
-                    toast.error("Please select a PDF file");
-                    return;
-                  }
+              </button>
 
-                  if (selectedCollectionIds.length === 0) {
-                    toast.error("Please select at least one collection");
-                    return;
-                  }
-
-                  try {
-                    setIsLoading(true);
-                    const response = await apiClient.papers.upload(
-                      selectedFile,
-                      {
-                        title: metadata.title || undefined,
-                        authors: metadata.authors || undefined,
-                        abstract: metadata.abstract || undefined,
-                        doi: metadata.doi || undefined,
-                        year: metadata.year
-                          ? parseInt(metadata.year)
-                          : undefined,
-                        keywords: metadata.keywords || undefined,
-                      },
-                    );
-
-                    // Add paper to selected collections
-                    const paperId = response.created_ids[0];
-                    let totalAdded = 0;
-                    for (const collectionId of selectedCollectionIds) {
-                      try {
-                        await apiClient.collections.addPaper(
-                          collectionId,
-                          paperId,
-                        );
-                        totalAdded++;
-                      } catch (error) {
-                        console.error(
-                          `Failed to add paper to collection ${collectionId}:`,
-                          error,
-                        );
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="font-semibold">Metadata</h3>
+                <div className="grid gap-3">
+                  <Input
+                    placeholder="Title"
+                    value={metadata.title}
+                    onChange={(e) =>
+                      setMetadata({ ...metadata, title: e.target.value })
+                    }
+                  />
+                  <Input
+                    placeholder="Authors"
+                    value={metadata.authors}
+                    onChange={(e) =>
+                      setMetadata({ ...metadata, authors: e.target.value })
+                    }
+                  />
+                  <Textarea
+                    placeholder="Abstract"
+                    value={metadata.abstract}
+                    onChange={(e) =>
+                      setMetadata({ ...metadata, abstract: e.target.value })
+                    }
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      placeholder="DOI"
+                      value={metadata.doi}
+                      onChange={(e) =>
+                        setMetadata({ ...metadata, doi: e.target.value })
                       }
+                    />
+                    <Input
+                      placeholder="Year"
+                      type="number"
+                      value={metadata.year}
+                      onChange={(e) =>
+                        setMetadata({ ...metadata, year: e.target.value })
+                      }
+                    />
+                  </div>
+                  <Input
+                    placeholder="Keywords (comma-separated)"
+                    value={metadata.keywords}
+                    onChange={(e) =>
+                      setMetadata({ ...metadata, keywords: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    Select Collections (multiple allowed)
+                  </Label>
+                  <div className="border border-border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                    {collections.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No collections available
+                      </p>
+                    ) : (
+                      collections.map((collection) => (
+                        <label
+                          key={collection.id}
+                          className="flex items-center space-x-2 cursor-pointer hover:bg-secondary p-2 rounded transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedCollectionIds.includes(
+                              collection.id,
+                            )}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedCollectionIds([
+                                  ...selectedCollectionIds,
+                                  collection.id,
+                                ]);
+                              } else {
+                                setSelectedCollectionIds(
+                                  selectedCollectionIds.filter(
+                                    (id) => id !== collection.id,
+                                  ),
+                                );
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                          />
+                          <span className="text-sm">{collection.name}</span>
+                          {collection.description && (
+                            <span className="text-xs text-muted-foreground">
+                              - {collection.description}
+                            </span>
+                          )}
+                        </label>
+                      ))
+                    )}
+                  </div>
+                  {selectedCollectionIds.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {selectedCollectionIds.length} collection
+                      {selectedCollectionIds.length !== 1 ? "s" : ""} selected
+                    </p>
+                  )}
+                </div>
+                <Button
+                  onClick={async () => {
+                    if (!selectedFile) {
+                      toast.error("Please select a PDF file");
+                      return;
                     }
 
-                    if (totalAdded > 0) {
-                      toast.success(
-                        `Successfully uploaded paper and added to ${totalAdded} collection(s)`,
+                    if (selectedCollectionIds.length === 0) {
+                      toast.error("Please select at least one collection");
+                      return;
+                    }
+
+                    try {
+                      setIsLoading(true);
+                      const response = await apiClient.papers.upload(
+                        selectedFile,
+                        {
+                          title: metadata.title || undefined,
+                          authors: metadata.authors || undefined,
+                          abstract: metadata.abstract || undefined,
+                          doi: metadata.doi || undefined,
+                          year: metadata.year
+                            ? parseInt(metadata.year, 10)
+                            : undefined,
+                          keywords: metadata.keywords || undefined,
+                        },
                       );
-                    } else {
-                      toast.success("Paper uploaded successfully");
-                    }
 
-                    onClose();
-                    // Reset form
-                    setSelectedFile(null);
-                    setMetadata({
-                      title: "",
-                      authors: "",
-                      abstract: "",
-                      doi: "",
-                      year: "",
-                      keywords: "",
-                    });
-                    setSelectedCollectionIds(
-                      collectionId ? [collectionId] : [],
-                    );
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = "";
+                      // Add paper to selected collections
+                      const paperId = response.created_ids[0];
+                      let totalAdded = 0;
+                      for (const collectionId of selectedCollectionIds) {
+                        try {
+                          await apiClient.collections.addPaper(
+                            collectionId,
+                            paperId,
+                          );
+                          totalAdded++;
+                        } catch (error) {
+                          console.error(
+                            `Failed to add paper to collection ${collectionId}:`,
+                            error,
+                          );
+                        }
+                      }
+
+                      if (totalAdded > 0) {
+                        toast.success(
+                          `Successfully uploaded paper and added to ${totalAdded} collection(s)`,
+                        );
+                      } else {
+                        toast.success("Paper uploaded successfully");
+                      }
+
+                      onClose();
+                      // Reset form
+                      setSelectedFile(null);
+                      setMetadata({
+                        title: "",
+                        authors: "",
+                        abstract: "",
+                        doi: "",
+                        year: "",
+                        keywords: "",
+                      });
+                      setSelectedCollectionIds(
+                        collectionId ? [collectionId] : [],
+                      );
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    } catch (error) {
+                      console.error("Failed to upload paper:", error);
+                      toast.error("Failed to upload paper");
+                    } finally {
+                      setIsLoading(false);
                     }
-                  } catch (error) {
-                    console.error("Failed to upload paper:", error);
-                    toast.error("Failed to upload paper");
-                  } finally {
-                    setIsLoading(false);
+                  }}
+                  disabled={
+                    isLoading ||
+                    !selectedFile ||
+                    selectedCollectionIds.length === 0
                   }
-                }}
-                disabled={
-                  isLoading ||
-                  !selectedFile ||
-                  selectedCollectionIds.length === 0
-                }
-                className="w-full"
-              >
-                {isLoading ? "Uploading..." : "Upload Paper"}
-              </Button>
-            </div>
-          </TabsContent>
-        </Tabs>
+                  className="w-full"
+                >
+                  {isLoading ? "Uploading..." : "Upload Paper"}
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
 
         <div className="flex gap-2 pt-4 border-t mt-4">

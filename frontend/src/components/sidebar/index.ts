@@ -1,7 +1,6 @@
 export { useSidebarActions } from "./hooks/use-sidebar-actions";
 export { useSidebarInteractions } from "./hooks/use-sidebar-interactions";
 
-export { CollectionsSection } from "./CollectionsSection";
 export { RecentChatsSection } from "./RecentChatsSection";
 export { SearchChatsDialog } from "./SearchChatsDialog";
 export { SidebarButton } from "./SidebarButton";

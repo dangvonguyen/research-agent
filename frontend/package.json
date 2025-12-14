@@ -8,9 +8,9 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "check": "biome check --write",
-    "generate:openapi": "npx openapi-typescript http://localhost:8000/api/v1/openapi.json -o src/api/openapi.gen.ts",
+    "generate:openapi": "pnpm dlx openapi-typescript http://localhost:8000/api/v1/openapi.json -o src/api/openapi.gen.ts",
     "generate:models": "tsx scripts/generate-models.ts",
-    "generate:all": "npm run generate:openapi && npm run generate:models"
+    "generate:all": "pnpm run generate:openapi && pnpm run generate:models"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
