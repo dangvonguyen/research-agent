@@ -242,7 +242,7 @@ function Chat({ id, initialMessages }: ChatProps) {
   };
 
   return (
-    <div className="w-full h-screen overflow-y-scroll scrollbar-thin">
+    <div className="w-full h-screen overflow-y-scroll scrollbar">
       <div
         className={cn(
           "grid w-full h-screen mx-auto px-8 max-w-208",
@@ -276,7 +276,7 @@ function Chat({ id, initialMessages }: ChatProps) {
                   </MessageAttachments>
                 )}
 
-                <MessageContent className="group-[.is-assistant]:w-full">
+                <MessageContent className="group-[.is-assistant]:w-full max-w-3xl">
                   {message.content.map((part, index) =>
                     renderContentPart(part, index, message),
                   )}

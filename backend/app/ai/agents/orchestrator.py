@@ -1,4 +1,4 @@
-"""Orchestrator Agent - coordinates specialized sub-agents."""
+"""Orchestrator Agent - coordinates RAG for research assistance."""
 
 from collections.abc import Callable
 
@@ -6,10 +6,10 @@ from llama_index.core.agent.workflow import FunctionAgent
 from llama_index.core.llms import LLM
 
 from app.ai.prompts import ORCHESTRATOR_AGENT_PROMPT
+from app.ai.tools.retrieval import DenseRetrievalTool
+from app.services.rag_service import RAGService
 
-from .calculator import CalculatorAgent
 from .registry import agent_registry
-from .weather import WeatherAgent
 
 
 def initialize_agent_registry() -> None:
@@ -18,20 +18,15 @@ def initialize_agent_registry() -> None:
     This registers all specialized agents that the orchestrator can delegate to.
     """
     # Register all available agents
-    agent_registry.register(CalculatorAgent)
-    agent_registry.register(WeatherAgent)
+    # agent_registry.register(AnyAgent)
 
 
 def create_orchestrator_agent(llm: LLM, event_callback: Callable) -> FunctionAgent:
     """Create the top-level orchestrator agent.
 
-    The orchestrator delegates to specialized sub-agents for domain-specific
-    tasks using the agent registry pattern. Sub-agents operate with isolated
-    context - they receive only the specific task routed to them, not the full
-    conversation history.
-
     Args:
         llm: Language model for the orchestrator
+        event_callback: Callback for streaming events
 
     Returns:
         Configured FunctionAgent for orchestration
@@ -41,10 +36,23 @@ def create_orchestrator_agent(llm: LLM, event_callback: Callable) -> FunctionAge
         initialize_agent_registry()
 
     # Get delegation tools from registry
-    tools = agent_registry.create_delegation_tools_with_streaming(llm, event_callback)
+    delegation_tools = agent_registry.create_delegation_tools_with_streaming(
+        llm=llm, event_callback=event_callback
+    )
+
+    # Create RAG service instance
+    rag_service = RAGService(llm=llm)
+
+    # Create retrieval tool
+    dense_retrieval_tool = DenseRetrievalTool(rag_service=rag_service)
+
+    # Convert to LlamaIndex tools
+    tools = [
+        dense_retrieval_tool.as_tool(),
+    ]
 
     return FunctionAgent(
         system_prompt=ORCHESTRATOR_AGENT_PROMPT,
-        tools=tools,
+        tools=delegation_tools + tools,
         llm=llm,
     )
