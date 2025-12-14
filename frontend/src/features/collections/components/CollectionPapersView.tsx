@@ -142,7 +142,7 @@ export function CollectionPapersView({
   // Initial fetch when collectionId changes
   useEffect(() => {
     fetchData(true);
-  }, [collectionId]);
+  }, [fetchData]);
 
   // Poll for updates every 5 seconds when viewing a collection
   useEffect(() => {

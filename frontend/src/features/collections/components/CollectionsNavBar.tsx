@@ -3,9 +3,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui";
 import {
   NavigationMenu,
-  NavigationMenuList,
   NavigationMenuItem,
   NavigationMenuLink,
+  NavigationMenuList,
 } from "@/components/ui/navigation-menu";
 import { SavePaperModal } from "./SavePaperModal";
 

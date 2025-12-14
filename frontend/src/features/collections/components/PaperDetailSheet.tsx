@@ -28,7 +28,7 @@ interface PaperDetailSheetProps {
 export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>(
-    []
+    [],
   );
   const [isAddToCollectionOpen, setIsAddToCollectionOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,7 +70,7 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
     setSelectedCollectionIds((prev) =>
       prev.includes(collectionId)
         ? prev.filter((id) => id !== collectionId)
-        : [...prev, collectionId]
+        : [...prev, collectionId],
     );
   };
 
@@ -96,7 +96,7 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
         } catch (error) {
           console.error(
             `Failed to add paper to collection ${collectionId}:`,
-            error
+            error,
           );
           errorCount++;
         }
@@ -104,7 +104,7 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
 
       if (successCount > 0) {
         toast.success(
-          `Successfully added paper to ${successCount} collection(s)`
+          `Successfully added paper to ${successCount} collection(s)`,
         );
         setIsAddToCollectionOpen(false);
         // Optionally refresh the paper data or trigger a callback
@@ -263,9 +263,9 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
                 Collections
               </p>
               <div className="flex flex-wrap gap-2">
-                {paperCollectionNames.map((name, index) => (
+                {paperCollectionNames.map((name) => (
                   <div
-                    key={`${name}-${index}`}
+                    key={name}
                     className="rounded-md border border-border bg-muted/50 px-3 py-1.5"
                   >
                     <span className="text-sm text-foreground">{name}</span>
@@ -344,21 +344,14 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
               ) : (
                 collections.map((collection) => {
                   const isSelected = selectedCollectionIds.includes(
-                    collection.id
+                    collection.id,
                   );
                   return (
-                    <div
+                    <Button
                       key={collection.id}
-                      className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent cursor-pointer"
+                      variant="ghost"
+                      className="p-2 w-full"
                       onClick={() => handleToggleCollection(collection.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          handleToggleCollection(collection.id);
-                        }
-                      }}
-                      role="button"
-                      tabIndex={0}
                       aria-label={`${
                         isSelected ? "Remove from" : "Add to"
                       } collection ${collection.name}`}
@@ -372,7 +365,7 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
                       >
                         {isSelected && <Check className="h-3 w-3" />}
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 text-left">
                         <span className="text-sm font-medium block">
                           {collection.name}
                         </span>
@@ -382,7 +375,7 @@ export function PaperDetailSheet({ paper, onClose }: PaperDetailSheetProps) {
                           </p>
                         )}
                       </div>
-                    </div>
+                    </Button>
                   );
                 })
               )}

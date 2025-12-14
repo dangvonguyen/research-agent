@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  Label,
   Tabs,
   TabsContent,
   TabsList,
@@ -30,7 +31,7 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
   const [query, setQuery] = useState("");
   const [maxResult, setMaxResult] = useState(5);
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>(
-    collectionId ? [collectionId] : []
+    collectionId ? [collectionId] : [],
   );
   const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -130,7 +131,7 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
       });
 
       toast.success(
-        "Crawler job created successfully. Papers will be added to the collection when ready."
+        "Crawler job created successfully. Papers will be added to the collection when ready.",
       );
 
       // Poll for job completion and add papers to collections
@@ -158,7 +159,7 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                   try {
                     await apiClient.collections.addPaper(
                       collectionId,
-                      paper.id
+                      paper.id,
                     );
                     totalAdded++;
                   } catch (error) {
@@ -167,7 +168,7 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                       error instanceof Error ? error.message : String(error);
                     if (!errorMsg.includes("already")) {
                       errors.push(
-                        `Failed to add paper "${paper.title}" to collection`
+                        `Failed to add paper "${paper.title}" to collection`,
                       );
                     }
                   }
@@ -176,20 +177,20 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
 
               if (totalAdded > 0) {
                 toast.success(
-                  `Successfully added ${jobPapers.length} paper(s) to ${selectedCollectionIds.length} collection(s)`
+                  `Successfully added ${jobPapers.length} paper(s) to ${selectedCollectionIds.length} collection(s)`,
                 );
               } else if (errors.length > 0) {
                 toast.warning(
-                  "Some papers may already be in the selected collections"
+                  "Some papers may already be in the selected collections",
                 );
               } else {
                 toast.info(
-                  "Papers were created but may already be in the collections"
+                  "Papers were created but may already be in the collections",
                 );
               }
             } else {
               toast.success(
-                `Successfully found ${jobPapers.length} paper(s). Papers are available in your library.`
+                `Successfully found ${jobPapers.length} paper(s). Papers are available in your library.`,
               );
             }
 
@@ -202,7 +203,7 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
             setSelectedCollectionIds(collectionId ? [collectionId] : []);
           } else if (job.status === "failed") {
             toast.error(
-              `Crawler job failed: ${job.error_message || "Unknown error"}`
+              `Crawler job failed: ${job.error_message || "Unknown error"}`,
             );
             setIsLoading(false);
           } else {
@@ -261,21 +262,27 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                 onChange={(e) => setQuery(e.target.value)}
               />
               <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground whitespace-nowrap">
+                <Label
+                  htmlFor="query-max-result"
+                  className="text-sm text-muted-foreground whitespace-nowrap"
+                >
                   Max Result:
-                </label>
+                </Label>
                 <Input
+                  id="query-max-result"
                   type="number"
                   min="1"
                   value={maxResult}
-                  onChange={(e) => setMaxResult(parseInt(e.target.value) || 1)}
+                  onChange={(e) =>
+                    setMaxResult(parseInt(e.target.value, 10) || 1)
+                  }
                   className="w-20"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">
+                <Label className="text-sm font-medium">
                   Select Collections (optional, multiple allowed)
-                </label>
+                </Label>
                 <div className="border border-border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
                   {collections.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
@@ -290,7 +297,7 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                         <input
                           type="checkbox"
                           checked={selectedCollectionIds.includes(
-                            collection.id
+                            collection.id,
                           )}
                           onChange={(e) => {
                             if (e.target.checked) {
@@ -301,8 +308,8 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                             } else {
                               setSelectedCollectionIds(
                                 selectedCollectionIds.filter(
-                                  (id) => id !== collection.id
-                                )
+                                  (id) => id !== collection.id,
+                                ),
                               );
                             }
                           }}
@@ -344,24 +351,28 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                     className="flex-1"
                   />
                   <div className="flex items-center gap-2">
-                    <label className="text-sm text-muted-foreground whitespace-nowrap">
+                    <Label
+                      htmlFor="url-max-result"
+                      className="text-sm text-muted-foreground whitespace-nowrap"
+                    >
                       Max Result:
-                    </label>
+                    </Label>
                     <Input
+                      id="url-max-result"
                       type="number"
                       min="1"
                       value={maxResult}
                       onChange={(e) =>
-                        setMaxResult(parseInt(e.target.value) || 5)
+                        setMaxResult(parseInt(e.target.value, 10) || 5)
                       }
                       className="w-20"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">
+                  <Label className="text-sm font-medium">
                     Select Collections (optional, multiple allowed)
-                  </label>
+                  </Label>
                   <div className="border border-border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
                     {collections.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
@@ -376,7 +387,7 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                           <input
                             type="checkbox"
                             checked={selectedCollectionIds.includes(
-                              collection.id
+                              collection.id,
                             )}
                             onChange={(e) => {
                               if (e.target.checked) {
@@ -387,8 +398,8 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                               } else {
                                 setSelectedCollectionIds(
                                   selectedCollectionIds.filter(
-                                    (id) => id !== collection.id
-                                  )
+                                    (id) => id !== collection.id,
+                                  ),
                                 );
                               }
                             }}
@@ -422,8 +433,9 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
             </TabsContent>
 
             <TabsContent value="upload" className="space-y-4">
-              <div
-                className="rounded-lg border-2 border-dashed border-border p-8 text-center cursor-pointer hover:border-primary/60 hover:bg-accent/40 transition-colors"
+              <button
+                type="button"
+                className="w-full rounded-lg border-2 border-dashed border-border p-8 text-center cursor-pointer hover:border-primary/60 hover:bg-accent/40 transition-colors"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
@@ -447,7 +459,7 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                     {selectedFile.name}
                   </p>
                 )}
-              </div>
+              </button>
 
               <div className="space-y-4 border-t pt-4">
                 <h3 className="font-semibold">Metadata</h3>
@@ -499,9 +511,9 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">
+                  <Label className="text-sm font-medium">
                     Select Collections (multiple allowed)
-                  </label>
+                  </Label>
                   <div className="border border-border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
                     {collections.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
@@ -516,7 +528,7 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                           <input
                             type="checkbox"
                             checked={selectedCollectionIds.includes(
-                              collection.id
+                              collection.id,
                             )}
                             onChange={(e) => {
                               if (e.target.checked) {
@@ -527,8 +539,8 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                               } else {
                                 setSelectedCollectionIds(
                                   selectedCollectionIds.filter(
-                                    (id) => id !== collection.id
-                                  )
+                                    (id) => id !== collection.id,
+                                  ),
                                 );
                               }
                             }}
@@ -573,10 +585,10 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                           abstract: metadata.abstract || undefined,
                           doi: metadata.doi || undefined,
                           year: metadata.year
-                            ? parseInt(metadata.year)
+                            ? parseInt(metadata.year, 10)
                             : undefined,
                           keywords: metadata.keywords || undefined,
-                        }
+                        },
                       );
 
                       // Add paper to selected collections
@@ -586,20 +598,20 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                         try {
                           await apiClient.collections.addPaper(
                             collectionId,
-                            paperId
+                            paperId,
                           );
                           totalAdded++;
                         } catch (error) {
                           console.error(
                             `Failed to add paper to collection ${collectionId}:`,
-                            error
+                            error,
                           );
                         }
                       }
 
                       if (totalAdded > 0) {
                         toast.success(
-                          `Successfully uploaded paper and added to ${totalAdded} collection(s)`
+                          `Successfully uploaded paper and added to ${totalAdded} collection(s)`,
                         );
                       } else {
                         toast.success("Paper uploaded successfully");
@@ -617,7 +629,7 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
                         keywords: "",
                       });
                       setSelectedCollectionIds(
-                        collectionId ? [collectionId] : []
+                        collectionId ? [collectionId] : [],
                       );
                       if (fileInputRef.current) {
                         fileInputRef.current.value = "";
