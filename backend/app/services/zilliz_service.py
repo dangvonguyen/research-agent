@@ -403,6 +403,72 @@ class ZillizService:
                 str(e),
             )
 
+    def query(
+        self,
+        filter: str,
+        limit: int = 10,
+        offset: int = 0,
+        output_fields: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """
+        Query chunks using metadata filters only. More efficient than search() when
+        you only need to filter by metadata.
+
+        Args:
+            filter: Filter expression (e.g., 'paper_id == "uuid"')
+            limit: Maximum number of results to return
+            offset: Number of results to skip
+            output_fields: Optional list of fields to return in results
+
+        Returns:
+            List of query results with metadata
+        """
+        if not self.endpoint or not self.token:
+            logger.warning("Zilliz not configured, returning empty query results")
+            return []
+
+        try:
+            self._ensure_connected()
+            if not self.client:
+                logger.warning(
+                    "Zilliz client not available, returning empty query results"
+                )
+                return []
+
+            self._ensure_collection()
+
+            # Default output fields
+            if output_fields is None:
+                output_fields = [
+                    "chunk_id",
+                    "paper_id",
+                    "paper_title",
+                    "authors",
+                    "venue",
+                    "year",
+                    "collection_names",
+                    "section_name",
+                    "section_index",
+                    "chunk_index",
+                    "chunk_content",
+                    "image_path",
+                ]
+
+            # Perform query using MilvusClient
+            results = self.client.query(
+                collection_name=self.collection_name,
+                filter=filter,
+                output_fields=output_fields,
+                limit=limit,
+                offset=offset,
+            )
+
+            return results
+
+        except Exception as e:
+            logger.exception("Failed to query Zilliz: %s", str(e))
+            return []
+
     def search(
         self,
         query_vector: list[float],
