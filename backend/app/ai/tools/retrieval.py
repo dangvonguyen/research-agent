@@ -23,6 +23,15 @@ class DenseRetrievalInput(BaseModel):
         default=None,
         description="Optional list of collection names to filter the retrieval",
     )
+    metadata_filters: str | None = Field(
+        default=None,
+        description=(
+            "Optional Milvus filter expression string. "
+            "Examples: 'year == 2023', 'venue == \"ACL\"', 'year == 2023 AND venue == \"ACL\"'. "
+            "Supported fields: paper_id, paper_title, venue, year, section_name, section_index, chunk_index. "
+            "Logical operators must use Milvus syntax: AND, OR, NOT. String values require double quotes."
+        ),
+    )
 
 
 class DenseRetrievalTool(BaseTool):
@@ -40,6 +49,7 @@ class DenseRetrievalTool(BaseTool):
         "Use this tool when you need raw context from papers without an AI-generated answer. "
         "The tool performs semantic search and returns matching chunks with metadata "
         "(paper title, authors, venue, section name) and relevance scores. "
+        "You can filter results by collection names and/or metadata fields (year, venue, section_name, etc.). "
     )
     input_schema = DenseRetrievalInput
 
@@ -54,8 +64,9 @@ class DenseRetrievalTool(BaseTool):
     async def arun(
         self,
         query: str,
-        collection_names: list[str] | None = None,
         top_k: int = 10,
+        collection_names: list[str] | None = None,
+        metadata_filters: str | None = None,
     ) -> ToolOutput:
         """Retrieve relevant chunks without synthesis.
 
@@ -63,6 +74,7 @@ class DenseRetrievalTool(BaseTool):
             query: The query to retrieve relevant context for
             top_k: Maximum number of chunks to retrieve (default: 10)
             collection_names: Optional list of collection names to filter by
+            metadata_filters: Optional filter expression string (e.g., 'year == 2023')
 
         Returns:
             ToolOutput with JSON containing chunks and metadata
@@ -71,8 +83,9 @@ class DenseRetrievalTool(BaseTool):
             # Retrieve context only
             chunks = await self.rag_service.retrieve_chunks(
                 query=query,
-                collection_names=collection_names,
                 top_k=top_k,
+                collection_names=collection_names,
+                metadata_filters=metadata_filters,
             )
 
             # Format chunks for JSON output
@@ -104,10 +117,10 @@ class DenseRetrievalTool(BaseTool):
                 "num_chunks": len(formatted_chunks),
             }
 
-            logger.info(
+            logger.debug(
                 "DenseRetrievalTool completed: %d chunks for query: %s",
                 len(formatted_chunks),
-                query[:100],
+                query,
             )
 
             return ToolOutput(

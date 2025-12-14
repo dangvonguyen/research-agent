@@ -179,15 +179,17 @@ class RAGService:
     async def retrieve_chunks(
         self,
         query: str,
-        collection_names: list[str] | None = None,
         top_k: int = 10,
+        collection_names: list[str] | None = None,
+        metadata_filters: str | None = None,
     ) -> list[dict[str, Any]]:
         """Retrieve relevant chunks without synthesis.
 
         Args:
-            query: Search query
+            query: Search query (can be empty string if only filtering by metadata)
             collection_names: Optional list of collection names to filter by
             top_k: Maximum number of chunks to retrieve (default: 10)
+            metadata_filters: Optional filter expression string (e.g., 'year == 2023')
 
         Returns:
             List of retrieved chunks with metadata
@@ -199,8 +201,9 @@ class RAGService:
         try:
             # Create retriever
             retriever = ZillizRetriever(
-                collection_names=collection_names,
                 top_k=top_k,
+                collection_names=collection_names,
+                metadata_filters=metadata_filters,
             )
 
             # Retrieve chunks

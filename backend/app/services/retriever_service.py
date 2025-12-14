@@ -21,18 +21,21 @@ class ZillizRetriever(BaseRetriever):
 
     def __init__(
         self,
-        collection_names: list[str] | None = None,
         top_k: int = 10,
+        collection_names: list[str] | None = None,
+        metadata_filters: str | None = None,
     ):
         """Initialize ZillizRetriever.
 
         Args:
             collection_names: Optional list of collection names to filter by
             top_k: Maximum number of results to return (default: 10)
+            metadata_filters: Optional filter expression string (e.g., 'year == 2023')
         """
         super().__init__()
-        self.collection_names = collection_names
         self.top_k = top_k
+        self.collection_names = collection_names
+        self.metadata_filters = metadata_filters
 
     async def _aretrieve(self, query_bundle: QueryBundle) -> list[NodeWithScore]:
         """Retrieve relevant chunks asynchronously.
@@ -57,8 +60,11 @@ class ZillizRetriever(BaseRetriever):
                 logger.warning("Failed to generate query embedding")
                 return []
 
-            # Build filter expression for collection filtering
+            # Build filter expression
             filter_expr = None
+
+            # Build collection name filter if provided
+            collection_filter = None
             if self.collection_names:
                 # Build JSON filter for collection_names array field
                 # Format: json_contains(collection_names, '"collection_name"')
@@ -66,7 +72,22 @@ class ZillizRetriever(BaseRetriever):
                     f'json_contains(collection_names, \\"{name}\\")'
                     for name in self.collection_names
                 ]
-                filter_expr = " || ".join(collection_filters)
+                if len(collection_filters) == 1:
+                    collection_filter = collection_filters[0]
+                else:
+                    collection_filter = f"({' || '.join(collection_filters)})"
+
+            # Use metadata_filters directly as provided by agent (unchanged)
+            if self.metadata_filters:
+                if collection_filter:
+                    # Combine collection filter with metadata filter using AND
+                    filter_expr = f"({collection_filter}) && ({self.metadata_filters})"
+                else:
+                    # Use metadata filter directly
+                    filter_expr = self.metadata_filters
+            elif collection_filter:
+                # Use collection filter only
+                filter_expr = collection_filter
 
             # Search Zilliz
             search_results = zilliz_service.search(
