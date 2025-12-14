@@ -23,7 +23,6 @@ dependencies = [
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
     "pymilvus>=2.4.0",
-    "pymongo>=4.13.2",
     "pypdf>=5.8.0",
     "markdown-it-py>=4.0.0",
     "requests>=2.32.0",
@@ -33,7 +32,6 @@ dependencies = [
 [dependency-groups]
 dev = [
     "coverage>=7.9.2",
-    "mongomock>=4.3.0",
     "mypy>=1.16.1",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
