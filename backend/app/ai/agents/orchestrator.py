@@ -6,9 +6,8 @@ from llama_index.core.agent.workflow import FunctionAgent
 from llama_index.core.llms import LLM
 
 from app.ai.prompts import ORCHESTRATOR_AGENT_PROMPT
-from app.ai.tools.retrieval import DenseRetrievalTool
-from app.services.rag_service import RAGService
 
+from .analysis import AnalysisAgent
 from .registry import agent_registry
 
 
@@ -17,8 +16,9 @@ def initialize_agent_registry() -> None:
 
     This registers all specialized agents that the orchestrator can delegate to.
     """
+
     # Register all available agents
-    # agent_registry.register(AnyAgent)
+    agent_registry.register(AnalysisAgent)
 
 
 def create_orchestrator_agent(llm: LLM, event_callback: Callable) -> FunctionAgent:
@@ -40,19 +40,8 @@ def create_orchestrator_agent(llm: LLM, event_callback: Callable) -> FunctionAge
         llm=llm, event_callback=event_callback
     )
 
-    # Create RAG service instance
-    rag_service = RAGService(llm=llm)
-
-    # Create retrieval tool
-    dense_retrieval_tool = DenseRetrievalTool(rag_service=rag_service)
-
-    # Convert to LlamaIndex tools
-    tools = [
-        dense_retrieval_tool.as_tool(),
-    ]
-
     return FunctionAgent(
         system_prompt=ORCHESTRATOR_AGENT_PROMPT,
-        tools=delegation_tools + tools,
+        tools=delegation_tools,
         llm=llm,
     )

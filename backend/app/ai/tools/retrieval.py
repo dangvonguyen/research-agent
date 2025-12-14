@@ -106,8 +106,7 @@ class DenseRetrievalTool(BaseTool):
 
             logger.info(
                 "DenseRetrievalTool completed: %d chunks for query: %s",
-                len(formatted_chunks),
-                query[:100],
+                len(formatted_chunks)
             )
 
             return ToolOutput(
