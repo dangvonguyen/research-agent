@@ -1,7 +1,13 @@
 import logging
+from enum import Enum
+from typing import Any, Protocol
 from uuid import UUID
 
-from openai import OpenAI
+from llama_index.core.embeddings import BaseEmbedding
+from llama_index.embeddings.gemini import GeminiEmbedding
+from llama_index.embeddings.ollama import OllamaEmbedding
+from llama_index.embeddings.openai import OpenAIEmbedding
+from pydantic import BaseModel, Field
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
@@ -13,28 +19,187 @@ from app.services.zilliz_service import zilliz_service
 logger = logging.getLogger(__name__)
 
 
+class EmbeddingProvider(str, Enum):
+    """Supported embedding providers."""
+
+    OPENAI = "openai"
+    GEMINI = "gemini"
+    OLLAMA = "ollama"
+
+
+class EmbeddingModel(BaseModel):
+    """Configuration for embedding model."""
+
+    model_name: str = Field(..., description="Embedding model name")
+    provider: EmbeddingProvider = Field(..., description="Embedding provider type")
+    kwargs: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional provider-specific configuration",
+    )
+
+
+class ProviderConfig(Protocol):
+    """Protocol for provider-specific configuration builders."""
+
+    def get_embedding_class(self) -> type[BaseEmbedding]:
+        """Return the embedding class for this provider."""
+        ...
+
+    def build_kwargs(self, model: EmbeddingModel, settings: Any) -> dict[str, Any]:
+        """Build provider-specific kwargs for embedding initialization."""
+        ...
+
+
+class OpenAIConfig:
+    """OpenAI provider configuration."""
+
+    def get_embedding_class(self) -> type[BaseEmbedding]:
+        return OpenAIEmbedding
+
+    def build_kwargs(self, model: EmbeddingModel, settings: Any) -> dict[str, Any]:
+        api_key = getattr(settings, "OPENAI_API_KEY", None)
+        if not api_key:
+            raise ValueError(
+                f"OPENAI_API_KEY is required for model '{model.model_name}'"
+            )
+
+        kwargs = {
+            "model_name": model.model_name,
+            "api_key": api_key,
+        }
+
+        if hasattr(settings, "EMBEDDING_DIMENSION"):
+            kwargs["dimensions"] = settings.EMBEDDING_DIMENSION
+
+        kwargs.update(model.kwargs)
+        return kwargs
+
+
+class GeminiConfig:
+    """Gemini provider configuration."""
+
+    def get_embedding_class(self) -> type[BaseEmbedding]:
+        return GeminiEmbedding
+
+    def build_kwargs(self, model: EmbeddingModel, settings: Any) -> dict[str, Any]:
+        api_key = getattr(settings, "GEMINI_API_KEY", None)
+        if not api_key:
+            raise ValueError(
+                f"GEMINI_API_KEY is required for model '{model.model_name}'"
+            )
+
+        kwargs = {
+            "model_name": model.model_name,
+            "api_key": api_key,
+        }
+
+        kwargs.update(model.kwargs)
+        return kwargs
+
+
+class OllamaConfig:
+    """Ollama provider configuration."""
+
+    def get_embedding_class(self) -> type[BaseEmbedding]:
+        return OllamaEmbedding
+
+    def build_kwargs(self, model: EmbeddingModel, settings: Any) -> dict[str, Any]:
+        base_url = getattr(settings, "OLLAMA_BASE_URL", None)
+        if not base_url:
+            raise ValueError(
+                f"OLLAMA_BASE_URL is required for model '{model.model_name}'"
+            )
+
+        kwargs = {
+            "model_name": model.model_name,
+            "base_url": base_url,
+        }
+
+        kwargs.update(model.kwargs)
+        return kwargs
+
+
+class EmbeddingFactory:
+    """Factory for creating embedding instances from configurations."""
+
+    # Provider registry - easy to extend with new providers
+    _PROVIDERS: dict[EmbeddingProvider, ProviderConfig] = {
+        EmbeddingProvider.OPENAI: OpenAIConfig(),
+        EmbeddingProvider.GEMINI: GeminiConfig(),
+        EmbeddingProvider.OLLAMA: OllamaConfig(),
+    }
+
+    @classmethod
+    def create_embedding(
+        cls, model: EmbeddingModel, settings: Any | None = None
+    ) -> BaseEmbedding:
+        """Create an embedding instance from a model configuration.
+
+        Args:
+            model: An embedding model configuration
+            settings: Settings object containing API keys and URLs
+
+        Raises:
+            ValueError: If the provider is not supported or required config is missing
+
+        Returns:
+            Configured embedding instance
+        """
+        if settings is None:
+            # Import here to avoid circular dependencies
+            from app.core.config import settings as default_settings
+
+            settings = default_settings
+
+        provider_config = cls._PROVIDERS.get(model.provider)
+        if not provider_config:
+            available = ", ".join(p.value for p in cls._PROVIDERS)
+            raise ValueError(
+                f"Unsupported embedding provider: {model.provider}. "
+                f"Available providers: {available}"
+            )
+
+        try:
+            embedding_class = provider_config.get_embedding_class()
+            kwargs = provider_config.build_kwargs(model, settings)
+            return embedding_class(**kwargs)
+        except Exception as e:
+            logger.error(
+                f"Failed to create embedding '{model.model_name}' "
+                f"({model.provider.value}): {e}"
+            )
+            raise
+
+
 class EmbeddingService:
     """Service for generating embeddings and storing them in Zilliz."""
 
-    EMBEDDING_MODEL = "text-embedding-3-small"  # OpenAI embedding model
-    EMBEDDING_DIMENSION = 1536  # Dimension for text-embedding-3-small
-
     def __init__(self):
-        """Initialize embedding service."""
-        self.client: OpenAI | None = None
-        if settings.OPENAI_API_KEY:
-            self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        """Initialize embedding service with default provider."""
+        self.set_embedding_model(
+            model_name=settings.EMBEDDING_MODEL,
+            provider=settings.EMBEDDING_PROVIDER,
+        )
 
-    def _ensure_client(self) -> None:
-        """Ensure OpenAI client is initialized."""
-        if not self.client:
-            if not settings.OPENAI_API_KEY:
-                raise ValueError("OpenAI API key is not configured")
-            self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    def set_embedding_model(
+        self, model_name: str, provider: str | EmbeddingProvider, **kwargs
+    ) -> None:
+        """Set a custom embedding model.
+
+        Args:
+            model_name: Name of the embedding model
+            provider: Embedding provider
+            **kwargs: Additional model configuration
+        """
+        if isinstance(provider, str):
+            provider = EmbeddingProvider(provider)
+
+        model = EmbeddingModel(model_name=model_name, provider=provider, kwargs=kwargs)
+        self.embedding_model = EmbeddingFactory.create_embedding(model)
 
     async def generate_embedding(self, text: str) -> list[float]:
         """
-        Generate embedding vector for given text using OpenAI.
+        Generate embedding vector for given text using configured provider.
 
         Args:
             text: Text to embed
@@ -47,17 +212,9 @@ class EmbeddingService:
             return []
 
         try:
-            self._ensure_client()
-            if not self.client:
-                raise ValueError("OpenAI client not available")
-
-            # Generate embedding
-            response = self.client.embeddings.create(
-                model=self.EMBEDDING_MODEL,
-                input=text,
-            )
-
-            return response.data[0].embedding
+            # Generate embedding using LlamaIndex embedding model
+            embedding = await self.embedding_model.aget_text_embedding(text)
+            return embedding
 
         except Exception as e:
             logger.exception("Failed to generate embedding: %s", str(e))
@@ -174,7 +331,10 @@ class EmbeddingService:
                         )
                         # Extract image_path from extra_metadata if present
                         image_path = None
-                        if content.extra_metadata and "image_path" in content.extra_metadata:
+                        if (
+                            content.extra_metadata
+                            and "image_path" in content.extra_metadata
+                        ):
                             image_path = content.extra_metadata["image_path"]
 
                         # Store reference chunk with metadata but no embeddings
@@ -205,7 +365,10 @@ class EmbeddingService:
 
                         # Extract image_path from extra_metadata if present
                         image_path = None
-                        if content.extra_metadata and "image_path" in content.extra_metadata:
+                        if (
+                            content.extra_metadata
+                            and "image_path" in content.extra_metadata
+                        ):
                             image_path = content.extra_metadata["image_path"]
 
                         # Prepare chunk data with metadata

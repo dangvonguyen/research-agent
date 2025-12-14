@@ -1252,6 +1252,20 @@ wheels = [
 ]
 
 [[package]]
+name = "llama-index-embeddings-ollama"
+version = "0.8.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "llama-index-core" },
+    { name = "ollama" },
+    { name = "pytest-asyncio" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/90/28/31a359840cab68eaf928b72204d4f3d931b4e6c9b5ada939eec1a28c0df8/llama_index_embeddings_ollama-0.8.4.tar.gz", hash = "sha256:6da860943108d775b4e1914508d0f656786dd0170a6a453e097ee2b8c29feb20", size = 4079, upload-time = "2025-11-10T20:00:46.157Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/96/1f/3d137c07f5cdb4c155f07ebe01da7099cce950e3ae0012265e715dd1b44a/llama_index_embeddings_ollama-0.8.4-py3-none-any.whl", hash = "sha256:0bf7de40048c8659c45ea3ee1ad8584941628c94743ffb41d3cc839cdd46bf5c", size = 3653, upload-time = "2025-11-10T20:00:45.403Z" },
+]
+
+[[package]]
 name = "llama-index-embeddings-openai"
 version = "0.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2418,6 +2432,7 @@ dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "llama-index" },
     { name = "llama-index-embeddings-gemini" },
+    { name = "llama-index-embeddings-ollama" },
     { name = "llama-index-llms-anthropic" },
     { name = "llama-index-llms-gemini" },
     { name = "llama-index-llms-ollama" },
@@ -2455,6 +2470,7 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.116.1" },
     { name = "llama-index", specifier = ">=0.14.2" },
     { name = "llama-index-embeddings-gemini", specifier = ">=0.4.1" },
+    { name = "llama-index-embeddings-ollama", specifier = ">=0.8.4" },
     { name = "llama-index-llms-anthropic", specifier = ">=0.10.3" },
     { name = "llama-index-llms-gemini", specifier = ">=0.6.1" },
     { name = "llama-index-llms-ollama", specifier = ">=0.9.0" },

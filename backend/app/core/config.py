@@ -119,6 +119,11 @@ class Settings(BaseSettings):
     TIMEOUT: Optional[float] = None
     MAX_TOKENS: Optional[int] = None
 
+    # Embedding settings
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    EMBEDDING_PROVIDER: str = "openai"
+    EMBEDDING_DIMENSION: int | None = None
+
     # LLM Provider API Keys
     ANTHROPIC_API_KEY: Optional[str] = None
     GEMINI_API_KEY: Optional[str] = None
