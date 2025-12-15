@@ -5,6 +5,7 @@ from typing import Any
 
 from llama_index.core.agent.workflow import FunctionAgent
 from llama_index.core.llms import LLM
+from llama_index.core.objects import ObjectRetriever
 from llama_index.core.tools import BaseTool as LlamaBaseTool
 from llama_index.core.workflow.handler import WorkflowHandler
 from pydantic import BaseModel, Field
@@ -49,6 +50,12 @@ class BaseAgent(ABC):
         pass
 
     @property
+    @abstractmethod
+    def system_prompt(self) -> str:
+        """Return the system prompt that defines agent behavior."""
+        pass
+
+    @property
     def capabilities(self) -> list[str]:
         """List of capabilities this agent provides.
 
@@ -57,15 +64,18 @@ class BaseAgent(ABC):
         """
         return []
 
-    @abstractmethod
-    def get_tools(self) -> list[LlamaBaseTool]:
-        """Return the list of tools this agent needs to function."""
-        pass
+    @property
+    def output_cls(self) -> type[BaseModel] | None:
+        """Output class for the agent."""
+        return None
 
-    @abstractmethod
-    def get_system_prompt(self) -> str:
-        """Return the system prompt that defines agent behavior."""
-        pass
+    def get_tools(self) -> list[LlamaBaseTool] | None:
+        """Return the list of tools this agent needs to function."""
+        return None
+
+    def get_tool_retriever(self) -> list[ObjectRetriever] | None:
+        """The tool retriever for the agent, can be provided instead of tools"""
+        return None
 
     def create(self, llm: LLM) -> FunctionAgent:
         """Create and configure the FunctionAgent instance.
@@ -80,9 +90,13 @@ class BaseAgent(ABC):
             Configured FunctionAgent ready for execution
         """
         return FunctionAgent(
-            system_prompt=self.get_system_prompt(),
+            name=self.name,
+            description=self.description,
+            system_prompt=self.system_prompt,
             tools=self.get_tools(),
+            tool_retriever=self.get_tool_retriever(),
             llm=llm,
+            output_cls=self.output_cls,
         )
 
     async def run(self, llm: LLM, user_msg: str, **kwargs):

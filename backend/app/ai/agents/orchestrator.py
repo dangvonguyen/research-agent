@@ -41,6 +41,7 @@ def create_orchestrator_agent(llm: LLM, event_callback: Callable) -> FunctionAge
     )
 
     return FunctionAgent(
+        name="Orchestrator_agent",
         system_prompt=ORCHESTRATOR_AGENT_PROMPT,
         tools=delegation_tools,
         llm=llm,
