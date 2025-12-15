@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import api_router
+from app.api.main import api_router
 from app.core.config import settings
 from app.logging import setup_logging
 from app.services.crawler import crawler_service

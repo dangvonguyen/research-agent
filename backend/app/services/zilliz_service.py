@@ -2,7 +2,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from pymilvus import DataType, MilvusClient
+from pymilvus import DataType, Function, FunctionType, MilvusClient
 
 from app.core.config import settings
 
@@ -26,10 +26,8 @@ class ZillizService:
         Connect to Zilliz vector database.
         """
         if not self.endpoint or not self.token:
-            logger.warning(
-                "Zilliz endpoint or token not configured. Vector database features will be disabled."
-            )
-            return
+            logger.error("Zilliz not configured")
+            raise RuntimeError("Zilliz endpoint or token not configured")
 
         try:
             # Connect using MilvusClient (works with Zilliz Cloud)
@@ -131,12 +129,19 @@ class ZillizService:
             schema.add_field(field_name="section_index", datatype=DataType.INT64)
             schema.add_field(field_name="chunk_index", datatype=DataType.INT64)
             schema.add_field(
-                field_name="chunk_content", datatype=DataType.VARCHAR, max_length=65535
+                field_name="chunk_content",
+                datatype=DataType.VARCHAR,
+                max_length=65535,
+                enable_analyzer=True,
             )
             schema.add_field(
                 field_name="chunk_content_embedding",
                 datatype=DataType.FLOAT_VECTOR,
                 dim=self.vector_dimension,
+            )
+            schema.add_field(
+                field_name="chunk_content_bm25",
+                datatype=DataType.SPARSE_FLOAT_VECTOR,
             )
             schema.add_field(
                 field_name="paper_title_embedding",
@@ -152,6 +157,15 @@ class ZillizService:
             schema.add_field(
                 field_name="image_path", datatype=DataType.VARCHAR, max_length=512
             )
+
+            # Add BM25 function for full-text search
+            bm25_function = Function(
+                name="bm25_text_embedding",
+                input_field_names=["chunk_content"],
+                output_field_names=["chunk_content_bm25"],
+                function_type=FunctionType.BM25,
+            )
+            schema.add_function(bm25_function)
 
             # Create collection with schema
             self.client.create_collection(
@@ -179,6 +193,11 @@ class ZillizService:
                 index_type="IVF_FLAT",
                 metric_type="L2",
                 params={"nlist": 1024},
+            )
+            index_params.add_index(
+                field_name="chunk_content_bm25",
+                index_type="SPARSE_INVERTED_INDEX",
+                metric_type="BM25",
             )
             self.client.create_index(
                 collection_name=self.collection_name,
@@ -403,6 +422,62 @@ class ZillizService:
                 str(e),
             )
 
+    def query(
+        self,
+        filter: str,
+        limit: int = 10,
+        offset: int = 0,
+        output_fields: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """
+        Query chunks using metadata filters only. More efficient than search() when
+        you only need to filter by metadata.
+
+        Args:
+            filter: Filter expression (e.g., 'paper_id == "uuid"')
+            limit: Maximum number of results to return
+            offset: Number of results to skip
+            output_fields: Optional list of fields to return in results
+
+        Returns:
+            List of query results with metadata
+        """
+        self._ensure_connected()
+        self._ensure_collection()
+
+        try:
+            # Default output fields
+            if output_fields is None:
+                output_fields = [
+                    "chunk_id",
+                    "paper_id",
+                    "paper_title",
+                    "authors",
+                    "venue",
+                    "year",
+                    "collection_names",
+                    "section_name",
+                    "section_index",
+                    "chunk_index",
+                    "chunk_content",
+                    "image_path",
+                ]
+
+            # Perform query using MilvusClient
+            results = self.client.query(
+                collection_name=self.collection_name,
+                filter=filter,
+                output_fields=output_fields,
+                limit=limit,
+                offset=offset,
+            )
+
+            return results
+
+        except Exception as e:
+            logger.exception("Failed to query Zilliz: %s", str(e))
+            raise
+
     def search(
         self,
         query_vector: list[float],
@@ -422,20 +497,10 @@ class ZillizService:
         Returns:
             List of search results with metadata
         """
-        if not self.endpoint or not self.token:
-            logger.warning("Zilliz not configured, returning empty search results")
-            return []
+        self._ensure_connected()
+        self._ensure_collection()
 
         try:
-            self._ensure_connected()
-            if not self.client:
-                logger.warning(
-                    "Zilliz client not available, returning empty search results"
-                )
-                return []
-
-            self._ensure_collection()
-
             # Default output fields
             if output_fields is None:
                 output_fields = [
@@ -486,7 +551,75 @@ class ZillizService:
 
         except Exception as e:
             logger.exception("Failed to search in Zilliz: %s", str(e))
-            return []
+            raise
+
+    def bm25_search(
+        self,
+        query_text: str,
+        limit: int = 10,
+        filter_expr: str | None = None,
+        output_fields: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """
+        Perform BM25 full-text search on chunk_content field.
+
+        Args:
+            query_text: Raw text query (will be tokenized and ranked using BM25)
+            limit: Maximum number of results to return
+            filter_expr: Optional filter expression (e.g., 'year == 2023')
+            output_fields: Optional list of fields to return in results
+
+        Returns:
+            List of search results ranked by BM25 score
+        """
+        self._ensure_connected()
+        self._ensure_collection()
+
+        try:
+            # Default output fields
+            if output_fields is None:
+                output_fields = [
+                    "chunk_id",
+                    "paper_id",
+                    "paper_title",
+                    "authors",
+                    "venue",
+                    "year",
+                    "collection_names",
+                    "section_name",
+                    "section_index",
+                    "chunk_index",
+                    "chunk_content",
+                    "image_path",
+                ]
+
+            # Perform BM25 search
+            results = self.client.search(
+                collection_name=self.collection_name,
+                data=[query_text],  # Raw text query
+                limit=limit,
+                filter=filter_expr,
+                output_fields=output_fields,
+                anns_field="chunk_content_bm25",
+            )
+
+            # Format results
+            formatted_results = []
+            if results and len(results) > 0:
+                for hit in results[0]:
+                    formatted_results.append(
+                        {
+                            "id": hit.get("id"),
+                            "distance": hit.get("distance"),
+                            "entity": hit,
+                        }
+                    )
+
+            return formatted_results
+
+        except Exception as e:
+            logger.exception("Error performing BM25 search in Zilliz: %s", str(e))
+            raise
 
 
 # Create singleton instance
