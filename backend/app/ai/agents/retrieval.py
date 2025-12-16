@@ -139,7 +139,7 @@ class RetrievalAgent(BaseAgent):
     @property
     def description(self) -> str:
         return (
-            "Autonomous retrieval agent that intelligently combines semantic search, "
+            "Autonomous retrieval tool that intelligently combines semantic search, "
             "keyword search, and metadata filtering to find relevant document chunks. "
             "Use for comprehensive retrieval with automatic strategy selection, "
             "query enhancement, and result merging. Returns deduplicated and re-ranked "
