@@ -194,7 +194,6 @@ class StructuredExtractorTool(BaseTool):
             logger.exception("Failed to process paper_id %s: %s", paper_id, str(e))
             return {paper_id: {}}
 
-
     async def arun(
         self,
         paper_ids: list[str],
@@ -266,20 +265,14 @@ class StructuredExtractorTool(BaseTool):
             }
             logger.debug("Response data: %s", json.dumps(response_data, indent=2))
 
-            return ToolOutput(
-                type="json",
-                value=response_data,
-            )
+            return ToolOutput(type="json", value=response_data)
 
         except Exception as e:
             logger.exception("StructuredExtractorTool failed: %s", str(e))
             error_data = {
-                "error": str(e),
+                "error": "structured_extractor_error",
+                "message": "Failed to extract structured information. Please try again.",
                 "paper_ids": paper_ids,
                 "schema": extraction_schema,
-                "message": "Failed to extract structured information. Please try again.",
             }
-            return ToolOutput(
-                type="error-json",
-                value=error_data,
-            )
+            return ToolOutput(type="error-json", value=error_data)

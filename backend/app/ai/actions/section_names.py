@@ -109,7 +109,7 @@ async def select_relevant_sections_for_paper(
             llm_start_time,
         )
 
-        response = structured_llm.complete(prompt)
+        response = await structured_llm.acomplete(prompt)
 
         llm_end_time = time.perf_counter()
         llm_duration = llm_end_time - llm_start_time
