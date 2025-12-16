@@ -2,7 +2,8 @@
 
 from llama_index.core.agent.workflow import FunctionAgent
 from llama_index.core.llms import LLM
-from llama_index.core.tools import BaseTool as LlamaBaseTool, FunctionTool
+from llama_index.core.tools import BaseTool as LlamaBaseTool
+from llama_index.core.tools import FunctionTool
 
 from app.ai.prompts import ANALYSIS_AGENT_PROMPT
 from app.services.rag_service import RAGService

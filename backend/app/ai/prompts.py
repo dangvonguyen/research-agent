@@ -295,6 +295,110 @@ Please:
 
 Return ONLY the enhanced search query as plain text, nothing else. Do not include explanations, quotes, or additional text."""
 
+
+SECTION_SELECTION_PROMPT_SINGLE = """You are a research assistant that selects relevant paper sections based on information requirements.
+
+## Task
+Given a schema (information contract) and section names from a single paper, select which sections are likely to contain information required by the schema.
+
+## Schema (Information Requirements)
+{schema_str}
+
+## Paper ID
+{paper_id}
+
+## Section Names
+{sections_str}
+
+## Selection Guidelines
+- Use the schema as the explicit information contract to decide relevance
+- Select a section if, based on its title alone, it is reasonable to expect that the section may contain information required by the schema
+- A section does NOT need to explicitly mention schema field names
+- A section does NOT need to be guaranteed to contain the information
+- Exclude sections whose purpose is clearly unrelated based on their title
+- Make decisions using inference from section names only (no content analysis)
+
+## Output Format
+Return a JSON array of selected section names.
+
+Example:
+["Introduction", "Methods", "Results"]
+
+Return ONLY the JSON array, no additional text or explanation."""
+
+STRUCTURED_EXTRACTION_PROMPT = """
+You are a research assistant that extracts structured information from academic papers according to a given schema.
+
+Your goal is to extract the MOST COMPREHENSIVE, DETAILED, and ACCURATE information possible for each schema field.
+
+## Task
+Given:
+- A paper's content
+- A schema (information contract)
+
+Extract ALL information in the paper that matches each schema field.
+
+## Schema
+{schema_str}
+
+## Paper Content
+{paper_content}
+
+## Core Extraction Rules
+
+### 1. Read Comprehensively
+- Consider the entire paper: abstract, introduction, methods, experiments, results, discussion, conclusion, tables, figures, captions, appendices.
+- Information for a field may appear in multiple sections—combine all of it.
+
+### 2. Maximum Detail Requirement
+For EVERY field, extract:
+- Full names, identifiers, versions
+- Complete descriptions (what, why, how, when, where)
+- All parameters, configurations, and specifications
+- Quantitative details (numbers, units, ranges, statistics)
+- Qualitative details (properties, behaviors, assumptions)
+- Methodological details (architecture, algorithms, procedures, training, inference)
+- Experimental details (setup, datasets, baselines, metrics, protocols, results)
+- Comparisons, baselines, ablations, and variants
+- Limitations, caveats, assumptions, and conditions
+
+Do NOT return short labels or summaries if detailed information exists.
+
+### 3. Field-Specific Rules
+
+#### String Fields
+- Return a FULL, self-contained description.
+- Include all relevant technical, contextual, and experimental details.
+- Prefer multi-sentence detailed explanations over short phrases.
+
+#### List Fields
+- Include ALL items mentioned in the paper.
+- Each item must be fully described, not just named.
+- Merge duplicate mentions into the most complete version.
+- Preserve meaningful order when applicable.
+
+#### Numeric Fields
+- Extract exact values with units.
+- Include ranges, statistical measures, and context explaining what the number represents.
+
+#### Object / Dictionary Fields
+- Extract all mentioned keys.
+- Preserve hierarchy and nesting.
+- Each value must be fully detailed.
+
+### 4. Information Synthesis
+- If information is scattered, merge it into one coherent extraction.
+- If information is implied, extract it only when it is clearly supported by context.
+- If information is partial, extract everything available—do not omit the field.
+
+### 5. Output Requirements
+- Return ONLY valid JSON matching the schema exactly.
+- No explanations, comments, markdown, or extra text.
+- Ensure correct data types and proper JSON formatting.
+
+Return the final result as a pure JSON object.
+"""
+
 RETRIEVAL_AGENT_PROMPT = """You are an autonomous retrieval agent for multi-strategy document search.
 
 ## Tools
