@@ -151,8 +151,8 @@ paper_id == "abc123" AND section_name == "Methods"
         except Exception as e:
             logger.exception("MetadataRetrieverTool failed: %s", str(e))
             error_data = {
-                "error": str(e),
-                "filter": metadata_filter,
+                "error": "metadata_search_error",
                 "message": "Failed to filter chunks by metadata. Please check your filter expression syntax.",
+                "filter": metadata_filter,
             }
             return ToolOutput(type="error-json", value=error_data)

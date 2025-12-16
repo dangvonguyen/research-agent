@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 
-from llama_index.core.agent.workflow import AgentOutput
+from llama_index.core.agent.workflow import AgentOutput, ToolCallResult
 from llama_index.core.llms import LLM
 from llama_index.core.tools import FunctionTool
 
@@ -129,10 +129,16 @@ class AgentRegistry:
             # Create async wrapper that captures LLM and agent instance
             # Use default argument to capture instance in closure
             def create_delegation_fn(agent: BaseAgent = instance):
-                async def delegate(task: str) -> str:
+                async def delegate(task: str) -> dict:
                     """Delegate task to sub-agent."""
-                    result = await agent.run(llm=llm, user_msg=task)
-                    return str(result)
+                    result: AgentOutput = await agent.run(llm=llm, user_msg=task)
+
+                    # Extract the actual value from the tool output
+                    if hasattr(result.raw, "value"):
+                        return result.raw.value
+
+                    # Fallback: return the string representation
+                    return {"result": str(result)}
 
                 return delegate
 
@@ -175,7 +181,7 @@ class AgentRegistry:
                     """Delegate task, stream events, return result."""
                     handler = agent.get_handler(llm, user_msg=task)
 
-                    result = ""
+                    result = None
 
                     async for event in handler.stream_events():
                         # Stream to client via multiplexer
@@ -184,10 +190,12 @@ class AgentRegistry:
 
                         # Capture final result
                         if isinstance(event, AgentOutput):
-                            result = str(event)
+                            result = {"result": str(event)}
 
-                    # Return ONLY the clean result, keeps parent context clean
-                    return result
+                        elif isinstance(event, ToolCallResult) and event.return_direct:
+                            result = event.tool_output.raw_output.value
+
+                    return result if result is not None else {}
 
                 return delegate
 

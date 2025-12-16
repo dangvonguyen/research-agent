@@ -1,3 +1,5 @@
+"""Vector-based retrieval tool to find relevant context with relevance ranking."""
+
 import logging
 
 from pydantic import BaseModel, Field
@@ -135,8 +137,8 @@ year > 2020 AND venue == "ACL"
         except Exception as e:
             logger.exception("DenseRetrieverTool failed: %s", str(e))
             error_data = {
-                "error": str(e),
+                "error": "semantic_search_error",
+                "message": "An internal error occurred while performing semantic search.",
                 "query": query,
-                "message": "Failed to retrieve context. Please try again.",
             }
             return ToolOutput(type="error-json", value=error_data)
