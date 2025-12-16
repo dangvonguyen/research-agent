@@ -1,4 +1,4 @@
-"""Analysis Agent - handles research paper retrieval and analysis."""
+"""Synthesis Agent - handles broad research synthesis across many papers."""
 
 from llama_index.core.llms import LLM
 from llama_index.core.tools import BaseTool as LlamaBaseTool
@@ -12,11 +12,15 @@ from .base import BaseAgent
 from .retrieval import RetrievalAgent
 
 
-class AnalysisAgent(BaseAgent):
-    """Agent specialized in retrieving and analyzing research papers."""
+class SynthesisAgent(BaseAgent):
+    """Agent specialized in broad research synthesis across many papers.
+
+    This agent is optimized for breadth over depth: it analyzes patterns,
+    trends, and insights across 10-50+ papers rather than deep-diving into 1-2 papers.
+    """
 
     def __init__(self, rag_service: RAGService | None = None):
-        """Initialize the AnalysisAgent.
+        """Initialize the SynthesisAgent.
 
         Args:
             rag_service: Optional RAGService instance. If not provided, will be created when tools are needed.
@@ -27,24 +31,36 @@ class AnalysisAgent(BaseAgent):
 
     @property
     def name(self) -> str:
-        return "synthesis_agent"
+        """Unique identifier for the agent."""
+        return "synthesis_tool"
 
     @property
     def description(self) -> str:
+        """Concise explanation of the agent's research function."""
         return (
-            "Retrieves and analyzes research papers from the corpus. "
-            "Use this agent when you need to search for relevant papers, "
-            "find specific information, or explore research topics. "
-            "This agent performs semantic search and returns relevant paper chunks with metadata."
+            "Synthesizes research insights across many papers (10-50+) to identify trends, "
+            "compare approaches, track evolution, and map the research landscape. "
+            "Use this agent for broad survey-style questions about fields, approaches, "
+            "consensus/disagreement, temporal trends, and comparative analysis. "
+            "Optimized for breadth over depth."
         )
 
     @property
     def system_prompt(self) -> str:
+        """Return the system prompt that defines agent behavior."""
         return SYNTHESIS_AGENT_PROMPT
 
     @property
     def capabilities(self) -> list[str]:
-        return ["semantic_search", "paper_retrieval", "research_analysis"]
+        """List of capabilities this agent provides."""
+        return [
+            "trend_analysis",
+            "comparative_analysis",
+            "research_landscape_mapping",
+            "temporal_evolution_tracking",
+            "consensus_building",
+            "broad_survey_synthesis",
+        ]
 
     def _get_rag_service(self) -> RAGService:
         """Get or create RAG service instance.
@@ -85,7 +101,9 @@ class AnalysisAgent(BaseAgent):
         # Create delegation function for RetrievalAgent
         async def delegate_to_retrieval(task: str) -> str:
             """Delegate retrieval task to RetrievalAgent."""
-            print(f"[DEBUG] delegate_to_retrieval called with task: {task}")
+            print(
+                f"[DEBUG] SynthesisAgent delegate_to_retrieval called with task: {task}"
+            )
             result = await retrieval_agent.run(llm=self._llm, user_msg=task)
             return result
 

@@ -9,6 +9,7 @@ from app.ai.prompts import ORCHESTRATOR_AGENT_PROMPT
 
 from .analysis import AnalysisAgent
 from .registry import agent_registry
+from .synthesis import SynthesisAgent
 
 
 def initialize_agent_registry() -> None:
@@ -19,9 +20,10 @@ def initialize_agent_registry() -> None:
 
     # Register all available agents
     agent_registry.register(AnalysisAgent)
+    agent_registry.register(SynthesisAgent)
 
 
-def create_orchestrator_agent(llm: LLM, _event_callback: Callable) -> FunctionAgent:
+def create_orchestrator_agent(llm: LLM, event_callback: Callable) -> FunctionAgent:
     """Create the top-level orchestrator agent.
 
     Args:
@@ -36,7 +38,9 @@ def create_orchestrator_agent(llm: LLM, _event_callback: Callable) -> FunctionAg
         initialize_agent_registry()
 
     # Get delegation tools from registry
-    delegation_tools = agent_registry.create_delegation_tools(llm=llm)
+    delegation_tools = agent_registry.create_delegation_tools_with_streaming(
+        llm=llm, event_callback=event_callback
+    )
 
     return FunctionAgent(
         name="Orchestrator_agent",
