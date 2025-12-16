@@ -23,7 +23,7 @@ def initialize_agent_registry() -> None:
     agent_registry.register(RetrievalAgent)
 
 
-def create_orchestrator_agent(llm: LLM, event_callback: Callable) -> FunctionAgent:
+def create_orchestrator_agent(llm: LLM, _event_callback: Callable) -> FunctionAgent:
     """Create the top-level orchestrator agent.
 
     Args:
@@ -38,9 +38,7 @@ def create_orchestrator_agent(llm: LLM, event_callback: Callable) -> FunctionAge
         initialize_agent_registry()
 
     # Get delegation tools from registry
-    delegation_tools = agent_registry.create_delegation_tools_with_streaming(
-        llm=llm, event_callback=event_callback
-    )
+    delegation_tools = agent_registry.create_delegation_tools(llm=llm)
 
     return FunctionAgent(
         name="Orchestrator_agent",

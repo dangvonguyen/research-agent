@@ -132,7 +132,7 @@ class AgentRegistry:
                 async def delegate(task: str) -> str:
                     """Delegate task to sub-agent."""
                     result = await agent.run(llm=llm, user_msg=task)
-                    return str(result)
+                    return result
 
                 return delegate
 
