@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import time
@@ -6,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.ai.prompts import SECTION_SELECTION_PROMPT, SECTION_SELECTION_PROMPT_SINGLE
+from app.ai.prompts import SECTION_SELECTION_PROMPT_SINGLE
 from app.services.llm_service import default_llm
 from app.services.zilliz_service import zilliz_service
 
@@ -65,62 +64,6 @@ def get_section_names_for_paper(paper_id: str) -> list[str]:
             "Failed to extract sections for paper_id %s: %s", paper_id, str(e)
         )
         return []
-
-
-async def get_section_names_for_papers_async(
-    paper_ids: list[str],
-) -> dict[str, list[str]]:
-    """Get all unique section names for multiple papers in parallel.
-
-    Args:
-        paper_ids: List of paper IDs to get section names for
-
-    Returns:
-        Dictionary mapping paper_id to list of section names
-    """
-    # Process all papers in parallel using asyncio.to_thread for sync functions
-    loop = asyncio.get_event_loop()
-    tasks = [
-        loop.run_in_executor(None, get_section_names_for_paper, paper_id)
-        for paper_id in paper_ids
-    ]
-    section_names_list = await asyncio.gather(*tasks)
-
-    # Combine results
-    result: dict[str, list[str]] = {}
-    for paper_id, section_names in zip(paper_ids, section_names_list, strict=True):
-        result[paper_id] = section_names
-
-    logger.info(
-        "Extracted section names for %d papers (parallel)",
-        len(paper_ids),
-    )
-
-    return result
-
-
-def get_section_names_for_papers(
-    paper_ids: list[str],
-) -> dict[str, list[str]]:
-    """Get all unique section names for multiple papers (synchronous version).
-
-    Args:
-        paper_ids: List of paper IDs to get section names for
-
-    Returns:
-        Dictionary mapping paper_id to list of section names
-    """
-    result: dict[str, list[str]] = {}
-
-    for paper_id in paper_ids:
-        result[paper_id] = get_section_names_for_paper(paper_id)
-
-    logger.info(
-        "Extracted section names for %d papers",
-        len(paper_ids),
-    )
-
-    return result
 
 
 async def select_relevant_sections_for_paper(
@@ -216,127 +159,6 @@ async def select_relevant_sections_for_paper(
             str(e),
         )
         return []
-
-
-async def select_relevant_sections(
-    section_names_by_paper: dict[str, list[str]], schema: dict[str, Any]
-) -> dict[str, list[str]]:
-    """Select section names that are semantically aligned with the schema requirements.
-
-    This function uses an LLM to analyze section names and determine which sections
-    are likely to contain information required by the schema. The selection is based
-    solely on section titles, not content.
-
-    Args:
-        section_names_by_paper: Dictionary mapping paper_id to list of section names
-        schema: Schema dict defining what information to extract (e.g., {'data': str, 'evaluation metric': str})
-
-    Returns:
-        Dictionary mapping paper_id to list of selected section names that are
-        semantically aligned with the schema requirements
-    """
-    # Build the prompt for LLM
-    schema_str = json.dumps(schema, indent=2)
-
-    # Format section names by paper for the prompt
-    sections_str = ""
-    for paper_id, section_names in section_names_by_paper.items():
-        sections_str += f"\nPaper ID: {paper_id}\n"
-        sections_str += (
-            f"Sections: {', '.join(section_names) if section_names else '(none)'}\n"
-        )
-
-    prompt = SECTION_SELECTION_PROMPT.format(
-        schema_str=schema_str, sections_str=sections_str
-    )
-
-    try:
-        # Use structured output: get response and validate with Pydantic model
-        response = await default_llm.acomplete(prompt)
-        response_text = response.text.strip()
-
-        # Remove any markdown code blocks if present
-        if response_text.startswith("```"):
-            # Extract JSON from code block
-            lines = response_text.split("\n")
-            # Remove first line (```json or ```)
-            lines = lines[1:]
-            # Remove last line (```)
-            if lines and lines[-1].strip() == "```":
-                lines = lines[:-1]
-            response_text = "\n".join(lines).strip()
-
-        # Parse JSON and validate with Pydantic model for structured output
-        parsed_data = json.loads(response_text)
-        structured_response = SectionSelectionResponse(selected_sections=parsed_data)
-
-        # Extract the structured data
-        selected_sections = structured_response.selected_sections
-
-        # Validate and ensure all paper_ids are present
-        result: dict[str, list[str]] = {}
-        for paper_id in section_names_by_paper:
-            if paper_id in selected_sections:
-                # Validate that selected sections actually exist in the original list
-                available_sections = set(section_names_by_paper[paper_id])
-                selected = selected_sections[paper_id]
-                # Filter to only include sections that actually exist
-                result[paper_id] = [s for s in selected if s in available_sections]
-            else:
-                # If paper_id not in response, return empty list
-                result[paper_id] = []
-
-        logger.info(
-            "Selected relevant sections for %d papers using schema",
-            len(result),
-        )
-
-        return result
-
-    except Exception as e:
-        logger.exception("Failed to select relevant sections: %s", str(e))
-        # Fallback: return empty selections for all papers
-        return {paper_id: [] for paper_id in section_names_by_paper}
-
-
-async def select_relevant_sections_parallel(
-    section_names_by_paper: dict[str, list[str]], schema: dict[str, Any]
-) -> dict[str, list[str]]:
-    """Select section names that are semantically aligned with the schema requirements for multiple papers in parallel.
-
-    This function uses an LLM to analyze section names and determine which sections
-    are likely to contain information required by the schema. The selection is based
-    solely on section titles, not content. Each paper is processed in parallel.
-
-    Args:
-        section_names_by_paper: Dictionary mapping paper_id to list of section names
-        schema: Schema dict defining what information to extract (e.g., {'data': str, 'evaluation metric': str})
-
-    Returns:
-        Dictionary mapping paper_id to list of selected section names that are
-        semantically aligned with the schema requirements
-    """
-    # Process all papers in parallel
-    tasks = [
-        select_relevant_sections_for_paper(paper_id, section_names, schema)
-        for paper_id, section_names in section_names_by_paper.items()
-    ]
-
-    selected_sections_list = await asyncio.gather(*tasks)
-
-    # Combine results
-    result: dict[str, list[str]] = {}
-    for paper_id, selected_sections in zip(
-        section_names_by_paper.keys(), selected_sections_list, strict=True
-    ):
-        result[paper_id] = selected_sections
-
-    logger.info(
-        "Selected relevant sections for %d papers using schema (parallel)",
-        len(result),
-    )
-
-    return result
 
 
 def get_paper_content_from_sections(paper_id: str, section_names: list[str]) -> str:

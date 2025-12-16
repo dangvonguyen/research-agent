@@ -304,36 +304,6 @@ Please:
 Return ONLY the enhanced search query as plain text, nothing else. Do not include explanations, quotes, or additional text."""
 
 
-SECTION_SELECTION_PROMPT = """You are a research assistant that selects relevant paper sections based on information requirements.
-
-## Task
-Given a schema (information contract) and section names from multiple papers, select which sections are likely to contain information required by the schema.
-
-## Schema (Information Requirements)
-{schema_str}
-
-## Section Names by Paper
-{sections_str}
-
-## Selection Guidelines
-- Use the schema as the explicit information contract to decide relevance
-- Select a section if, based on its title alone, it is reasonable to expect that the section may contain information required by the schema
-- A section does NOT need to explicitly mention schema field names
-- A section does NOT need to be guaranteed to contain the information
-- Exclude sections whose purpose is clearly unrelated based on their title
-- Make decisions using inference from section names only (no content analysis)
-
-## Output Format
-Return a JSON object mapping each paper_id to a list of selected section names.
-
-Example:
-{{
-  "paper_id_1": ["Introduction", "Methods", "Results"],
-  "paper_id_2": ["Methodology", "Evaluation"]
-}}
-
-Return ONLY the JSON object, no additional text or explanation."""
-
 SECTION_SELECTION_PROMPT_SINGLE = """You are a research assistant that selects relevant paper sections based on information requirements.
 
 ## Task
@@ -364,182 +334,75 @@ Example:
 
 Return ONLY the JSON array, no additional text or explanation."""
 
-STRUCTURED_EXTRACTION_PROMPT = """You are a research assistant that extracts structured information from academic papers based on a schema. Your primary objective is to extract COMPREHENSIVE, DETAILED information that fully captures all aspects of each schema field.
+STRUCTURED_EXTRACTION_PROMPT = """
+You are a research assistant that extracts structured information from academic papers according to a given schema.
+
+Your goal is to extract the MOST COMPREHENSIVE, DETAILED, and ACCURATE information possible for each schema field.
 
 ## Task
-Given a paper's content and a schema (information contract), extract the information that matches the schema fields from the paper content. Your goal is to identify and extract ALL relevant information that corresponds to each field in the schema, maintaining accuracy, completeness, and maximum detail.
+Given:
+- A paper's content
+- A schema (information contract)
 
-## Schema (Information Requirements)
+Extract ALL information in the paper that matches each schema field.
+
+## Schema
 {schema_str}
 
 ## Paper Content
 {paper_content}
 
-## Core Extraction Philosophy
+## Core Extraction Rules
 
-### What "Detailed" Means
-When extracting information, "detailed" means:
-- **Full Context**: Include all relevant context that explains what, why, how, when, and where
-- **Complete Specifications**: Include all parameters, configurations, settings, and specifications mentioned
-- **Comprehensive Descriptions**: Not just names or labels, but full descriptions with all relevant attributes
-- **All Variations**: If information appears in multiple forms or contexts, capture all of them
-- **Supporting Details**: Include quantitative details, qualitative descriptions, comparisons, and relationships
-- **Methodological Details**: For methods, include architecture, algorithms, procedures, and implementation specifics
-- **Experimental Details**: For experiments, include setup, conditions, procedures, measurements, and results
-- **Complete Lists**: For lists, include all items with their full descriptions, not just names
+### 1. Read Comprehensively
+- Consider the entire paper: abstract, introduction, methods, experiments, results, discussion, conclusion, tables, figures, captions, appendices.
+- Information for a field may appear in multiple sections—combine all of it.
 
-### Depth vs. Breadth
-- **Depth**: Extract all layers of information - not just the surface level, but underlying details, mechanisms, and explanations
-- **Breadth**: Extract all related information across different sections of the paper that pertain to each schema field
-- **Relationships**: Capture how different pieces of information relate to each other
-- **Nuances**: Include qualifications, limitations, assumptions, and conditions mentioned
+### 2. Maximum Detail Requirement
+For EVERY field, extract:
+- Full names, identifiers, versions
+- Complete descriptions (what, why, how, when, where)
+- All parameters, configurations, and specifications
+- Quantitative details (numbers, units, ranges, statistics)
+- Qualitative details (properties, behaviors, assumptions)
+- Methodological details (architecture, algorithms, procedures, training, inference)
+- Experimental details (setup, datasets, baselines, metrics, protocols, results)
+- Comparisons, baselines, ablations, and variants
+- Limitations, caveats, assumptions, and conditions
 
-## Extraction Guidelines
+Do NOT return short labels or summaries if detailed information exists.
 
-### General Principles
+### 3. Field-Specific Rules
 
-**1. Comprehensive Reading Strategy**
-- Read through the entire paper content at least once to understand the full context
-- Identify all sections where information relevant to each schema field appears
-- Note any cross-references, dependencies, or relationships between different pieces of information
-- Pay attention to both explicit statements and implicit information that can be reasonably inferred from context
+#### String Fields
+- Return a FULL, self-contained description.
+- Include all relevant technical, contextual, and experimental details.
+- Prefer multi-sentence detailed explanations over short phrases.
 
-**2. Information Gathering Process**
-- For each schema field, systematically search through all sections of the paper
-- Collect information from multiple mentions, even if they appear in different sections
-- Look for information in: abstracts, introductions, methods, results, discussions, conclusions, tables, and figure captions
-- Note any supplementary information, appendices, or footnotes that might contain relevant details
+#### List Fields
+- Include ALL items mentioned in the paper.
+- Each item must be fully described, not just named.
+- Merge duplicate mentions into the most complete version.
+- Preserve meaningful order when applicable.
 
-**3. Detail Extraction Strategy**
-- Start with the most direct mentions of the information
-- Expand to include all related details, specifications, and context
-- Include quantitative information: numbers, percentages, ratios, ranges, distributions
-- Include qualitative information: descriptions, characteristics, properties, behaviors
-- Include comparative information: comparisons with baselines, previous work, or alternatives
-- Include temporal information: when things happen, duration, sequence, timing
-- Include spatial/structural information: architecture, layout, organization, hierarchy
+#### Numeric Fields
+- Extract exact values with units.
+- Include ranges, statistical measures, and context explaining what the number represents.
 
-**4. Context Preservation**
-- Always include enough context to make the extracted information meaningful and understandable
-- Preserve relationships between different pieces of information
-- Include any conditions, assumptions, or prerequisites that affect the information
-- Note any limitations, caveats, or exceptions mentioned
+#### Object / Dictionary Fields
+- Extract all mentioned keys.
+- Preserve hierarchy and nesting.
+- Each value must be fully detailed.
 
-### Field-Specific Extraction Rules
+### 4. Information Synthesis
+- If information is scattered, merge it into one coherent extraction.
+- If information is implied, extract it only when it is clearly supported by context.
+- If information is partial, extract everything available—do not omit the field.
 
-**String Fields - Maximum Detail Extraction:**
+### 5. Output Requirements
+- Return ONLY valid JSON matching the schema exactly.
+- No explanations, comments, markdown, or extra text.
+- Ensure correct data types and proper JSON formatting.
 
-When extracting string fields, you must include:
-- **Full Names and Identifiers**: Complete names, full titles, official designations, version numbers
-- **Complete Descriptions**: Not just labels, but full descriptions with all relevant attributes, characteristics, and properties
-- **Specifications**: All technical specifications, parameters, configurations, and settings
-- **Quantitative Details**: All numbers, measurements, sizes, counts, percentages, ratios, and statistical information
-- **Qualitative Details**: All descriptive information, characteristics, behaviors, properties, and qualities
-- **Procedural Details**: Step-by-step processes, methodologies, algorithms, procedures, and workflows
-- **Contextual Information**: Background, motivation, purpose, goals, objectives, and rationale
-- **Comparative Information**: Comparisons with alternatives, baselines, previous work, or standards
-- **Temporal Information**: Timing, duration, sequence, chronology, and temporal relationships
-- **Spatial/Structural Information**: Architecture, layout, organization, hierarchy, and structural relationships
-- **Results and Outcomes**: All results, findings, outcomes, achievements, and performance metrics
-- **Limitations and Caveats**: Any limitations, constraints, assumptions, exceptions, or caveats mentioned
-
-**Example of Detailed String Extraction:**
-If the schema field is "method" and the paper describes a neural network:
-- DO extract: "Transformer-based neural machine translation model with 6 encoder layers and 6 decoder layers. Each layer has 512 hidden dimensions and 8 attention heads. The model uses learned positional embeddings with maximum sequence length of 512 tokens. Layer normalization is applied after each sub-layer with residual connections. The feed-forward network has 2048 dimensions. Training uses Adam optimizer with beta1=0.9, beta2=0.98, epsilon=1e-9, learning rate of 1.0 with warmup over 4000 steps, and dropout of 0.1. The model is trained on WMT14 English-German dataset with batch size of 4096 tokens."
-- DO NOT extract: "Transformer model" or "Neural network with attention"
-
-**List Fields - Complete Enumeration:**
-
-When extracting list fields, you must:
-- **Find All Instances**: Systematically search for and include ALL instances that match the field, not just the first few
-- **Full Descriptions**: Each list item should be a complete, self-contained description with all relevant details
-- **Preserve Order**: Maintain the order found in the paper when it's meaningful (e.g., chronological, hierarchical, or importance-based)
-- **Include Context**: Each item should include enough context to be meaningful on its own
-- **Avoid Duplication**: If the same information appears multiple times, include it once but with the most comprehensive version
-- **Handle Variations**: If information appears in different forms or contexts, include all relevant variations
-
-**Example of Detailed List Extraction:**
-If the schema field is "evaluation_metrics" and the paper mentions multiple metrics:
-- DO extract: ["BLEU score calculated using multi-bleu.perl script with case-insensitive tokenization, achieving 28.4 on newstest2014", "ROUGE-L F-measure with 1.2 beta parameter, showing 31.2 on the test set", "METEOR score with default parameters, reaching 24.8 on the evaluation set", "Human evaluation on 100 randomly selected samples with 5-point Likert scale, average rating of 4.2"]
-- DO NOT extract: ["BLEU", "ROUGE", "METEOR", "Human eval"]
-
-**Numeric Fields - Precision and Context:**
-
-When extracting numeric fields:
-- **Exact Values**: Extract exact numerical values with full precision as stated in the paper
-- **Units**: Always include units (e.g., "85.3%", "1000 samples", "512 dimensions", "2.5 hours", "50GB")
-- **Ranges**: If ranges are given, preserve the full range format (e.g., "85-90%", "1000-2000 samples")
-- **Statistical Measures**: Include statistical measures when available (mean, median, std, confidence intervals)
-- **Context**: Include context that explains what the number represents and how it was obtained
-
-**Dictionary/Object Fields - Complete Structure:**
-
-When extracting dictionary or nested object fields:
-- **All Keys**: Extract all relevant keys/properties that are mentioned in the paper
-- **Complete Values**: For each key, extract the complete, detailed value, not just a summary
-- **Nested Information**: If nested structures are mentioned, preserve the full hierarchy
-- **Related Information**: Include any related information that helps understand the dictionary entries
-
-### Information Synthesis and Combination
-
-**When Information is Scattered:**
-- If information about a schema field appears in multiple places, combine all relevant parts into a comprehensive extraction
-- Synthesize information from different sections (e.g., method description in Methods section + results in Results section)
-- Maintain logical flow and coherence when combining information
-- Use connecting phrases to link related information naturally
-
-**When Information is Implied:**
-- Extract information that is clearly implied or can be reasonably inferred from explicit statements
-- Include information that is stated indirectly through examples, figures, or comparisons
-- However, do not make speculative inferences beyond what can be reasonably concluded from the content
-
-**When Multiple Mentions Exist:**
-- If the same information appears multiple times with different levels of detail, extract the most comprehensive version
-- If different aspects are mentioned in different places, combine them all
-- If there are contradictions, note them or extract the most authoritative version
-
-**When Information is Partial:**
-- If only partial information is available, extract what is available with full detail
-- Do not skip fields just because complete information is not available
-- Include any available details even if they are incomplete
-
-### Quality Assurance
-
-**Before Finalizing Extraction:**
-
-1. **Completeness Check**: Verify that you have extracted ALL information relevant to each schema field
-2. **Detail Check**: Verify that extracted information includes all relevant details, not just summaries
-3. **Context Check**: Verify that extracted information includes sufficient context to be meaningful
-4. **Type Check**: Verify that extracted data types match the schema (strings are strings, lists are lists, numbers are numbers)
-5. **Accuracy Check**: Verify that extracted information accurately reflects what is stated in the paper
-6. **Relevance Check**: Verify that extracted information is actually relevant to the schema field
-7. **Format Check**: Verify that the output is valid JSON with proper formatting
-
-## Output Format Requirements
-
-**JSON Structure:**
-- Return a JSON object that matches the schema structure exactly
-- The JSON must be valid and parseable
-- All strings must be properly quoted
-- All numbers must be unquoted (except when they are part of strings)
-- All lists must be in square brackets
-- All objects/dictionaries must be in curly braces
-- Use proper JSON escaping for special characters
-
-**Output Restrictions:**
-- Return ONLY the JSON object matching the schema structure
-- Do NOT include any explanatory text, comments, or markdown formatting outside the JSON
-- Do NOT include code blocks, markdown syntax, or any formatting around the JSON
-- Do NOT include any preamble, postamble, or additional commentary
-- The output should be pure, valid JSON that can be directly parsed
-
-## Final Instructions
-
-1. **Read Comprehensively**: Read the entire paper content carefully, understanding the full context before extracting
-2. **Extract Systematically**: For each schema field, systematically search and extract all relevant information
-3. **Prioritize Detail**: Always extract the most detailed, comprehensive version of information available
-4. **Preserve Context**: Include all necessary context to make extracted information meaningful
-5. **Verify Completeness**: Ensure you have captured all relevant information for each field
-6. **Format Correctly**: Ensure the output is valid JSON matching the schema structure exactly
-7. **Output Only JSON**: Return only the JSON object, with no additional text or formatting
+Return the final result as a pure JSON object.
 """

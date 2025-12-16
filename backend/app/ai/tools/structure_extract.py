@@ -194,67 +194,6 @@ class StructuredExtractorTool(BaseTool):
             logger.exception("Failed to process paper_id %s: %s", paper_id, str(e))
             return {paper_id: {}}
 
-    async def _extract_paper_data(
-        self,
-        paper_id: str,
-        selected_sections: list[str],
-        extraction_schema: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Extract structured data for a single paper.
-
-        Args:
-            paper_id: Paper ID to extract information from
-            selected_sections: List of selected section names for this paper
-            extraction_schema: Schema defining what information to extract
-
-        Returns:
-            Dictionary with paper_id as key and extracted data as value
-        """
-        if not selected_sections:
-            logger.warning("No relevant sections selected for paper_id: %s", paper_id)
-            return {paper_id: {}}
-
-        # Get paper content from selected sections
-        paper_content = get_paper_content_from_sections(paper_id, selected_sections)
-
-        if not paper_content:
-            logger.warning(
-                "No content found for paper_id: %s with sections: %s",
-                paper_id,
-                selected_sections,
-            )
-            return {paper_id: {}}
-
-        # Use LLM to extract structured data
-        try:
-            schema_str = json.dumps(extraction_schema, indent=2)
-            prompt = STRUCTURED_EXTRACTION_PROMPT.format(
-                schema_str=schema_str, paper_content=paper_content
-            )
-
-            response = await default_llm.acomplete(prompt)
-            response_text = response.text.strip()
-
-            # Remove any markdown code blocks if present
-            if response_text.startswith("```"):
-                lines = response_text.split("\n")
-                lines = lines[1:]  # Remove first line
-                if lines and lines[-1].strip() == "```":
-                    lines = lines[:-1]  # Remove last line
-                response_text = "\n".join(lines).strip()
-
-            # Parse JSON response
-            extracted_data = json.loads(response_text)
-            logger.debug("Extracted structured data for paper_id: %s", paper_id)
-            return {paper_id: extracted_data}
-
-        except Exception as e:
-            logger.warning(
-                "Failed to extract structured data for paper_id %s: %s",
-                paper_id,
-                str(e),
-            )
-            return {paper_id: {}}
 
     async def arun(
         self,

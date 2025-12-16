@@ -12,9 +12,22 @@ async def main():
         "b25c8e42-7550-4e61-a106-1c65a0d020a9",
     ]
     schema = {
-        "dataset": "str",
-        "evaluation_metric": "str",
-        "main_results": "str",
+        "dataset": {
+            "name": "str",
+            "source": "str",
+            "languages": "list[str]",
+            "statistics": {
+                "words": "number",
+                "definitions": "number",
+                "synonyms": "number"
+            },
+            "evaluation_settings": "list[str]"
+        },
+        "evaluation_metrics": "list[str]",
+        "main_results": {
+            "summary": "str",
+            "key_numbers": "list[str]"
+        }
     }
 
     start = time.perf_counter()
