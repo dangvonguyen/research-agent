@@ -12,11 +12,11 @@ from app.services.zilliz_service import zilliz_service
 logger = logging.getLogger(__name__)
 
 
-class SectionSelectionResponse(BaseModel):
-    """Structured output model for section selection."""
+class SectionListResponse(BaseModel):
+    """Structured output model for single paper section selection."""
 
-    selected_sections: dict[str, list[str]] = Field(
-        description="Dictionary mapping paper_id to list of selected section names"
+    sections: list[str] = Field(
+        description="List of selected section names that are semantically aligned with the schema requirements"
     )
 
 
@@ -100,7 +100,8 @@ async def select_relevant_sections_for_paper(
     )
 
     try:
-        # Use structured output: get response and parse JSON array
+        structured_llm = default_llm.as_structured_llm(SectionListResponse)
+
         llm_start_time = time.perf_counter()
         logger.debug(
             "[Paper %s] LLM call (select sections) started at %.3f",
@@ -108,7 +109,7 @@ async def select_relevant_sections_for_paper(
             llm_start_time,
         )
 
-        response = await default_llm.acomplete(prompt)
+        response = structured_llm.complete(prompt)
 
         llm_end_time = time.perf_counter()
         llm_duration = llm_end_time - llm_start_time
@@ -118,23 +119,12 @@ async def select_relevant_sections_for_paper(
             llm_duration,
         )
 
-        response_text = response.text.strip()
-
-        # Remove any markdown code blocks if present
-        if response_text.startswith("```"):
-            lines = response_text.split("\n")
-            lines = lines[1:]  # Remove first line
-            if lines and lines[-1].strip() == "```":
-                lines = lines[:-1]  # Remove last line
-            response_text = "\n".join(lines).strip()
-
-        # Parse JSON array
-        selected_sections = json.loads(response_text)
+        json_response = json.loads(response.text)
+        selected_sections = json_response["sections"]
 
         # Validate that selected sections actually exist in the original list
         available_sections = set(section_names)
         if isinstance(selected_sections, list):
-            # Filter to only include sections that actually exist
             result = [s for s in selected_sections if s in available_sections]
         else:
             logger.warning(
