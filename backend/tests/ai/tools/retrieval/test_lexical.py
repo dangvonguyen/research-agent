@@ -201,7 +201,8 @@ class TestLexicalRetrieverTool:
             result = await lexical_tool.arun(query="test")
 
             assert result.type == "error-json"
-            assert "error_code" in result.value
+            assert "error" in result.value
+            assert "message" in result.value
 
     @pytest.mark.asyncio
     async def test_top_k_limit(self, lexical_tool):

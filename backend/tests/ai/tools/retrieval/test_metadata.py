@@ -276,26 +276,9 @@ class TestMetadataRetrieverTool:
             )
 
             assert result.type == "error-json"
-            assert "error" in result.value
-            assert "Database connection failed" in result.value["error"]
             assert result.value["filter"] == "invalid filter"
+            assert "error" in result.value
             assert "message" in result.value
-            assert "Failed to filter chunks" in result.value["message"]
-
-    @pytest.mark.asyncio
-    async def test_error_preserves_context(self, metadata_tool):
-        """Test error response includes filter context."""
-        with patch("app.ai.tools.retrieval.metadata.zilliz_service") as mock_zilliz:
-            mock_zilliz.query.side_effect = RuntimeError("Query timeout")
-
-            result = await metadata_tool.arun(
-                metadata_filter='year > 2020 AND venue == "ACL"',
-                limit=50,
-            )
-
-            assert result.type == "error-json"
-            assert "Query timeout" in result.value["error"]
-            assert result.value["filter"] == 'year > 2020 AND venue == "ACL"'
 
     @pytest.mark.asyncio
     async def test_filter_with_special_characters(

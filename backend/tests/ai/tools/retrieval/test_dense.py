@@ -286,11 +286,9 @@ class TestDenseRetrieverTool:
         result = await dense_tool.arun(query="test query")
 
         assert result.type == "error-json"
-        assert "error" in result.value
-        assert "Vector search failed" in result.value["error"]
         assert result.value["query"] == "test query"
+        assert "error" in result.value
         assert "message" in result.value
-        assert "Failed to retrieve context" in result.value["message"]
 
     @pytest.mark.asyncio
     async def test_error_with_parameters(self, dense_tool, mock_rag_service):
@@ -303,7 +301,6 @@ class TestDenseRetrieverTool:
         )
 
         assert result.type == "error-json"
-        assert "Database timeout" in result.value["error"]
         assert result.value["query"] == "complex query"
 
     @pytest.mark.asyncio

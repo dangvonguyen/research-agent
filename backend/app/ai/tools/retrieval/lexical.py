@@ -147,8 +147,8 @@ Example:
         except Exception as e:
             logger.exception("LexicalRetrieverTool error: %s", str(e))
             error_data = {
-                "error_code": "LEXICAL_SEARCH_ERROR",
-                "query": query,
+                "error": "lexical_search_error",
                 "message": "An internal error occurred while performing lexical search.",
+                "query": query,
             }
             return ToolOutput(type="error-json", value=error_data)
