@@ -1,5 +1,6 @@
 """Agent registry for dynamic agent discovery and management."""
 
+import logging
 from collections.abc import Callable
 
 from llama_index.core.agent.workflow import AgentOutput, ToolCallResult
@@ -7,6 +8,8 @@ from llama_index.core.llms import LLM
 from llama_index.core.tools import FunctionTool
 
 from .base import AgentMetadata, BaseAgent
+
+logger = logging.getLogger()
 
 
 class AgentRegistry:
@@ -39,7 +42,8 @@ class AgentRegistry:
         name = instance.name
 
         if name in self._agents:
-            raise ValueError(f"Agent '{name}' is already registered")
+            logger.warning(f"Agent '{name}' is already registered")
+            return
 
         self._agents[name] = agent_class
 
