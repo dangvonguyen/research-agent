@@ -6,6 +6,7 @@ from llama_index.core.tools import FunctionTool
 
 from app.ai.prompts import SYNTHESIS_AGENT_PROMPT
 from app.ai.tools.structure_extract import StructuredExtractorTool
+from app.ai.tools.tavily_search import TavilySearchTool
 from app.services.rag_service import RAGService
 
 from .base import BaseAgent
@@ -32,7 +33,7 @@ class SynthesisAgent(BaseAgent):
     @property
     def name(self) -> str:
         """Unique identifier for the agent."""
-        return "synthesis_tool"
+        return "synthesis_agent"
 
     @property
     def description(self) -> str:
@@ -114,8 +115,9 @@ class SynthesisAgent(BaseAgent):
             description=retrieval_agent.description,
         )
         extractor_tool = StructuredExtractorTool()
+        tavily_search = TavilySearchTool()
 
-        return [retrieval_tool, extractor_tool.as_tool()]
+        return [retrieval_tool, extractor_tool.as_tool(), tavily_search.as_tool()]
 
     def create(self, llm: LLM):
         # Store LLM for use in get_tools()

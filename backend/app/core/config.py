@@ -98,6 +98,9 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
 
+    # Search API Keys
+    TAVILY_API_KEY: Optional[str] = None
+
     # Ollama settings
     OLLAMA_BASE_URL: str = "http://localhost:11434"
 
