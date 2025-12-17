@@ -26,10 +26,10 @@ export type MessageProps = HTMLAttributes<HTMLDivElement> & {
 export const Message = ({ className, from, ...props }: MessageProps) => (
   <div
     className={cn(
-      "group flex w-full flex-col gap-2",
+      "group flex flex-col gap-2",
       from === "user"
         ? "is-user ml-auto justify-end max-w-[70%]"
-        : "is-assistant",
+        : "is-assistant w-full",
       className,
     )}
     {...props}
@@ -311,6 +311,26 @@ export const MessageResponse = memo(
         "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className,
       )}
+      components={{
+        ul: ({ children }) => {
+          const filter = Array.isArray(children)
+            ? children.filter((c) => typeof c !== "string" || c.trim() !== "")
+            : children;
+          return <ul className="list-disc ml-6">{filter}</ul>;
+        },
+        ol: ({ children }) => {
+          const filter = Array.isArray(children)
+            ? children.filter((c) => typeof c !== "string" || c.trim() !== "")
+            : children;
+          return <ol className="list-decimal ml-5.5">{filter}</ol>;
+        },
+        li: ({ children }) => {
+          const filter = Array.isArray(children)
+            ? children.filter((c) => typeof c !== "string" || c.trim() !== "")
+            : children;
+          return <li className="pl-2 marker:mr-2 leading-loose">{filter}</li>;
+        },
+      }}
       {...props}
     />
   ),

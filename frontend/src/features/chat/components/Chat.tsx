@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { apiClient } from "@/api";
-import type { ToolResultOutput } from "@/api/models";
+import type { Role, ToolResultOutput } from "@/api/models";
 import {
   MessageAttachment,
   MessageAttachments,
@@ -186,14 +186,21 @@ function Chat({ id, initialMessages }: ChatProps) {
     part: MessageContentPart,
     index: number,
     message: Message,
+    role: Role,
   ) => {
     switch (part.type) {
-      case "text":
-        return (
-          <MessageResponse key={`${message.id}-${index}`} className="break-all">
+      case "text": {
+        const key = `${message.id}-${index}`;
+        return role === "user" ? (
+          <div key={key} className="wrap-break-word">
+            {part.text}
+          </div>
+        ) : (
+          <MessageResponse key={key} className="wrap-break-word">
             {part.text}
           </MessageResponse>
         );
+      }
       case "reasoning": {
         const isPartStreaming =
           status === "streaming" &&
@@ -204,7 +211,7 @@ function Chat({ id, initialMessages }: ChatProps) {
             key={`${message.id}-${index}`}
             defaultOpen={isPartStreaming}
             isStreaming={isPartStreaming}
-            className="break-all"
+            className="wrap-break-word"
           >
             <ReasoningTrigger />
             <ReasoningContent>{part.text}</ReasoningContent>
@@ -257,7 +264,7 @@ function Chat({ id, initialMessages }: ChatProps) {
             <h1 className="text-3xl">What's on your mind today?</h1>
           </div>
         ) : (
-          <div className="flex flex-col gap-10 pt-[7vh] pb-[10vh] whitespace-pre-wrap">
+          <div className="max-w-3xl flex flex-col gap-10 pt-[7vh] pb-[10vh] whitespace-pre-wrap">
             {messages.map((message) => (
               <UIMessage from={message.role} key={message.id}>
                 {message.attachments && message.attachments.length > 0 && (
@@ -276,9 +283,9 @@ function Chat({ id, initialMessages }: ChatProps) {
                   </MessageAttachments>
                 )}
 
-                <MessageContent className="group-[.is-assistant]:w-full max-w-3xl">
+                <MessageContent className="w-full">
                   {message.content.map((part, index) =>
-                    renderContentPart(part, index, message),
+                    renderContentPart(part, index, message, message.role),
                   )}
                 </MessageContent>
               </UIMessage>
@@ -299,7 +306,7 @@ function Chat({ id, initialMessages }: ChatProps) {
         )}
 
         {/* Chat Composer */}
-        <div className="sticky bottom-0">
+        <div className="max-w-3xl sticky bottom-0">
           {/* Backdrop */}
           <div className="absolute top-10 bottom-0 inset-x-0 bg-background z-0" />
 
