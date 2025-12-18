@@ -47,6 +47,30 @@ class ZillizService:
         if not self.client:
             self.connect()
 
+    def initialize(self) -> None:
+        """
+        Initialize Zilliz connection and collection at application startup.
+        This should be called once when the app starts.
+        """
+        if not self.endpoint or not self.token:
+            logger.debug("Zilliz not configured, skipping initialization")
+            return
+
+        try:
+            # Connect to Milvus
+            self.connect()
+
+            # Create collection if it doesn't exist
+            self.create_collection()
+
+            logger.info("Zilliz service initialized successfully")
+        except Exception as e:
+            logger.warning(
+                "Failed to initialize Zilliz service (will retry on first use): %s",
+                str(e),
+            )
+            # Don't raise - allow lazy initialization on first use
+
     def create_collection(self) -> None:
         """
         Create collection in Zilliz if it doesn't exist (one-time operation).
@@ -225,28 +249,9 @@ class ZillizService:
             raise
 
     def _ensure_collection(self) -> None:
-        """Ensure collection exists."""
+        """Ensure collection exists. Only creates if not already created."""
         if not self._collection_created:
             self.create_collection()
-        else:
-            # Double-check that collection actually exists
-            # (it might have been deleted externally)
-            try:
-                self._ensure_connected()
-                if self.client and not self.client.has_collection(self.collection_name):
-                    logger.warning(
-                        "Collection '%s' was expected to exist but doesn't. Recreating...",
-                        self.collection_name,
-                    )
-                    self._collection_created = False
-                    self.create_collection()
-            except Exception as e:
-                logger.warning(
-                    "Could not verify collection existence, attempting to create: %s",
-                    str(e),
-                )
-                self._collection_created = False
-                self.create_collection()
 
     def insert_embeddings(
         self,
@@ -292,16 +297,6 @@ class ZillizService:
                 return
 
             self._ensure_collection()
-
-            # Verify collection exists one more time before insertion
-            if not self.client.has_collection(self.collection_name):
-                logger.error(
-                    "Collection '%s' does not exist and could not be created. Aborting insertion.",
-                    self.collection_name,
-                )
-                raise ValueError(
-                    f"Collection '{self.collection_name}' does not exist in Zilliz"
-                )
 
             # Prepare data for insertion
             data = []
