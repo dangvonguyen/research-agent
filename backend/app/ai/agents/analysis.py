@@ -1,11 +1,13 @@
 """Analysis Agent - handles research paper retrieval and analysis."""
 
+from llama_index.core.agent.workflow import FunctionAgent
 from llama_index.core.llms import LLM
 from llama_index.core.tools import BaseTool as LlamaBaseTool
 from llama_index.core.tools import FunctionTool
 
-from app.ai.prompts import SYNTHESIS_AGENT_PROMPT
+from app.ai.prompts import ANALYSIS_AGENT_PROMPT
 from app.ai.tools.structure_extract import StructuredExtractorTool
+from app.ai.tools.image_analysis import ImageAnalysisTool
 from app.services.rag_service import RAGService
 
 from .base import BaseAgent
@@ -27,7 +29,7 @@ class AnalysisAgent(BaseAgent):
 
     @property
     def name(self) -> str:
-        return "synthesis_agent"
+        return "analysis_agent"
 
     @property
     def description(self) -> str:
@@ -40,7 +42,7 @@ class AnalysisAgent(BaseAgent):
 
     @property
     def system_prompt(self) -> str:
-        return SYNTHESIS_AGENT_PROMPT
+        return ANALYSIS_AGENT_PROMPT
 
     @property
     def capabilities(self) -> list[str]:
@@ -87,6 +89,7 @@ class AnalysisAgent(BaseAgent):
             """Delegate retrieval task to RetrievalAgent."""
             print(f"[DEBUG] delegate_to_retrieval called with task: {task}")
             result = await retrieval_agent.run(llm=self._llm, user_msg=task)
+            print(f"[DEBUG] retrieval_agent result: {result}")
             return result
 
         # Create delegation tool
@@ -96,11 +99,27 @@ class AnalysisAgent(BaseAgent):
             description=retrieval_agent.description,
         )
         extractor_tool = StructuredExtractorTool()
+        image_analysis_tool = ImageAnalysisTool()
 
-        return [retrieval_tool, extractor_tool.as_tool()]
+        return [retrieval_tool, extractor_tool.as_tool(), image_analysis_tool.as_tool()]
 
-    def create(self, llm: LLM):
+    def create(self, llm: LLM) -> FunctionAgent:
+        """Create and configure the FunctionAgent instance with tools from get_tools().
+
+        Args:
+            llm: Language model to use for reasoning
+
+        Returns:
+            Configured FunctionAgent ready for execution with tools from get_tools()
+        """
         # Store LLM for use in get_tools()
         self._llm = llm
 
-        return super().create(llm)
+        return FunctionAgent(
+            name=self.name,
+            description=self.description,
+            system_prompt=self.system_prompt,
+            tools=self.get_tools(),
+            llm=llm,
+            # output_cls=self.output_cls,
+        )
