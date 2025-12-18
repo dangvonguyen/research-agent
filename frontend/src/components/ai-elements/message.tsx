@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowUpRight,
   ChevronLeftIcon,
   ChevronRightIcon,
   PaperclipIcon,
@@ -312,6 +313,41 @@ export const MessageResponse = memo(
         className,
       )}
       components={{
+        h1: ({ children }) => (
+          <h1 className="text-2xl font-semibold mt-4 mb-2">{children}</h1>
+        ),
+        h2: ({ children }) => (
+          <h2 className="text-xl font-semibold mt-4 mb-1">{children}</h2>
+        ),
+        h3: ({ children }) => (
+          <h3 className="text-lg font-semibold mt-4 mb-1">{children}</h3>
+        ),
+        h4: ({ children }) => (
+          <h4 className="text-base font-semibold mt-4 mb-0">{children}</h4>
+        ),
+        h5: ({ children }) => (
+          <h5 className="text-base font-semibold mt-0 mb-0">{children}</h5>
+        ),
+        h6: ({ children }) => (
+          <h6 className="text-base font-normal mt-0 mb-0">{children}</h6>
+        ),
+        p: ({ children }) => (
+          <p className="whitespace-pre-wrap leading-[1.75em] [&:has(+ul)]:mb-1 [&:has(+ol)]:mb-1">
+            {children}
+          </p>
+        ),
+        a: ({ href, children, ...props }) => (
+          <a
+            href={href}
+            className="flex items-center gap-1 hover:text-blue-600"
+            {...props}
+          >
+            <span className="underline decoration-dotted underline-offset-4">
+              {children}
+            </span>
+            <ArrowUpRight size={14} />
+          </a>
+        ),
         ul: ({ children }) => {
           const filter = Array.isArray(children)
             ? children.filter((c) => typeof c !== "string" || c.trim() !== "")
@@ -328,8 +364,17 @@ export const MessageResponse = memo(
           const filter = Array.isArray(children)
             ? children.filter((c) => typeof c !== "string" || c.trim() !== "")
             : children;
-          return <li className="pl-2 marker:mr-2 leading-loose">{filter}</li>;
+          return (
+            <li className="pl-2 leading-[1.75em] marker:mr-2 marker:font-bold">
+              {filter}
+            </li>
+          );
         },
+        blockquote: ({ children }) => (
+          <blockquote className="my-2 border-muted-foreground/40 border-l-4 pl-4 text-muted-foreground italic">
+            {children}
+          </blockquote>
+        ),
       }}
       {...props}
     />
