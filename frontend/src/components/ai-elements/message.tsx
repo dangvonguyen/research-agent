@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowUpRight,
   ChevronLeftIcon,
   ChevronRightIcon,
   PaperclipIcon,
@@ -26,10 +27,10 @@ export type MessageProps = HTMLAttributes<HTMLDivElement> & {
 export const Message = ({ className, from, ...props }: MessageProps) => (
   <div
     className={cn(
-      "group flex w-full flex-col gap-2",
+      "group flex flex-col gap-2",
       from === "user"
         ? "is-user ml-auto justify-end max-w-[70%]"
-        : "is-assistant",
+        : "is-assistant w-full",
       className,
     )}
     {...props}
@@ -311,6 +312,70 @@ export const MessageResponse = memo(
         "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className,
       )}
+      components={{
+        h1: ({ children }) => (
+          <h1 className="text-2xl font-semibold mt-4 mb-2">{children}</h1>
+        ),
+        h2: ({ children }) => (
+          <h2 className="text-xl font-semibold mt-4 mb-1">{children}</h2>
+        ),
+        h3: ({ children }) => (
+          <h3 className="text-lg font-semibold mt-4 mb-1">{children}</h3>
+        ),
+        h4: ({ children }) => (
+          <h4 className="text-base font-semibold mt-4 mb-0">{children}</h4>
+        ),
+        h5: ({ children }) => (
+          <h5 className="text-base font-semibold mt-0 mb-0">{children}</h5>
+        ),
+        h6: ({ children }) => (
+          <h6 className="text-base font-normal mt-0 mb-0">{children}</h6>
+        ),
+        p: ({ children }) => (
+          <p className="whitespace-pre-wrap leading-[1.75em] [&:has(+ul)]:mb-1 [&:has(+ol)]:mb-1">
+            {children}
+          </p>
+        ),
+        a: ({ href, children, ...props }) => (
+          <a
+            href={href}
+            className="flex items-center gap-1 hover:text-blue-600"
+            {...props}
+          >
+            <span className="underline decoration-dotted underline-offset-4">
+              {children}
+            </span>
+            <ArrowUpRight size={14} />
+          </a>
+        ),
+        ul: ({ children }) => {
+          const filter = Array.isArray(children)
+            ? children.filter((c) => typeof c !== "string" || c.trim() !== "")
+            : children;
+          return <ul className="list-disc ml-6">{filter}</ul>;
+        },
+        ol: ({ children }) => {
+          const filter = Array.isArray(children)
+            ? children.filter((c) => typeof c !== "string" || c.trim() !== "")
+            : children;
+          return <ol className="list-decimal ml-5.5">{filter}</ol>;
+        },
+        li: ({ children }) => {
+          const filter = Array.isArray(children)
+            ? children.filter((c) => typeof c !== "string" || c.trim() !== "")
+            : children;
+          return (
+            <li className="pl-2 leading-[1.75em] marker:mr-2 marker:font-bold">
+              {filter}
+            </li>
+          );
+        },
+        blockquote: ({ children }) => (
+          <blockquote className="my-2 border-muted-foreground/40 border-l-4 pl-4 text-muted-foreground italic">
+            {children}
+          </blockquote>
+        ),
+      }}
       {...props}
     />
   ),
