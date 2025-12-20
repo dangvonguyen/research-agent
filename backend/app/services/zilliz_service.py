@@ -298,7 +298,33 @@ class ZillizService:
 
             self._ensure_collection()
 
+            # Check if chunks already exist - if so, preserve their collection_names
+            # This prevents overwriting collection_names that were updated while embedding was in progress
+            existing_chunks = self.query(
+                filter=f'paper_id == "{paper_id}"',
+                limit=1,
+                output_fields=["chunk_id", "collection_names"],
+            )
+
+            # If chunks exist, use their existing collection_names (they might have been updated)
+            # Otherwise, use the collection_names passed to this function
+            if existing_chunks and len(existing_chunks) > 0:
+                existing_collection_names = existing_chunks[0].get(
+                    "collection_names", []
+                )
+                if existing_collection_names:
+                    logger.debug(
+                        "Chunks already exist for paper '%s' with collection_names: %s. "
+                        "Preserving existing collection_names instead of using: %s",
+                        paper_id,
+                        existing_collection_names,
+                        collection_names,
+                    )
+                    collection_names = existing_collection_names
+
             # Prepare data for insertion
+            # Note: MilvusClient.insert() will upsert (update if exists, insert if not)
+            # based on the primary key (chunk_id), so we don't need to delete first
             data = []
 
             paper_id_str = str(paper_id)
@@ -416,6 +442,109 @@ class ZillizService:
                 paper_id,
                 str(e),
             )
+
+    def update_paper_collection_names(
+        self,
+        paper_id: UUID,
+        collection_names: list[str],
+    ) -> None:
+        """
+        Update collection_names for all chunks of a paper in Zilliz.
+        Fetches existing chunks from Zilliz, updates their collection_names, and upserts them back.
+
+        Args:
+            paper_id: UUID of the paper
+            collection_names: Updated list of collection names
+        """
+        if not self.endpoint or not self.token:
+            logger.debug("Zilliz not configured, skipping collection_names update")
+            return
+
+        try:
+            self._ensure_connected()
+            if not self.client:
+                logger.warning(
+                    "Zilliz client not available, skipping collection_names update"
+                )
+                return
+
+            self._ensure_collection()
+
+            # Fetch all existing chunks from Zilliz with all their data
+            existing_chunks = self.query(
+                filter=f'paper_id == "{paper_id}"',
+                limit=10000,  # Get all chunks to update their collection_names
+                output_fields=[
+                    "chunk_id",
+                    "paper_id",
+                    "paper_title",
+                    "authors",
+                    "venue",
+                    "year",
+                    "section_name",
+                    "section_index",
+                    "chunk_index",
+                    "chunk_content",
+                    "chunk_content_embedding",
+                    "paper_title_embedding",
+                    "abstract_embedding",
+                    "chunk_references",
+                    "image_path",
+                ],
+            )
+
+            if not existing_chunks:
+                logger.debug(
+                    "Paper '%s' has no chunks in Zilliz, skipping update", paper_id
+                )
+                return
+
+            # Update collection_names for all chunks and prepare for upsert
+            updated_chunks = []
+            for chunk in existing_chunks:
+                chunk_data = {
+                    "chunk_id": chunk["chunk_id"],
+                    "paper_id": chunk["paper_id"],
+                    "paper_title": chunk.get("paper_title", ""),
+                    "authors": chunk.get("authors", []),
+                    "venue": chunk.get("venue", ""),
+                    "year": chunk.get("year", 0),
+                    "collection_names": collection_names,  # Updated collection names
+                    "section_name": chunk.get("section_name", ""),
+                    "section_index": chunk.get("section_index", 0),
+                    "chunk_index": chunk.get("chunk_index", 0),
+                    "chunk_content": chunk.get("chunk_content", ""),
+                    "chunk_content_embedding": chunk.get("chunk_content_embedding", []),
+                    "paper_title_embedding": chunk.get("paper_title_embedding", []),
+                    "abstract_embedding": chunk.get("abstract_embedding", []),
+                    "chunk_references": chunk.get("chunk_references", []),
+                    "image_path": chunk.get("image_path", ""),
+                }
+                updated_chunks.append(chunk_data)
+
+            if not updated_chunks:
+                logger.warning("No chunks found to update for paper '%s'", paper_id)
+                return
+
+            # Upsert updated chunks (will update existing ones based on chunk_id primary key)
+            self.client.insert(
+                collection_name=self.collection_name,
+                data=updated_chunks,
+            )
+
+            logger.info(
+                "Successfully updated collection_names for paper '%s' in Zilliz to: %s",
+                paper_id,
+                collection_names,
+            )
+
+        except Exception as e:
+            logger.exception(
+                "Failed to update collection_names for paper '%s': %s",
+                paper_id,
+                str(e),
+            )
+            raise
 
     def query(
         self,
