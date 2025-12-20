@@ -12,6 +12,7 @@ from app.api.main import api_router
 from app.core.config import settings
 from app.logging import setup_logging
 from app.services.crawler import crawler_service
+from app.services.zilliz_service import zilliz_service
 
 
 @asynccontextmanager
@@ -36,6 +37,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa
     except Exception as e:
         logger.error("Failed to initialize default crawler configs: %s", str(e))
         # Don't fail startup if config initialization fails
+
+    # Initialize Zilliz/Milvus connection and collection
+    try:
+        zilliz_service.initialize()
+    except Exception as e:
+        logger.warning(
+            "Failed to initialize Zilliz service at startup (will retry on first use): %s",
+            str(e),
+        )
 
     startup_time = time.time() - start_time
     logger.info(

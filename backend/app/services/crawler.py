@@ -263,7 +263,8 @@ class CrawlerService:
                     papers_to_embed = []
 
                     parse_tasks = [
-                        self.parse_one(paper_db_obj) for paper_db_obj in created_papers
+                        asyncio.create_task(self.parse_one(paper_db_obj))
+                        for paper_db_obj in created_papers
                     ]
 
                     # Wait for all parsing tasks to complete

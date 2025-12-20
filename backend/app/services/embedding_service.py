@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import Session
 from app.core.config import settings
-from app.db.models import Paper, PaperContent
+from app.db.models import Collection, Paper, PaperContent, paper_collection
 from app.services.zilliz_service import zilliz_service
 
 logger = logging.getLogger(__name__)
@@ -236,12 +236,10 @@ class EmbeddingService:
 
         async with Session() as session:
             try:
-                # Fetch paper with all related data
+                # Fetch paper with contents (collections will be queried separately)
                 stmt = (
                     select(Paper)
-                    .options(
-                        selectinload(Paper.contents), selectinload(Paper.collections)
-                    )
+                    .options(selectinload(Paper.contents))
                     .where(Paper.id == paper_id)
                 )
                 result = await session.execute(stmt)
@@ -254,13 +252,6 @@ class EmbeddingService:
                 if not paper.contents or len(paper.contents) == 0:
                     logger.info("Paper '%s' has no chunks to embed", paper_id)
                     return
-
-                # Get collection names
-                collection_names = (
-                    [collection.name for collection in paper.collections]
-                    if paper.collections
-                    else []
-                )
 
                 logger.info(
                     "Generating embeddings for %d chunks of paper '%s'",
@@ -418,6 +409,26 @@ class EmbeddingService:
 
                 # Insert all chunks into Zilliz (reference chunks without embedding)
                 if all_chunks:
+                    # Query collection names RIGHT BEFORE inserting to get the latest values
+                    # This prevents race conditions where collection is added during embedding
+
+                    collection_stmt = (
+                        select(Collection.name)
+                        .join(
+                            paper_collection,
+                            Collection.id == paper_collection.c.collection_id,
+                        )
+                        .where(paper_collection.c.paper_id == paper_id)
+                    )
+                    collection_result = await session.execute(collection_stmt)
+                    collection_names = [row[0] for row in collection_result.all()]
+
+                    logger.debug(
+                        "Inserting chunks for paper '%s' with collection_names: %s",
+                        paper_id,
+                        collection_names,
+                    )
+
                     zilliz_service.insert_embeddings(
                         paper_id=paper_id,
                         paper_title=paper.title,
