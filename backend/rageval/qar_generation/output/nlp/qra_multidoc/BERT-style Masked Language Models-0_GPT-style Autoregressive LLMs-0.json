@@ -1,0 +1,96 @@
+{
+    "qa_multi_document_information_integration": [
+        {
+            "question type": "Cross-paper Synthesis Question",
+            "question": "According to the papers titled BERT-style Masked Language Models: Methods and Applications and Rethinking GPT-style Autoregressive LLMs Design, what is the shared objective of the proposed improvements in both works?",
+            "answer": "Both papers aim to improve language model performance by enhancing contextual understanding and generative/in-context capabilities. Paper 1 targets contextual understanding through adaptive masking and architecture optimizations, while Paper 2 targets generative capabilities and in-context learning through a refined GPT-style design.",
+            "ref": [
+                {
+                    "paper_title": "BERT-style Masked Language Models: Methods and Applications",
+                    "content": "We introduce a novel training strategy that incorporates adaptive masking techniques to enhance contextual understanding, which we validate through comprehensive experiments on benchmark datasets including GLUE and SQuAD."
+                },
+                {
+                    "paper_title": "Rethinking GPT-style Autoregressive LLMs Design",
+                    "content": "We focus on enhancing the model's generative capabilities and in-context learning, which are critical for tasks requiring understanding and generating coherent text based on limited context."
+                }
+            ]
+        }
+    ],
+    "qa_multi_document_compare": [
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "According to the papers titled BERT-style Masked Language Models: Methods and Applications and Rethinking GPT-style Autoregressive LLMs Design, which model uses more transformer layers, and what are the layer counts for each?",
+            "answer": "The Rethinking GPT-style Autoregressive LLMs Design paper uses more transformer layers with 48 layers, while the BERT-style Masked Language Models paper uses 12 layers. Therefore, the GPT-style AR LLMs are deeper (48 vs 12).",
+            "ref": [
+                {
+                    "paper_title": "BERT-style Masked Language Models: Methods and Applications",
+                    "content": "The model consists of 12 transformer layers, each equipped with 12 attention heads and 768 hidden dimensions."
+                },
+                {
+                    "paper_title": "Rethinking GPT-style Autoregressive LLMs Design",
+                    "content": "Our model is based on a transformer architecture, consisting of 48 layers, each with a hidden size of 4096."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "According to the papers titled BERT-style Masked Language Models: Methods and Applications and Rethinking GPT-style Autoregressive LLMs Design, which model reports higher accuracy on its primary evaluation metric: the BERT-style MLM on GLUE (0.94 accuracy) or the GPT-style AR LLMs on few-shot tasks (0.82 accuracy)?",
+            "answer": "The BERT-style MLM reports higher accuracy on its primary metric with 0.94 accuracy, compared to the GPT-style AR LLMs' 0.82 accuracy.",
+            "ref": [
+                {
+                    "paper_title": "BERT-style Masked Language Models: Methods and Applications",
+                    "content": "Our model achieved an accuracy of 0.94 and an F1 score of 0.92, outperforming BERT and RoBERTa, which achieved accuracies of 0.91 and 0.93, respectively."
+                },
+                {
+                    "paper_title": "Rethinking GPT-style Autoregressive LLMs Design",
+                    "content": "On SuperGLUE and LAMBADA datasets, our model achieves an F1 score of 0.9 and an accuracy of 0.82, significantly outperforming the baselines (GPT-3 and T5) which achieved an F1 score of 0.85 and an accuracy of 0.78."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "According to the papers titled BERT-style Masked Language Models: Methods and Applications and Rethinking GPT-style Autoregressive LLMs Design, which model achieves lower perplexity on language modeling tasks, and what are the figures?",
+            "answer": "The GPT-style AR LLMs Design paper achieves lower perplexity (11.2) than the BERT-style MLM paper (12.4).",
+            "ref": [
+                {
+                    "paper_title": "BERT-style Masked Language Models: Methods and Applications",
+                    "content": "The results demonstrate that our enhanced MLM outperforms existing methods, achieving state-of-the-art performance metrics, including an average F1 score of 0.92 on NER tasks and a perplexity of 12.4 on language modeling tasks."
+                },
+                {
+                    "paper_title": "Rethinking GPT-style Autoregressive LLMs Design",
+                    "content": "On the WikiText-103 and OpenAI WebGPT datasets, our model achieves a BLEU score of 41.7 and a perplexity of 11.2, outperforming the baselines (GPT-3 and CTRL) which achieved a BLEU score of 40.5 and a perplexity of 12.3."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "According to the papers titled BERT-style Masked Language Models: Methods and Applications and Rethinking GPT-style Autoregressive LLMs Design, which model trains on a larger data scale and uses a larger batch size, and what are the figures?",
+            "answer": "The GPT-style AR LLMs Design model trains on a much larger data scale (approximately 300 GB of text) and uses a batch size of 2048, whereas the BERT-style MLM trains on GLUE-scale data with a batch size of 32.",
+            "ref": [
+                {
+                    "paper_title": "BERT-style Masked Language Models: Methods and Applications",
+                    "content": "We employ an adaptive learning rate schedule with warm-up steps, utilizing a batch size of 32 and training for 3 epochs on the GLUE dataset."
+                },
+                {
+                    "paper_title": "Rethinking GPT-style Autoregressive LLMs Design",
+                    "content": "Our model is trained on a large corpus of 300GB of text data, using a batch size of 2048."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "According to the papers titled BERT-style Masked Language Models: Methods and Applications and Rethinking GPT-style Autoregressive LLMs Design, which paper introduces multi-query attention and which introduces adaptive masking, and what are these innovations?",
+            "answer": "The Rethinking GPT-style Autoregressive LLMs Design paper introduces multi-query attention to reduce memory usage while maintaining performance, while the BERT-style MLM paper introduces adaptive masking to focus masking on contextually important tokens, enhancing learning of nuanced representations.",
+            "ref": [
+                {
+                    "paper_title": "BERT-style Masked Language Models: Methods and Applications",
+                    "content": "Our adaptive masking strategy dynamically selects which tokens to mask based on their contextual importance during training."
+                },
+                {
+                    "paper_title": "Rethinking GPT-style Autoregressive LLMs Design",
+                    "content": "The multi-query attention mechanism is a key innovation in our model architecture. Traditional transformer models use multi-head attention, where each head attends to different parts of the input sequence. In contrast, our approach uses a single set of keys and values shared across multiple attention heads, reducing the computational complexity of the attention mechanism."
+                }
+            ]
+        }
+    ]
+}
