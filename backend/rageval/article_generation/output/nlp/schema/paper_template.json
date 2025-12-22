@@ -1,0 +1,41 @@
+{
+  "paperMetadata": {
+    "title": "",
+    "authors": [],
+    "venue": "",
+    "year": "",
+    "subfield": ""
+  },
+  "abstract": "",
+  "researchContributions": [
+    {
+      "contribution": "",
+      "description": "",
+      "novelty": ""
+    }
+  ],
+  "methodology": {
+    "approach": "",
+    "modelArchitecture": "",
+    "trainingStrategy": "",
+    "keyInnovations": []
+  },
+  "experiments": [
+    {
+      "experimentName": "",
+      "datasets": [],
+      "baselines": [],
+      "metrics": {},
+      "results": {},
+      "analysis": ""
+    }
+  ],
+  "relatedWork": [
+    {
+      "category": "",
+      "keyPapers": [],
+      "ourDifference": ""
+    }
+  ],
+  "futureWork": []
+}
