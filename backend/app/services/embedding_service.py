@@ -176,12 +176,23 @@ class EmbeddingService:
 
     def __init__(self):
         """Initialize embedding service with default provider."""
-        self.set_embedding_model(
+        self._embed_model: BaseEmbedding
+
+        self.set_default_embed_model()
+
+    @property
+    def embed_model(self) -> BaseEmbedding:
+        """Get the current embedding model instance."""
+        return self._embed_model
+
+    def set_default_embed_model(self) -> None:
+        """Set the default embedding model from settings."""
+        self.set_embed_model(
             model_name=settings.EMBEDDING_MODEL,
             provider=settings.EMBEDDING_PROVIDER,
         )
 
-    def set_embedding_model(
+    def set_embed_model(
         self, model_name: str, provider: str | EmbeddingProvider, **kwargs
     ) -> None:
         """Set a custom embedding model.
@@ -195,30 +206,7 @@ class EmbeddingService:
             provider = EmbeddingProvider(provider)
 
         model = EmbeddingModel(model_name=model_name, provider=provider, kwargs=kwargs)
-        self.embedding_model = EmbeddingFactory.create_embedding(model)
-
-    async def generate_embedding(self, text: str) -> list[float]:
-        """
-        Generate embedding vector for given text using configured provider.
-
-        Args:
-            text: Text to embed
-
-        Returns:
-            List of floats representing the embedding vector
-        """
-        if not text or not text.strip():
-            logger.warning("Empty text provided for embedding")
-            return []
-
-        try:
-            # Generate embedding using LlamaIndex embedding model
-            embedding = await self.embedding_model.aget_text_embedding(text)
-            return embedding
-
-        except Exception as e:
-            logger.exception("Failed to generate embedding: %s", str(e))
-            raise
+        self._embed_model = EmbeddingFactory.create_embedding(model)
 
     async def embed_paper_chunks(self, paper_id: UUID) -> None:
         """
@@ -263,7 +251,9 @@ class EmbeddingService:
                 title_embedding = None
                 if paper.title:
                     try:
-                        title_embedding = await self.generate_embedding(paper.title)
+                        title_embedding = await self._embed_model.aget_text_embedding(
+                            paper.title
+                        )
                         logger.debug(
                             "Generated title embedding for paper '%s'", paper.title
                         )
@@ -278,8 +268,8 @@ class EmbeddingService:
                 abstract_embedding = None
                 if paper.abstract:
                     try:
-                        abstract_embedding = await self.generate_embedding(
-                            paper.abstract
+                        abstract_embedding = (
+                            await self._embed_model.aget_text_embedding(paper.abstract)
                         )
                         logger.debug(
                             "Generated abstract embedding for paper '%s'", paper.title
@@ -344,7 +334,9 @@ class EmbeddingService:
 
                     try:
                         # Generate embedding for chunk content
-                        embedding = await self.generate_embedding(content.content)
+                        embedding = await self._embed_model.aget_text_embedding(
+                            content.content
+                        )
 
                         if not embedding:
                             logger.warning(

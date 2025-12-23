@@ -54,7 +54,8 @@ class ZillizRetriever(BaseRetriever):
 
         try:
             # Generate embedding for query
-            query_embedding = await embedding_service.generate_embedding(query_text)
+            embed_model = embedding_service.embed_model
+            query_embedding = await embed_model.aget_text_embedding(query_text)
 
             if not query_embedding:
                 logger.warning("Failed to generate query embedding")
