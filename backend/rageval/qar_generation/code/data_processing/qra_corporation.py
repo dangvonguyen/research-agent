@@ -3,6 +3,8 @@ import json
 import os
 from pathlib import Path
 
+FILE_NAME = "DRAGONBALL_query.jsonl"
+
 
 def read_jsonl_doc(doc_path: str) -> list:
     docs_data = []
@@ -33,17 +35,14 @@ def qa_format_single_doc(domain: str, docs: list[dict]) -> list[dict]:
                     paper_title: str = json_data["paperMetadata"]["subfield"]
 
                     for doc in docs:
-                        if (
-                            "paper_subfield" in doc
-                            and doc["paper_subfield"] in paper_title
-                        ):
+                        if doc["paper_title"] in paper_title:
                             doc_id = doc["doc_id"]
                             break
 
                 for key in key_list:
                     for qa in json_data[key]:
                         jsonl_obj = {
-                            "domain": domain.capitalize(),
+                            "domain": domain,
                             "query": {
                                 "query_id": 0,
                                 "query_type": qa["question type"],
@@ -87,7 +86,7 @@ def qa_format_multi_doc(domain: str, docs: list[dict]) -> list[dict]:
                             for doc in docs:
                                 if (
                                     domain == "nlp"
-                                    and doc["paper_subfield"] in ref["paper_title"]
+                                    and doc["paper_title"] == ref["paper_title"]
                                 ):
                                     doc_id = doc["doc_id"]
                                     for r in ref["content"]:
@@ -98,7 +97,7 @@ def qa_format_multi_doc(domain: str, docs: list[dict]) -> list[dict]:
                         doc_ids = list(set(doc_ids))
 
                         jsonl_obj = {
-                            "domain": domain.capitalize(),
+                            "domain": domain,
                             "query": {
                                 "query_id": 0,
                                 "query_type": qa["question type"],
@@ -127,11 +126,11 @@ def qa_format_irrelevant(domain: str, docs: list[dict]) -> list[dict]:
     for item in json_data:
         if domain == "nlp":
             for doc in docs:
-                if doc["paper_subfield"] in item["paper_title"]:
+                if doc["paper_title"] == item["paper_title"]:
                     doc_id = doc["doc_id"]
                     break
         jsonl_obj = {
-            "domain": domain.capitalize(),
+            "domain": domain,
             "query": {
                 "query_id": 0,
                 "query_type": item["question type"],
@@ -153,6 +152,12 @@ def main():
     parser = argparse.ArgumentParser(description="corporate docs.")
     parser.add_argument(
         "--domains", type=str, required=True, help="Comma-separated list of domains"
+    )
+    parser.add_argument(
+        "--input_dir",
+        type=str,
+        required=True,
+        help="Input directory for domains' output files",
     )
     parser.add_argument(
         "--output_dir",
@@ -178,7 +183,7 @@ def main():
     for i, item in enumerate(query_list):
         item["query"]["query_id"] = i
 
-    output_path = args.output_dir + "/DRAGONBALL_query.jsonl"
+    output_path = Path(args.output_dir) / FILE_NAME
     with open(output_path, "w") as f:
         for item in query_list:
             json_string = json.dumps(item, ensure_ascii=False)

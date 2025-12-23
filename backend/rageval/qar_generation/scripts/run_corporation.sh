@@ -14,6 +14,7 @@ run_command() {
 
     PYTHONPATH="$SCRIPT_DIR/.." python -m code.data_processing.${CORPORATION_TYPE}_corporation \
         --domains "$domains_str" \
+        --input_dir "$OUTPUT_BASE_DIR" \
         --output_dir "$RESULTS_DIR"
 }
 
