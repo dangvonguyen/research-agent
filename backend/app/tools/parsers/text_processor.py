@@ -2,6 +2,8 @@
 
 import logging
 import re
+from collections import deque
+from typing import Literal
 
 import tiktoken
 
@@ -150,15 +152,20 @@ class TextProcessor:
 
         return paragraphs
 
-    def split_into_chunks(self, content: str) -> list[str]:
+    def split_into_chunks(
+        self, content: str, max_chunk_words: int | None = None, overlap_words: int = 0
+    ) -> list[str]:
         """
         Split content into chunks by paragraph, preserving tables.
 
-        Combines multiple paragraphs together until the character limit (500)
-        is exceeded. Tables are never split across chunks.
+        Combines multiple paragraphs together until the token limit is exceeded.
+        Tables are never split across chunks. Implements overlap by preserving
+        last N tokens from previous chunk and prepending to next chunk.
 
         Args:
             content: Content to split into chunks
+            max_chunk_words: Maximum tokens per chunk
+            overlap_words: Number of overlap tokens between chunks
 
         Returns:
             List of chunk strings
@@ -166,53 +173,128 @@ class TextProcessor:
         if not content.strip():
             return []
 
+        max_chunk_words = max_chunk_words or self.max_chunk_words
+
         # Split into paragraphs (tables are preserved as single units)
         paragraphs = self.split_into_paragraphs(content)
 
         if not paragraphs:
             return []
 
+        # Precompute token counts
+        para_tokens = [self.count_tokens(p) for p in paragraphs]
+
         chunks = []
         current_chunk = []
         current_chunk_size = 0
 
-        for paragraph in paragraphs:
-            paragraph_size = self.count_tokens(paragraph)
-
-            # If a single paragraph exceeds the limit, add it as its own chunk
-            if paragraph_size > self.max_chunk_words:
-                # Save current chunk if any
+        for paragraph, para_size in zip(paragraphs, para_tokens, strict=False):
+            # Paragraph too large → standalone chunk
+            if para_size > max_chunk_words:
                 if current_chunk:
                     chunks.append("\n\n".join(current_chunk))
                     current_chunk = []
                     current_chunk_size = 0
 
-                # Add the large paragraph as its own chunk
                 chunks.append(paragraph)
-            else:
-                # Check if adding this paragraph would exceed the limit
-                # Account for the "\n\n" separator between paragraphs
-                separator_size = 2 if current_chunk else 0
-                new_size = current_chunk_size + separator_size + paragraph_size
 
-                if new_size > self.max_chunk_words and current_chunk:
-                    # Current chunk is full, start a new one
-                    chunks.append("\n\n".join(current_chunk))
-                    current_chunk = [paragraph]
-                    current_chunk_size = paragraph_size
-                else:
-                    # Add to current chunk
-                    current_chunk.append(paragraph)
-                    current_chunk_size = new_size
+                # IMPORTANT:
+                # Do NOT seed overlap from this paragraph
+                continue
+
+            # Check if adding this paragraph would exceed the limit
+            # Account for the "\n\n" separator between paragraphs
+            separator_size = 2 if current_chunk else 0
+            new_size = current_chunk_size + separator_size + para_size
+
+            if new_size > max_chunk_words and current_chunk:
+                # Finalize current chunk
+                chunks.append("\n\n".join(current_chunk))
+
+                # Extract overlap
+                overlap = self._extract_overlap(current_chunk, overlap_words)
+
+                current_chunk = [*overlap, paragraph]
+                current_chunk_size = sum(self.count_tokens(p) for p in current_chunk)
+            else:
+                # Add to current chunk
+                current_chunk.append(paragraph)
+                current_chunk_size = new_size
 
         # Add any remaining chunk
         if current_chunk:
             chunks.append("\n\n".join(current_chunk))
 
         logger.debug(
-            "Split content into %d chunks (max %d characters, paragraph-based)",
+            "Split content into %d chunks (max %d tokens, overlap %d tokens, paragraph-based)",
             len(chunks),
-            self.max_chunk_words,
+            max_chunk_words,
+            overlap_words,
         )
 
         return chunks
+
+    def _extract_overlap(
+        self,
+        paragraphs: list[str],
+        overlap_words: int,
+        level: Literal["word", "sentence", "paragraph"] = "sentence",
+    ) -> list[str]:
+        """
+        Extract last N tokens worth of content for overlap.
+
+        Walks backwards through content, collecting units until the overlap token
+        limit is reached.
+
+        Args:
+            paragraphs: List of paragraphs to extract overlap from
+            overlap_words: Target number of tokens for overlap
+            level: Granularity level
+
+        Returns:
+            List of paragraphs reconstructed from extracted overlap content
+        """
+        if overlap_words == 0 or not paragraphs:
+            return []
+
+        overlap = deque()
+        remaining = overlap_words
+
+        if level == "paragraph":
+            for para in reversed(paragraphs):
+                size = self.count_tokens(para)
+                if size <= remaining:
+                    break
+                overlap.appendleft(para)
+                remaining -= size
+            return list(overlap)
+
+        if level == "sentence":
+            # Walk paragraphs backwards, split lazily
+            for para in reversed(paragraphs):
+                sentences = re.split(r"(?<=[.!?])\s+", para)
+                for sent in reversed(sentences):
+                    size = self.count_tokens(sent)
+                    if size > remaining:
+                        return [" ".join(overlap)] if overlap else []
+                    overlap.appendleft(sent)
+                    remaining -= size
+
+            # Reconstruct as single paragraph
+            return [" ".join(overlap)] if overlap else []
+
+        if level == "word":
+            for para in reversed(paragraphs):
+                words = para.split()
+                for word in reversed(words):
+                    size = self.count_tokens(word)
+                    if size > remaining:
+                        return [" ".join(overlap)] if overlap else []
+                    overlap.appendleft(word)
+                    remaining -= size
+
+            # Reconstruct as single paragraph
+            return [" ".join(overlap)] if overlap else []
+
+        logger.warning("Unknown overlap level '%s', defaulting to sentence", level)
+        return self._extract_overlap(paragraphs, overlap_words, "sentence")
