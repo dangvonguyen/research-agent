@@ -1,0 +1,197 @@
+{
+  "paperMetadata": {
+    "title": "Rethinking Diffusion Models for Text Design",
+    "authors": [
+      "Hayden Kuznetsov",
+      "Tatum Hassan",
+      "Ashton Sokolov",
+      "Quinn Singh",
+      "Morgan Huang"
+    ],
+    "venue": "EACL",
+    "year": "2025",
+    "subfield": "Diffusion Models for Text"
+  },
+  "abstract": "This paper explores the adaptation of diffusion models, traditionally used in image generation, to the domain of text generation. We propose a novel hybrid diffusion model that integrates continuous diffusion in the embedding space with discrete diffusion processes, enabling more controllable and coherent text generation. Our approach allows for tasks such as text infilling and provides a competitive alternative to autoregressive models by leveraging diffusion's inherent iterative refinement capabilities. Key contributions include the introduction of a novel loss function tailored for text, a hybrid architecture merging continuous and discrete diffusion processes, and a comprehensive experimental evaluation against state-of-the-art autoregressive models. Our findings demonstrate significant improvements in controllability and infilling tasks, paving the way for more nuanced text generation applications.",
+  "contributions": [
+    {
+      "title": "Novel Hybrid Diffusion Architecture",
+      "description": "We introduce a hybrid architecture that combines continuous diffusion in embedding space with discrete diffusion steps for generating text. This architecture enhances the coherence and diversity of generated text.",
+      "novelty": "This is the first application of hybrid diffusion combining continuous and discrete processes specifically for text generation."
+    },
+    {
+      "title": "Custom Loss Function for Text",
+      "description": "We propose a loss function specifically designed for text diffusion models that balances the trade-off between text coherence and diversity.",
+      "novelty": "The loss function is novel in its formulation for optimizing diffusion models in the text domain, addressing unique challenges not present in image generation."
+    },
+    {
+      "title": "Comprehensive Evaluation Framework",
+      "description": "We develop a rigorous evaluation framework to compare diffusion-based text generation models against autoregressive models using standard metrics and new metrics tailored for diffusion.",
+      "novelty": "The introduction of new evaluation metrics specific to diffusion models represents a significant advancement in assessing text generation quality."
+    }
+  ],
+  "methodology": {
+    "problemFormulation": "Adapting diffusion models, widely used in image domains, to handle text generation by addressing challenges in discrete space and ensuring coherent text output.",
+    "approach": "Our approach employs a hybrid diffusion model that operates in both continuous embedding spaces and discrete token spaces. The model iteratively refines text predictions through a sequence of diffusion steps, leveraging both continuous transformations and discrete sampling.",
+    "components": [
+      {
+        "name": "Continuous Embedding Diffusion",
+        "role": "Handles the transformation of text embeddings through continuous diffusion processes.",
+        "details": "Utilizes a series of Gaussian transformations applied in the embedding space to enable smooth interpolation between text states."
+      },
+      {
+        "name": "Discrete Token Diffusion",
+        "role": "Performs discrete sampling to generate tokenized text from refined embeddings.",
+        "details": "Applies a categorical diffusion process in token space, ensuring generated text remains grammatically and semantically coherent."
+      },
+      {
+        "name": "Custom Loss Function",
+        "role": "Guides the training of the diffusion model to optimize text coherence and diversity.",
+        "details": "Balances reconstruction loss with a novel diversity-promoting term specific to text generation."
+      }
+    ],
+    "assumptions": [
+      "Text can be effectively represented and transformed in a continuous embedding space.",
+      "Diffusion processes can be adapted to discrete token spaces with appropriate modifications."
+    ],
+    "limitations": [
+      "High computational cost due to iterative refinement steps.",
+      "Potential challenges in scaling to very large datasets or corpora."
+    ]
+  },
+  "evidence": [
+    {
+      "type": "experiment",
+      "description": "Validation of text generation quality and controllability against autoregressive models.",
+      "setup": {
+        "context": "Evaluating generated text for fluency and adherence to prompts.",
+        "inputs": [
+          "Prompts from a standardized benchmark set."
+        ],
+        "conditions": [
+          "Baseline autoregressive models",
+          "Proposed hybrid diffusion model"
+        ]
+      },
+      "evaluation": {
+        "criteria": [
+          "Fluency",
+          "Coherence",
+          "Controllability"
+        ],
+        "metrics": [
+          "BLEU",
+          "ROUGE",
+          "F1-score"
+        ],
+        "protocol": "Comparison of generated outputs using a mixed-method evaluation including human and automated metrics."
+      },
+      "results": [
+        {
+          "measure": "BLEU",
+          "value": "34.5",
+          "notes": "Improved BLEU score over baseline models by 5%."
+        },
+        {
+          "measure": "ROUGE",
+          "value": "0.52",
+          "notes": "Demonstrated superior text coherence."
+        }
+      ],
+      "analysis": "The proposed model generated text that was more controllable and fluent compared to autoregressive baselines."
+    },
+    {
+      "type": "experiment",
+      "description": "Assessment of text infilling capability.",
+      "setup": {
+        "context": "Testing model's ability to infill missing segments in text.",
+        "inputs": [
+          "Partial text inputs with deliberate gaps."
+        ],
+        "conditions": [
+          "Baseline models",
+          "Proposed hybrid diffusion model"
+        ]
+      },
+      "evaluation": {
+        "criteria": [
+          "Infilling accuracy",
+          "Contextual relevance"
+        ],
+        "metrics": [
+          "F1-score",
+          "Human evaluation"
+        ],
+        "protocol": "Infilling performance measured against ground truth and human evaluations."
+      },
+      "results": [
+        {
+          "measure": "F1-score",
+          "value": "0.78",
+          "notes": "Outperformed baselines by 10% in infilling tasks."
+        }
+      ],
+      "analysis": "The hybrid diffusion model excels in maintaining contextual relevance during infilling, surpassing traditional autoregressive approaches."
+    }
+  ],
+  "relatedWork": [
+    {
+      "category": "Autoregressive Text Generation",
+      "works": [
+        {
+          "reference": "Vaswani et al. (2017)",
+          "summary": "Introduced the Transformer model, a cornerstone in autoregressive text generation."
+        },
+        {
+          "reference": "Radford et al. (2019)",
+          "summary": "Developed GPT-2, showcasing the power of large-scale autoregressive models."
+        }
+      ],
+      "relationship": "contrasts"
+    },
+    {
+      "category": "Diffusion Models in Vision",
+      "works": [
+        {
+          "reference": "Ho et al. (2020)",
+          "summary": "Pioneered the use of diffusion models for image generation, setting a precedent for adaptation in other domains."
+        }
+      ],
+      "relationship": "extends"
+    },
+    {
+      "category": "Hybrid Models for Generation",
+      "works": [
+        {
+          "reference": "Zhang et al. (2022)",
+          "summary": "Proposed integrating multiple generative methods for enhanced outputs."
+        }
+      ],
+      "relationship": "unifies"
+    },
+    {
+      "category": "Text Embedding Techniques",
+      "works": [
+        {
+          "reference": "Devlin et al. (2018)",
+          "summary": "Introduced BERT, a model using embeddings for contextual understanding in text."
+        }
+      ],
+      "relationship": "adapts"
+    }
+  ],
+  "futureWork": [
+    {
+      "direction": "Scalable Training Techniques",
+      "motivation": "Address the computational demands of diffusion models by exploring more efficient training paradigms or distributed computing solutions."
+    },
+    {
+      "direction": "Enhanced Semantic Control",
+      "motivation": "Develop methods to improve semantic control in text generation, enabling more precise adherence to user intent or specified constraints."
+    },
+    {
+      "direction": "Cross-Domain Diffusion Applications",
+      "motivation": "Investigate the application of diffusion models to other discrete domains beyond text, such as symbolic music or structured data."
+    }
+  ]
+}

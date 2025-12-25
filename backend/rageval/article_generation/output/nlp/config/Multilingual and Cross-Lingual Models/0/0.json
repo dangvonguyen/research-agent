@@ -1,0 +1,190 @@
+{
+  "paperMetadata": {
+    "title": "Scaling Multilingual and Cross-Lingual Models with Transformers",
+    "authors": [
+      "Drew Müller",
+      "Sawyer Singh",
+      "Reese Kumar",
+      "Kai Gupta",
+      "Logan Zieliński",
+      "Dakota Santos"
+    ],
+    "venue": "AAAI",
+    "year": "2025",
+    "subfield": "Multilingual and Cross-Lingual Models"
+  },
+  "abstract": "This paper addresses the challenge of scaling multilingual and cross-lingual models to better accommodate low-resource languages. We propose a novel architecture integrating language-specific adapters with a unified transformer model, enhancing both multilingual understanding and cross-lingual transfer capabilities. Our approach leverages a dynamic adapter selection mechanism, which provides language-agnostic representations and facilitates zero-shot learning. Through extensive experiments on benchmark datasets, our model demonstrates significant improvements over state-of-the-art multilingual transformers, showcasing superior performance in low-resource settings and retaining competitive accuracy in high-resource environments. Our contributions include a scalable model architecture, a refined training paradigm for low-resource languages, and insights into language-agnostic representation learning. This work sets a new standard for multilingual NLP, providing a robust framework for future research in cross-lingual understanding.",
+  "contributions": [
+    {
+      "title": "Dynamic Adapter Selection Mechanism",
+      "description": "Introduces a mechanism for dynamically selecting language-specific adapters based on context, optimizing model performance across diverse languages.",
+      "novelty": "This approach is novel in its ability to adapt language processing dynamically without retraining the entire model, thus enhancing scalability."
+    },
+    {
+      "title": "Unified Transformer Architecture",
+      "description": "Presents a unified architecture that integrates language-specific adapters seamlessly into a single transformer model, facilitating efficient multilingual processing.",
+      "novelty": "Unlike existing architectures, our design unifies language adapters within the model, reducing redundancy and improving computational efficiency."
+    },
+    {
+      "title": "Improved Cross-Lingual Transfer Learning",
+      "description": "Demonstrates enhanced cross-lingual transfer capabilities by leveraging language-agnostic representations, notably improving zero-shot learning performance.",
+      "novelty": "Our method surpasses traditional transfer learning techniques by focusing on language-agnostic embeddings, which are less explored in current models."
+    }
+  ],
+  "methodology": {
+    "problemFormulation": "The task is to design a scalable multilingual model that effectively handles both high-resource and low-resource languages while enhancing cross-lingual transfer capabilities.",
+    "approach": "We develop a transformer model with integrated language-specific adapters that dynamically adjust based on input, using a shared language-agnostic representation layer.",
+    "components": [
+      {
+        "name": "Transformer Core",
+        "role": "Processes input tokens using self-attention mechanisms.",
+        "details": "Standard transformer layers with multi-head attention, feed-forward networks, and layer normalization."
+      },
+      {
+        "name": "Language-Specific Adapters",
+        "role": "Facilitate language-specific processing without retraining the entire model.",
+        "details": "Lightweight modules inserted into transformer layers, activated dynamically based on input language."
+      },
+      {
+        "name": "Adapter Selector",
+        "role": "Determines which adapters to activate based on linguistic context.",
+        "details": "Employs a gating mechanism informed by input language embeddings and contextual signals."
+      }
+    ],
+    "assumptions": [
+      "Assumes availability of language-specific data for training adapters.",
+      "Assumes that language-agnostic layers can generalize across languages."
+    ],
+    "limitations": [
+      "Performance may degrade if adapters are poorly trained for specific languages.",
+      "The model's size may grow with the number of adapters, impacting efficiency."
+    ]
+  },
+  "evidence": [
+    {
+      "type": "experiment",
+      "description": "Evaluates multilingual performance on standard benchmark datasets.",
+      "setup": {
+        "context": "Assessing performance across multiple languages including low-resource ones.",
+        "inputs": [
+          "Parallel corpora",
+          "Low-resource language datasets"
+        ],
+        "conditions": [
+          "Baseline multilingual models",
+          "State-of-the-art transformer models"
+        ]
+      },
+      "evaluation": {
+        "criteria": [
+          "Accuracy",
+          "F1 Score"
+        ],
+        "metrics": [
+          "BLEU",
+          "ROUGE"
+        ],
+        "protocol": "Compare performance metrics across test datasets in various languages."
+      },
+      "results": [
+        {
+          "measure": "BLEU",
+          "value": "35.2",
+          "notes": "Improved over baseline models by 3.4 points."
+        },
+        {
+          "measure": "F1 Score",
+          "value": "82.5",
+          "notes": "Outperformed the SOTA by 2.1 points."
+        }
+      ],
+      "analysis": "The experiments demonstrate a consistent advantage in low-resource scenarios, validating the effectiveness of language-specific adapters."
+    },
+    {
+      "type": "experiment",
+      "description": "Tests cross-lingual transfer capabilities in zero-shot settings.",
+      "setup": {
+        "context": "Evaluate zero-shot performance on unseen languages.",
+        "inputs": [
+          "Unseen language datasets"
+        ],
+        "conditions": [
+          "Trained on high-resource languages only"
+        ]
+      },
+      "evaluation": {
+        "criteria": [
+          "Zero-shot accuracy"
+        ],
+        "metrics": [
+          "Cross-lingual Accuracy"
+        ],
+        "protocol": "Measure accuracy on test sets of languages not present during training."
+      },
+      "results": [
+        {
+          "measure": "Cross-lingual Accuracy",
+          "value": "74.3",
+          "notes": "Significantly higher than baseline zero-shot models."
+        }
+      ],
+      "analysis": "The model's ability to leverage language-agnostic representations proves crucial for effective cross-lingual transfer."
+    }
+  ],
+  "relatedWork": [
+    {
+      "category": "Multilingual Transformers",
+      "works": [
+        {
+          "reference": "Devlin, J., et al. (2019). BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding.",
+          "summary": "Introduced the BERT model, which set a standard for transformer-based language models."
+        },
+        {
+          "reference": "Conneau, A., et al. (2020). Unsupervised Cross-lingual Representation Learning at Scale.",
+          "summary": "Proposed a large-scale multilingual model, focusing on cross-lingual representation."
+        }
+      ],
+      "relationship": "extends"
+    },
+    {
+      "category": "Cross-Lingual Transfer Learning",
+      "works": [
+        {
+          "reference": "Lample, G., & Conneau, A. (2019). Cross-lingual Language Model Pretraining.",
+          "summary": "Explored cross-lingual transfer using pre-trained language models."
+        }
+      ],
+      "relationship": "contrasts"
+    },
+    {
+      "category": "Language-Specific Adapters",
+      "works": [
+        {
+          "reference": "Houlsby, N., et al. (2019). Parameter-Efficient Transfer Learning for NLP.",
+          "summary": "Introduced adapter modules for efficient transfer learning in language models."
+        }
+      ],
+      "relationship": "unifies"
+    },
+    {
+      "category": "Low-Resource Language Processing",
+      "works": [
+        {
+          "reference": "Hu, J., et al. (2020). XTREME: A Massively Multilingual Multi-task Benchmark.",
+          "summary": "Provided a framework for evaluating multilingual models on low-resource languages."
+        }
+      ],
+      "relationship": "reproduces"
+    }
+  ],
+  "futureWork": [
+    {
+      "direction": "Expanding Adapter Diversity",
+      "motivation": "Further diversify adapter modules to capture finer linguistic nuances and improve low-resource language performance."
+    },
+    {
+      "direction": "Efficient Adapter Training",
+      "motivation": "Develop methods to train adapters efficiently, reducing computational overhead and enhancing scalability."
+    }
+  ]
+}

@@ -1,10 +1,82 @@
 [
   {
-    "name": "Research Topic Name",
-    "details": "Detailed description of the research area, focus points, and key aspects to cover"
+    "name": "Retrieval-Augmented Generation (RAG)",
+    "details": "Systems combining neural retrieval with language generation for knowledge-intensive tasks. Focus on dense retrieval methods, retrieval-generation fusion architectures, iterative retrieval strategies, factual grounding, handling noisy retrieved documents, and evaluation of factual accuracy and relevance."
   },
   {
-    "name": "Research Topic Name",
-    "details": "Detailed description of the research area, focus points, and key aspects to cover"
+    "name": "Chain-of-Thought and Reasoning",
+    "details": "Techniques for eliciting step-by-step reasoning in LLMs through prompting strategies, self-consistency decoding, tree-of-thoughts, program-aided reasoning, and verification mechanisms. Research on mathematical reasoning, logical inference, multi-hop question answering, and compositional generalization."
+  },
+  {
+    "name": "Instruction Tuning and Alignment",
+    "details": "Methods for aligning LLMs with human preferences including supervised fine-tuning on instruction datasets, reinforcement learning from human feedback (RLHF), direct preference optimization (DPO), constitutional AI, and reward modeling. Focus on helpfulness, harmlessness, and honesty."
+  },
+  {
+    "name": "Parameter-Efficient Fine-Tuning (PEFT)",
+    "details": "Techniques like LoRA (Low-Rank Adaptation), prefix tuning, adapters, prompt tuning, and IA3 that enable efficient adaptation of large pre-trained models with minimal trainable parameters. Research on rank selection, merging strategies, and task-specific adaptation."
+  },
+  {
+    "name": "Long-Context Language Models",
+    "details": "Architectures and methods for extending context windows beyond standard limits, including sparse attention mechanisms, memory-augmented transformers, recurrent memory layers, position encoding innovations (RoPE, ALiBi), and efficient attention approximations for processing long documents."
+  },
+  {
+    "name": "Mixture of Experts (MoE) Models",
+    "details": "Sparse models with conditional computation using expert routing mechanisms. Research on gating networks, load balancing strategies, expert specialization, scaling laws for MoE, efficient training and inference, and combining dense and sparse components."
+  },
+  {
+    "name": "Multimodal Large Language Models",
+    "details": "Vision-language models like CLIP, BLIP, Flamingo, LLaVA integrating visual and textual understanding. Focus on cross-modal alignment, visual instruction tuning, image-text interleaving, visual reasoning, and unified architectures for multiple modalities including audio and video."
+  },
+  {
+    "name": "Model Compression and Quantization",
+    "details": "Techniques for reducing model size and computational requirements including post-training quantization, quantization-aware training, pruning strategies, knowledge distillation, and low-bit inference. Research on maintaining performance while achieving 4-bit, 8-bit, or mixed-precision representations."
+  },
+  {
+    "name": "Hallucination Detection and Mitigation",
+    "details": "Methods for identifying and reducing factual errors in LLM outputs, including uncertainty quantification, self-consistency checks, retrieval-based verification, attribution mechanisms, and training objectives that promote factual accuracy. Evaluation on factuality benchmarks."
+  },
+  {
+    "name": "Multilingual and Cross-Lingual Models",
+    "details": "Massively multilingual transformers, cross-lingual transfer learning, language-agnostic representations, translation-based approaches, and zero-shot cross-lingual understanding. Research on low-resource languages, language-specific adapters, and multilingual instruction following."
+  },
+  {
+    "name": "Efficient Transformer Architectures",
+    "details": "Alternatives and improvements to standard transformers including linear attention mechanisms, state space models (Mamba, S4), Flash Attention, sparse attention patterns, and hybrid architectures. Focus on reducing quadratic complexity while maintaining performance."
+  },
+  {
+    "name": "Prompt Engineering and Optimization",
+    "details": "Automated prompt design, soft prompts, gradient-based prompt optimization, prompt ensembling, and meta-prompting strategies. Research on prompt transferability, robustness to prompt variations, and discrete prompt search methods."
+  },
+  {
+    "name": "Tool Use and Agent Systems",
+    "details": "LLMs augmented with external tools including code execution, calculators, search engines, and APIs. Research on tool selection, action planning, multi-step reasoning with tools, error recovery, and autonomous agent frameworks like ReAct and Toolformer."
+  },
+  {
+    "name": "Continual Learning and Adaptation",
+    "details": "Methods for updating models with new knowledge while preventing catastrophic forgetting, including experience replay, regularization techniques, dynamic architectures, and efficient incremental learning. Focus on temporal adaptation and knowledge editing."
+  },
+  {
+    "name": "Bias, Fairness, and Safety",
+    "details": "Detecting and mitigating biases in language models, fairness across demographic groups, toxicity reduction, adversarial robustness, jailbreak prevention, and red-teaming. Research on bias measurement, debiasing techniques, and safety alignment."
+  },
+  {
+    "name": "Code Generation and Program Synthesis",
+    "details": "Models for generating code from natural language descriptions, including code completion, bug fixing, test generation, and code translation. Research on execution-based evaluation, self-debugging, retrieval-augmented code generation, and multi-language support."
+  },
+  {
+    "name": "Structured Output Generation",
+    "details": "Techniques for generating well-formed structured outputs including JSON, XML, SQL queries, and semantic parses. Research on constrained decoding, grammar-based generation, format enforcement, and semantic validation of generated structures."
+  },
+  {
+    "name": "Model Interpretability and Mechanistic Understanding",
+    "details": "Methods for understanding internal representations and mechanisms in transformers, including attention analysis, probing classifiers, circuit discovery, activation patching, and causal interventions. Research on emergent capabilities and feature attribution."
+  },
+  {
+    "name": "Diffusion Models for Text",
+    "details": "Adapting diffusion-based generation from images to discrete text, including continuous diffusion in embedding space, discrete diffusion processes, and hybrid approaches. Research on controllable generation, infilling, and comparison with autoregressive models."
+  },
+  {
+    "name": "Federated and Privacy-Preserving NLP",
+    "details": "Training language models on decentralized data while preserving privacy, including federated learning algorithms, differential privacy mechanisms, secure aggregation, and on-device personalization. Research on communication efficiency and privacy-utility tradeoffs."
   }
 ]

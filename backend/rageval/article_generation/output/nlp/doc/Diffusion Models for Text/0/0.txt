@@ -1,0 +1,162 @@
+# Rethinking Diffusion Models for Text Design
+
+**Authors:** Hayden Kuznetsov, Tatum Hassan, Ashton Sokolov, Quinn Singh, Morgan Huang  
+**Venue:** EACL 2025  
+**Subfield:** Diffusion Models for Text  
+
+## Abstract
+
+This paper explores the adaptation of diffusion models, traditionally used in image generation, to the domain of text generation. We propose a novel hybrid diffusion model that integrates continuous diffusion in the embedding space with discrete diffusion processes, enabling more controllable and coherent text generation. Our approach allows for tasks such as text infilling and provides a competitive alternative to autoregressive models by leveraging diffusion's inherent iterative refinement capabilities. Key contributions include the introduction of a novel loss function tailored for text, a hybrid architecture merging continuous and discrete diffusion processes, and a comprehensive experimental evaluation against state-of-the-art autoregressive models. Our findings demonstrate significant improvements in controllability and infilling tasks, paving the way for more nuanced text generation applications.
+
+## Introduction
+
+The advent of diffusion models has revolutionized generative tasks in the image domain, offering a robust framework for generating high-fidelity images through iterative refinement processes. These models, characterized by their ability to gradually transform noise into coherent outputs, present a compelling alternative to traditional autoregressive models. However, the application of diffusion models to text generation remains underexplored, primarily due to the discrete nature of text, which poses unique challenges compared to continuous image data.
+
+Autoregressive models, such as those based on the Transformer architecture (Vaswani et al., 2017) and its derivatives like GPT-2 (Radford et al., 2019), have dominated the field of text generation. These models generate text in a sequential manner, predicting the next token based on the previously generated sequence. Despite their success, autoregressive models face limitations in controllability and coherence, particularly in complex generation tasks such as infilling or adhering to specific stylistic constraints.
+
+In contrast, diffusion models offer a fundamentally different approach, leveraging iterative refinement to generate outputs. Ho et al. (2020) demonstrated the efficacy of diffusion models in image generation, providing a foundation for exploring their potential in text-related tasks. However, directly translating these models to the text domain is non-trivial due to the need to handle discrete token spaces effectively.
+
+Our research addresses this gap by introducing a novel hybrid diffusion architecture that combines continuous diffusion in embedding space with discrete diffusion processes. This approach enables the generation of text that is both coherent and diverse, overcoming the limitations of existing models. We further enhance our model with a custom loss function designed specifically for text, balancing the trade-off between coherence and diversity.
+
+The primary contributions of this work are as follows:
+
+1. **Novel Hybrid Diffusion Architecture:** We propose a hybrid architecture that seamlessly integrates continuous and discrete diffusion processes, enhancing the coherence and diversity of generated text.
+   
+2. **Custom Loss Function for Text:** We introduce a novel loss function tailored for text diffusion models, optimizing for coherence and diversity in generated outputs.
+
+3. **Comprehensive Evaluation Framework:** We develop a rigorous evaluation framework to assess the performance of diffusion-based text generation models, introducing new metrics specific to diffusion processes.
+
+In the following sections, we provide a detailed exploration of related work, elaborate on our methodology, present comprehensive experimental results, and discuss the implications of our findings. We conclude with insights into future research directions, highlighting the potential for diffusion models to transform text generation tasks.
+
+## Related Work
+
+The landscape of text generation has been predominantly shaped by autoregressive models, diffusion models in vision, hybrid generative models, and advanced text embedding techniques. Each of these areas contributes uniquely to the development of our proposed hybrid diffusion model for text.
+
+### Autoregressive Text Generation
+
+Autoregressive models have long been the cornerstone of text generation, with the Transformer model (Vaswani et al., 2017) and its successors like GPT-2 (Radford et al., 2019) setting benchmarks for fluency and coherence. These models generate text sequentially, predicting each token based on the preceding context. While effective, they often struggle with maintaining global coherence over long sequences and lack flexibility in terms of controllability and infilling capabilities.
+
+### Diffusion Models in Vision
+
+Diffusion models were initially popularized in the vision domain by Ho et al. (2020), who demonstrated their potential for generating high-quality images through a series of iterative refinements. These models operate by gradually denoising a sample, transforming it from a noisy initial state to a coherent output. The success of diffusion models in vision has inspired their adaptation to other domains, including text, where the challenge lies in managing the discrete nature of language.
+
+### Hybrid Models for Generation
+
+The concept of hybrid generative models, as explored by Zhang et al. (2022), involves integrating multiple generative techniques to enhance output quality. These models leverage the strengths of different approaches, such as combining the sequential nature of autoregressive models with the iterative refinement of diffusion models. Our work builds on this idea, creating a hybrid diffusion model that operates across continuous and discrete spaces.
+
+### Text Embedding Techniques
+
+Text embedding techniques, such as those introduced by Devlin et al. (2018) with BERT, play a crucial role in representing text in a continuous space. These embeddings capture semantic and contextual information, providing a foundation for continuous diffusion processes. Our model leverages these embeddings to facilitate smooth transformations in the diffusion process, bridging the gap between continuous and discrete text representations.
+
+## Methodology
+
+Our proposed methodology involves adapting diffusion models, traditionally used in image domains, to handle text generation by addressing the challenges inherent in discrete space and ensuring coherent text output. This section details the problem formulation, the components of our hybrid diffusion model, and our training strategy.
+
+### Problem Formulation
+
+The core challenge in adapting diffusion models for text lies in managing the discrete nature of language while maintaining coherence and diversity in generated outputs. Our approach employs a hybrid diffusion model that operates in both continuous embedding spaces and discrete token spaces. The model iteratively refines text predictions through a sequence of diffusion steps, leveraging both continuous transformations and discrete sampling.
+
+### Hybrid Diffusion Architecture
+
+Our hybrid diffusion architecture consists of two primary components:
+
+#### Continuous Embedding Diffusion
+
+Continuous embedding diffusion handles the transformation of text embeddings through continuous diffusion processes. This component utilizes a series of Gaussian transformations applied in the embedding space, enabling smooth interpolation between text states. By operating in the continuous domain, this process facilitates the gradual refinement of text representations, ensuring semantic coherence.
+
+#### Discrete Token Diffusion
+
+Discrete token diffusion performs discrete sampling to generate tokenized text from refined embeddings. This component applies a categorical diffusion process in token space, ensuring that the generated text remains grammatically and semantically coherent. By integrating discrete sampling, our model can effectively transition from continuous embeddings to discrete tokens, maintaining the integrity of the text.
+
+### Custom Loss Function
+
+A critical innovation in our approach is the custom loss function, which guides the training of the diffusion model to optimize text coherence and diversity. This loss function balances reconstruction loss with a novel diversity-promoting term specific to text generation. The reconstruction loss ensures that the generated text closely matches the target output, while the diversity-promoting term encourages variability in the generated text, preventing mode collapse.
+
+### Assumptions and Limitations
+
+Our methodology is based on several key assumptions:
+
+1. Text can be effectively represented and transformed in a continuous embedding space.
+2. Diffusion processes can be adapted to discrete token spaces with appropriate modifications.
+
+However, our approach also faces limitations, including high computational cost due to iterative refinement steps and potential challenges in scaling to very large datasets or corpora.
+
+## Experiments
+
+To validate the efficacy of our proposed hybrid diffusion model, we conducted a series of experiments focusing on text generation quality and controllability, as well as text infilling capabilities. This section details our experimental setup, evaluation criteria, and results.
+
+### Experimental Setup
+
+Our experiments were designed to compare the performance of our hybrid diffusion model against baseline autoregressive models. We utilized standardized benchmark sets for text generation tasks, ensuring a fair comparison across models.
+
+#### Datasets
+
+We employed a diverse set of datasets, including:
+
+- **OpenAI GPT-2 Dataset:** A large corpus used for training autoregressive models, providing a benchmark for fluency and coherence.
+- **Text Infilling Dataset:** A custom dataset designed to evaluate the infilling capabilities of models, containing partial text inputs with deliberate gaps.
+
+#### Baselines
+
+Our experiments included the following baseline models:
+
+- **Autoregressive Transformer Models:** Including the original Transformer (Vaswani et al., 2017) and GPT-2 (Radford et al., 2019) for comparison in text generation tasks.
+
+#### Evaluation Metrics
+
+We assessed model performance using both automated and human evaluation metrics, including:
+
+- **BLEU Score:** Measuring the fluency and accuracy of generated text.
+- **ROUGE Score:** Evaluating text coherence and overlap with reference outputs.
+- **F1-Score:** Assessing infilling accuracy and contextual relevance.
+
+### Main Results
+
+Our experimental results demonstrate the superiority of our hybrid diffusion model in several key areas:
+
+1. **Text Generation Quality:** Our model achieved a BLEU score of 34.5, representing a 5% improvement over baseline models. The ROUGE score of 0.52 further highlights the superior coherence of our generated text.
+
+2. **Controllability and Infilling:** In text infilling tasks, our model outperformed baselines with an F1-score of 0.78, surpassing traditional autoregressive approaches by 10%.
+
+### Ablation Studies
+
+To further understand the contributions of each component in our model, we conducted ablation studies by systematically removing elements such as the continuous diffusion process and the custom loss function. These studies revealed that each component plays a crucial role in enhancing text coherence and diversity, with the custom loss function being particularly impactful in promoting variability in generated outputs.
+
+## Results & Analysis
+
+The results of our experiments underscore the effectiveness of our hybrid diffusion model for text generation. The iterative refinement process inherent in diffusion models allows for greater control over text generation, enabling nuanced outputs that are both coherent and diverse. Our model's ability to seamlessly transition between continuous and discrete spaces is a key factor in its success, as it allows for the preservation of semantic and grammatical integrity in generated text.
+
+### Why It Works
+
+The success of our model can be attributed to several factors:
+
+- **Iterative Refinement:** By iteratively refining text representations, our model can achieve a high degree of coherence and fluency, addressing the limitations of autoregressive models in maintaining global coherence.
+- **Hybrid Architecture:** The integration of continuous and discrete diffusion processes allows for flexible and controllable text generation, accommodating a wide range of generation tasks.
+- **Custom Loss Function:** Our novel loss function effectively balances coherence and diversity, preventing mode collapse and promoting variability in generated outputs.
+
+### Failure Cases and Error Analysis
+
+Despite its strengths, our model is not without limitations. In some cases, particularly with highly complex or ambiguous prompts, the generated text may lack specificity or deviate from the intended style. Error analysis reveals that these issues often arise from the inherent challenges of balancing coherence and diversity, suggesting avenues for further refinement of our loss function and training strategies.
+
+## Conclusion
+
+In this paper, we have introduced a novel hybrid diffusion model for text generation, demonstrating its potential as a competitive alternative to autoregressive models. Our approach leverages the strengths of diffusion processes, offering enhanced controllability and coherence in generated text. Through comprehensive experiments, we have validated the efficacy of our model, highlighting its advantages in tasks such as text infilling and controllable generation.
+
+### Broader Impact
+
+The broader impact of our work lies in its potential to transform text generation applications, enabling more nuanced and flexible outputs. Our model's ability to balance coherence and diversity opens new possibilities for creative and adaptive text generation, with implications for fields ranging from natural language processing to creative writing.
+
+### Future Research Directions
+
+Looking forward, several avenues for future research emerge:
+
+1. **Scalable Training Techniques:** Addressing the computational demands of diffusion models by exploring more efficient training paradigms or distributed computing solutions.
+
+2. **Enhanced Semantic Control:** Developing methods to improve semantic control in text generation, enabling more precise adherence to user intent or specified constraints.
+
+3. **Cross-Domain Diffusion Applications:** Investigating the application of diffusion models to other discrete domains beyond text, such as symbolic music or structured data.
+
+In conclusion, our work represents a significant step forward in the application of diffusion models to text generation, offering a promising new direction for research and development in this dynamic field.
+
+Research Area Details:
+Adapting diffusion-based generation from images to discrete text, including continuous diffusion in embedding space, discrete diffusion processes, and hybrid approaches. Research on controllable generation, infilling, and comparison with autoregressive models.

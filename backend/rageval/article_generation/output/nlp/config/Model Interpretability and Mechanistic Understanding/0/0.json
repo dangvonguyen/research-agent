@@ -1,0 +1,187 @@
+{
+  "paperMetadata": {
+    "title": "Rethinking Model Interpretability and Mechanistic Understanding Design",
+    "authors": [
+      "Cameron Santos",
+      "Blake Garcia",
+      "Kendall Wagner",
+      "Avery Miller",
+      "Sam Wang",
+      "Quinn Ahmed"
+    ],
+    "venue": "EACL",
+    "year": "2023",
+    "subfield": "Model Interpretability and Mechanistic Understanding"
+  },
+  "abstract": "In recent years, the interpretability of transformer models has become a critical research area, given their widespread adoption in natural language processing tasks. This paper introduces a novel framework for enhancing model interpretability and mechanistic understanding by integrating attention analysis with causal intervention techniques. We propose a new architecture modification that allows for fine-grained control over attention mechanisms, facilitating deeper insights into the model's decision-making processes. Our experiments demonstrate that this approach not only improves interpretability but also maintains competitive performance on benchmark datasets. The primary contributions of this work include a novel attention modification technique, a systematic evaluation of interpretability metrics, and a comparative analysis against state-of-the-art methods. We also discuss the implications of our findings for future research in model interpretability.",
+  "contributions": [
+    {
+      "title": "Attention Mechanism Modification",
+      "description": "We introduce a new modification to the attention mechanism that allows for more granular control and interpretability by dynamically adjusting attention weights based on external intervention signals.",
+      "novelty": "This technique provides a new way to dissect and understand attention behaviors in transformers, offering insights not available through traditional static analysis."
+    },
+    {
+      "title": "Comprehensive Interpretability Evaluation",
+      "description": "We develop a systematic framework for evaluating model interpretability using a set of proposed metrics that measure both global and local interpretability.",
+      "novelty": "Unlike prior works, our evaluation framework provides a balanced assessment across different levels of interpretability, facilitating more informed comparisons between models."
+    },
+    {
+      "title": "Comparative Analysis with SOTA",
+      "description": "We perform a detailed comparative analysis with state-of-the-art interpretability methods, highlighting the strengths and weaknesses of our approach.",
+      "novelty": "This analysis is the first to comprehensively position a new method within the existing landscape of transformer interpretability techniques."
+    }
+  ],
+  "methodology": {
+    "problemFormulation": "The challenge is to enhance the interpretability of transformer models without sacrificing performance, by understanding and modifying their internal mechanisms.",
+    "approach": "We propose a modification to the attention mechanism involving external signals that influence attention distributions. This is achieved through a novel architecture that incorporates causal interventions.",
+    "components": [
+      {
+        "name": "Dynamic Attention Controller",
+        "role": "Modifies attention weights based on external intervention signals.",
+        "details": "Implemented as an additional layer that processes intervention signals and adjusts attention scores using a learned transformation."
+      },
+      {
+        "name": "Causal Intervention Module",
+        "role": "Intervenes in the attention process to identify causal relationships.",
+        "details": "Uses a set of pre-defined intervention signals to perturb attention distributions and analyze resultant outputs."
+      }
+    ],
+    "assumptions": [
+      "Intervention signals are representative of meaningful external factors.",
+      "The modified attention mechanism does not degrade model performance beyond acceptable thresholds."
+    ],
+    "limitations": [
+      "The approach requires pre-defined intervention signals, which may limit applicability across diverse domains.",
+      "Increased computational complexity due to additional layers and intervention processing."
+    ]
+  },
+  "evidence": [
+    {
+      "type": "experiment",
+      "description": "Validation of interpretability enhancement through attention modification.",
+      "setup": {
+        "context": "Evaluating modified transformers on standard NLP tasks.",
+        "inputs": [
+          "Text input sequences",
+          "Intervention signals"
+        ],
+        "conditions": [
+          "Baseline transformer",
+          "Modified transformer with intervention"
+        ]
+      },
+      "evaluation": {
+        "criteria": [
+          "Interpretability",
+          "Performance"
+        ],
+        "metrics": [
+          "Attention Entropy",
+          "F1 Score",
+          "Accuracy"
+        ],
+        "protocol": "Models are compared across tasks with and without intervention, measuring interpretability and task performance."
+      },
+      "results": [
+        {
+          "measure": "Attention Entropy",
+          "value": "0.35",
+          "notes": "Lower entropy indicates more focused attention distributions."
+        },
+        {
+          "measure": "F1 Score",
+          "value": "0.89",
+          "notes": "Comparable to baseline performance."
+        }
+      ],
+      "analysis": "The modified model exhibits enhanced interpretability with focused attention distributions, while maintaining performance comparable to the baseline."
+    },
+    {
+      "type": "caseStudy",
+      "description": "Application of the method to a sentiment analysis task.",
+      "setup": {
+        "context": "Sentiment prediction on a balanced dataset.",
+        "inputs": [
+          "Sentiment-labeled text samples"
+        ],
+        "conditions": [
+          "Without intervention",
+          "With targeted intervention"
+        ]
+      },
+      "evaluation": {
+        "criteria": [
+          "Model Explanation"
+        ],
+        "metrics": [
+          "Qualitative Analysis"
+        ],
+        "protocol": "Assessing model explanations with and without intervention through human evaluation."
+      },
+      "results": [
+        {
+          "measure": "Human Evaluation Score",
+          "value": "4.5/5",
+          "notes": "Scores reflect improved clarity and relevance of explanations with intervention."
+        }
+      ],
+      "analysis": "Interventions enhance the model's ability to provide meaningful explanations for sentiment predictions."
+    }
+  ],
+  "relatedWork": [
+    {
+      "category": "Attention Analysis",
+      "works": [
+        {
+          "reference": "Vaswani et al. 2017",
+          "summary": "Introduced the transformer architecture and highlighted the role of self-attention in capturing dependencies."
+        },
+        {
+          "reference": "Clark et al. 2019",
+          "summary": "Analyzed the interpretability of attention weights in transformers, questioning their reliability as explanations."
+        }
+      ],
+      "relationship": "extends"
+    },
+    {
+      "category": "Probing Classifiers",
+      "works": [
+        {
+          "reference": "Tenney et al. 2019",
+          "summary": "Developed probing techniques to analyze linguistic knowledge in BERT's internal representations."
+        }
+      ],
+      "relationship": "contrasts"
+    },
+    {
+      "category": "Causal Interventions",
+      "works": [
+        {
+          "reference": "Vig et al. 2020",
+          "summary": "Explored causal interventions in transformer attention to understand their decision-making processes."
+        }
+      ],
+      "relationship": "unifies"
+    },
+    {
+      "category": "Emergent Capabilities",
+      "works": [
+        {
+          "reference": "Radford et al. 2019",
+          "summary": "Investigated emergent language understanding capabilities in large language models."
+        }
+      ],
+      "relationship": "reproduces"
+    }
+  ],
+  "futureWork": [
+    {
+      "direction": "Development of automated intervention signal generation",
+      "motivation": "To facilitate broader applicability of the method by reducing the need for manually defined intervention signals."
+    },
+    {
+      "direction": "Exploration of interpretability in multimodal models",
+      "motivation": "To extend the applicability of interpretability techniques to models that process multiple types of data, such as text and images."
+    }
+  ]
+}

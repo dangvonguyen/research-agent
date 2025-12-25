@@ -1,0 +1,119 @@
+{
+  "paperMetadata": {
+    "title": "Rethinking Hallucination Detection and Mitigation Design",
+    "authors": [
+      "Sam Zieliński",
+      "Reagan Oliveira",
+      "Jesse Hassan",
+      "Sloan Oliveira"
+    ],
+    "venue": "TACL",
+    "year": "2025",
+    "subfield": "Hallucination Detection and Mitigation"
+  },
+  "abstract": "This paper addresses the critical challenge of hallucination in large language models (LLMs), where generated outputs contain factual inaccuracies. We propose a novel hallucination detection and mitigation framework that integrates a multi-faceted approach combining uncertainty quantification, self-consistency checks, and a specialized training objective. Our system is designed to enhance factual accuracy by incorporating a retrieval-based verification mechanism that cross-references model outputs with an external knowledge base. Experimental results on established factuality benchmarks demonstrate a significant reduction in hallucination rates compared to state-of-the-art baselines. Our contributions include a novel loss function tailored for factual accuracy, a comprehensive evaluation on diverse datasets, and an analysis of system performance under different configurations. This work advances the understanding of hallucination phenomena in LLMs and provides a robust methodology for improving output reliability.",
+  "contributions": [
+    {
+      "title": "Novel Factuality Loss Function",
+      "description": "We introduce a new loss function that explicitly penalizes factual inaccuracies by leveraging external knowledge sources. This function is integrated into the training process to enhance the fidelity of model outputs.",
+      "novelty": "This loss function is the first to directly incorporate external retrieval feedback into the gradient descent process, offering a new avenue for integrating factual verification into LLM training."
+    },
+    {
+      "title": "Comprehensive Evaluation Framework",
+      "description": "Our evaluation framework systematically assesses hallucination across multiple datasets, providing a detailed analysis of our approach's effectiveness in various domains.",
+      "novelty": "This is the first framework to employ both quantitative metrics and qualitative assessments, offering a holistic view of model performance."
+    }
+  ],
+  "methodology": {
+    "problemFormulation": "Hallucination in LLMs is defined as the generation of outputs containing factual inaccuracies. The goal is to detect and mitigate these hallucinations to improve model reliability.",
+    "approach": "Our approach combines uncertainty quantification with retrieval-based verification. The model first generates a preliminary output, which is then cross-verified against an external knowledge base. Discrepancies trigger a re-evaluation using a self-consistency check.",
+    "components": [
+      {
+        "name": "Uncertainty Quantification Module",
+        "role": "Estimates the confidence of model predictions to identify potentially hallucinated outputs.",
+        "details": "Utilizes Bayesian dropout to generate confidence intervals and flag low-confidence outputs for further verification."
+      },
+      {
+        "name": "Retrieval-Based Verifier",
+        "role": "Cross-references model outputs with an external knowledge base to verify factual accuracy.",
+        "details": "Employs a semantic similarity scoring mechanism to match outputs with relevant passages from the knowledge source."
+      }
+    ],
+    "assumptions": [
+      "The external knowledge base is comprehensive and up-to-date.",
+      "Bayesian dropout provides a reliable measure of uncertainty."
+    ],
+    "limitations": [
+      "The system requires significant computational resources for real-time retrieval and verification.",
+      "Performance is dependent on the coverage of the external knowledge base."
+    ]
+  },
+  "evidence": [
+    {
+      "type": "experiment",
+      "description": "Validation of the proposed loss function on factuality benchmarks.",
+      "setup": {
+        "context": "Testing on a curated set of factuality benchmarks including FEVER and TruthfulQA.",
+        "inputs": [
+          "Model outputs",
+          "External knowledge base"
+        ],
+        "conditions": [
+          "Baseline model",
+          "Model with factuality loss function"
+        ]
+      },
+      "evaluation": {
+        "criteria": [
+          "Factual accuracy",
+          "Consistency"
+        ],
+        "metrics": [
+          "F1 score",
+          "Precision"
+        ],
+        "protocol": "Compare model outputs against ground-truth annotations and calculate precision and F1 scores."
+      },
+      "results": [
+        {
+          "measure": "F1 score",
+          "value": "0.87",
+          "notes": "Shows a 10% improvement over the baseline model."
+        }
+      ],
+      "analysis": "The introduction of the factuality loss function leads to a statistically significant improvement, confirming its effectiveness in reducing hallucinations."
+    }
+  ],
+  "relatedWork": [
+    {
+      "category": "Uncertainty Quantification",
+      "works": [
+        {
+          "reference": "Smith, J. et al. (2021). 'Bayesian Approaches to Uncertainty in LLMs'.",
+          "summary": "Discusses the use of Bayesian methods to quantify uncertainty in neural network predictions."
+        }
+      ],
+      "relationship": "extends"
+    },
+    {
+      "category": "Retrieval-Augmented Generation",
+      "works": [
+        {
+          "reference": "Lee, K. et al. (2022). 'Retrieval-Augmented Generation for Fact-Checking'.",
+          "summary": "Proposes a method for integrating external retrieval mechanisms into generative models to improve factuality."
+        }
+      ],
+      "relationship": "extends"
+    }
+  ],
+  "futureWork": [
+    {
+      "direction": "Integration with Real-Time Systems",
+      "motivation": "To enhance the practicality of the proposed method, future work will explore optimizations for real-time application in conversational agents."
+    },
+    {
+      "direction": "Expansion of Knowledge Base Coverage",
+      "motivation": "Increasing the breadth and depth of the knowledge base will likely reduce false negatives and improve model reliability."
+    }
+  ]
+}
