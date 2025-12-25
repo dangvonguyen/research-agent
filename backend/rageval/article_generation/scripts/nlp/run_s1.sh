@@ -8,6 +8,7 @@ run_command() {
     local paper_type_idx=$1
 
     PYTHONPATH="$SCRIPT_DIR/../.." python -m code.nlp.s1_config \
+        --model_name $MODEL_NAME \
         --data_for_complete ${PAPER_SCHEMA_DIR}/${PAPER_TEMPLATE_FILE} \
         --paper_types ${PAPER_SCHEMA_DIR}/${PAPER_TYPES_FILE} \
         --paper_type_idx $paper_type_idx \

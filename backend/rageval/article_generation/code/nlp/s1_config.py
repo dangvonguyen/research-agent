@@ -49,29 +49,35 @@ def generate_config(
     paper_details,
 ):
     time.sleep(random.random() * 1.5)
-    system_prompt = "You are an experienced NLP researcher with expertise in writing academic papers and designing experiments."
-    user_prompt = f"""You need to generate a detailed research paper configuration in JSON format.
+    system_prompt = "You are an experienced NLP researcher specializing in experimental design and technical paper writing. Generate realistic, technically sound research configurations."
+    user_prompt = f"""Generate a complete research paper configuration in valid JSON format.
 
-The paper is about: {paper_type}
+RESEARCH CONTEXT:
+Topic: {paper_type}
 Background: {paper_details}
 
-You need to fill in the following JSON template with realistic and technically sound information:
-- The "paperMetadata" section has been pre-filled with title, authors, venue, year, and subfield.
-- Fill in "abstract": A concise 200-300 word summary of the paper.
-- Fill in "researchContributions": List 2-4 main contributions with detailed descriptions and novelty explanations.
-- Fill in "methodology": Describe the approach, model architecture (be specific with layer counts, dimensions, attention mechanisms), training strategy, and 3-5 key innovations.
-- Fill in "experiments": Design 2-4 experiments with specific dataset names, baseline methods, evaluation metrics (with expected values), results (be realistic), and analysis.
-- Fill in "relatedWork": List 2-3 categories of related work with representative papers and how this work differs.
-- Fill in "futureWork": Provide 2-3 promising future directions.
+TASK: Complete the JSON template below. The "paperMetadata" section is pre-filled; you must complete all other sections.
 
-Important:
-- Be technically specific (mention specific architectures, hyperparameters, dataset sizes, metric values)
-- Make the research contributions novel and believable
-- Ensure experiments are well-designed with appropriate baselines and metrics
-- Use realistic metric values (e.g., BLEU scores 20-45, F1 scores 0.70-0.95, perplexity 10-100)
-- Make sure all lists have actual content, not empty arrays
+REQUIREMENTS:
+- abstract: 200-300 word summary articulating the research problem, the proposed methodology, key findings, and the primary contributions
+- contributions: 2-4 distinct contributions, each with a descriptive title, detailed explanation of what it achieves, and explicit statement of its novelty
+- methodology: Comprehensive technical description including problem formulation, approach explanation, system architecture with component specifications, key assumptions underlying the method, and known limitations or constraints
+- evidence: 2-4 validation experiments, each specifying type, clear description of what is being validated, experimental setup, evaluation protocol, quantitative results, and analytical interpretation of findings
+- relatedWork: 4-5 thematic categories of prior research, each containing representative works (with citations and summaries)
+- futureWork: 2-4 concrete research directions with specific descriptions of the proposed direction and clear motivation
 
-The JSON template to complete:
+QUALITY STANDARDS:
+- Conceptual Novelty: The proposed method must introduce a distinct technical innovation (e.g., a new loss function, architecture modification, or training paradigm), not just a combination of existing techniques.
+- Technical Feasibility: The methodology must be theoretically sound and implementable. Avoid "magic box" explanations; describe distinct input/output flows and mathematical operations.
+- Experimental Rigor: Validation must include strong, relevant baselines (including recent SOTA) and appropriate ablation studies to isolate the contribution's effect.
+- Metric Appropriateness: Use specific, standard evaluation metrics for the task (e.g., ROUGE for summarization, F1 for extraction). Avoid generic "performance" claims.
+- Coherent Narrative: The problem statement, methodology, and experiments must form a logical narrative arc. The experiments must directly validate the claims made in the methodology.
+- Realistic Constraints: Acknowledge actual hardware/data limitations. Training details (e.g., batch size, learning rate, GPU hours) should be plausible.
+- Logical Consistency: Ensure parameters, dimension sizes, and terminology are used consistently across all sections.
+
+OUTPUT: Return ONLY valid JSON. No markdown, no explanations.
+
+JSON TEMPLATE:
 """
     user_prompt += json.dumps(data_for_complete, ensure_ascii=False, indent=2)
 
@@ -132,7 +138,7 @@ def set_value(data, paper_type) -> dict[str, Any]:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default="gpt-4o-mini")
+    parser.add_argument("--model_name", type=str, default="gpt-4o")
     parser.add_argument("--data_for_complete", type=str, default=None)
     parser.add_argument("--paper_types", type=str, default=None)
     parser.add_argument("--paper_type_idx", type=int, default=None)

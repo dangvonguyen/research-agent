@@ -19,70 +19,43 @@ def generate_article(
     paper_details,
 ):
     time.sleep(random.random() * 1.5)
-    system_prompt = "You are an experienced NLP researcher with expertise in writing academic papers for top-tier conferences and journals."
-    user_prompt = f"""You need to write a complete research paper based on the provided JSON configuration.
+    system_prompt = "You are an expert NLP researcher writing for top-tier venues (ACL, EMNLP, NeurIPS). Produce publication-quality academic papers with technical depth, clear argumentation, and strong empirical validation."
+    user_prompt = f"""Write a complete, publication-ready research paper based on the provided configuration.
 
-The paper is about: {paper_type}
+RESEARCH CONTEXT:
+Topic: {paper_type}
 Background: {paper_details}
 
-Based on the provided configuration, write a comprehensive research paper with the following structure:
+PAPER STRUCTURE (~5000 words):
 
-1. **Abstract** (200-250 words)
-   - Concise summary of the problem, approach, experiments, and main results
-   - Clear statement of contributions
+1. Abstract (~250 words): Define the problem, full proposed approach, key specific results with numbers, and primary contributions.
+2. Introduction (~800 words): Extensive motivation, detailed gap analysis of at least 3 prior works, research questions, contributions list, roadmap.
+3. Related Work (~800 words): Comprehensive survey categorized by themes, in-depth comparative analysis, clear positioning.
+4. Methodology (~1500 words): Rigorous problem formulation (math), full system architecture details (diagrams in text), training strategy, innovations.
+5. Experiments (~1500 words): Detailed setup (datasets, baselines), extensive metric definitions, main results, ablation studies, deep analysis.
+6. Results & Analysis (~600 words): Synthesis across settings, interpretation of why it works, failure cases, error analysis.
+7. Conclusion (~300 words): Summary of findings, broader impact, future research directions.
 
-2. **Introduction** (800-1000 words)
-   - Motivate the problem and its importance
-   - Describe the current state of the field
-   - Clearly state the research questions and contributions
-   - Outline the paper structure
+WRITING STANDARDS:
+- High Information Density: Content must be densely packed with information. Avoid filler language, broad claims, or meta commentary. Replace general statements with specific mechanisms, parameters, or empirical observations.
+- Mechanistic Explanation: Do not merely state what the method or contribution does. Explicitly explain why it works, including the underlying inductive biases, optimization effects, or representational advantages that lead to observed improvements.
+- Technical Precision: Use standard terminology correctly. Define all symbols and acronyms upon first use.
+- Evidence-Based Claims: Avoid subjective adjectives ("amazing", "huge"). Use quantitative descriptors ("15% reduction in latency", "O(n) complexity").
+- Cohesive Structure: Ensure smooth transitions between sections. The Methodology must map clearly to the Experiments.
+- Scholarly Tone: Maintain a formal, objective tone typical of top-tier NLP venues (ACL/NeurIPS).
 
-3. **Related Work** (1000-1200 words)
-   - Survey relevant prior work organized by category
-   - Compare and contrast with this work
-   - Identify gaps that this research addresses
-   - Be specific about methodology and results of related papers
+MATCHING & FORMATTING:
+- Use section headers as shown
+- Reference tables/figures in text
+- No LaTeX equations; use clear prose
+- Prefer paragraphs over bullets
 
-4. **Methodology** (1500-2000 words)
-   - Describe the approach in detail
-   - Explain the model architecture with specific details (layer counts, dimensions, activation functions)
-   - Describe the training procedure (optimization, learning rate schedule, batch size, etc.)
-   - Explain key innovations and design choices
-   - Include algorithmic descriptions where appropriate
-   - Use technical terminology appropriately
+CRITICAL LENGTH INSTRUCTION:
+- PROHIBITED: Summarizing, being concise, skipping details, "briefly", "in short".
+- REQUIRED: Expand every point. Providing mathematical formulations, detailed logic flows, and hypothetical examples. The goal is to produce a LONG, detailed technical document.
+- If the configuration is brief, you must logically extrapolate and fill in the missing technical details to meet the length requirements.
 
-5. **Experiments** (1500-2000 words)
-   - Describe experimental setup in detail
-   - List datasets with statistics (size, splits, characteristics)
-   - Describe baselines and their configurations
-   - Present evaluation metrics and justify their choice
-   - Include detailed results tables in text form
-   - Provide thorough analysis and ablation studies
-   - Discuss what the results show and why
-
-6. **Results and Analysis** (800-1000 words)
-   - Highlight main findings
-   - Provide in-depth analysis of results
-   - Discuss strengths and limitations
-   - Include error analysis or case studies if relevant
-   - Compare with theoretical expectations
-
-7. **Conclusion** (400-500 words)
-   - Summarize the main contributions
-   - Discuss broader implications
-   - Describe future work and potential extensions
-   - End with a strong closing statement
-
-Guidelines:
-- Write in a formal academic tone
-- Use technical terminology appropriately
-- Be specific about numbers, metrics, and technical details
-- Make the paper coherent and well-structured
-- Total length should be 6000-8000 words
-- Do not include actual equations in LaTeX, but describe mathematical concepts in text
-- Reference the provided JSON configuration for all technical details
-
-The configuration JSON:
+Extract ALL technical details from the configuration JSON below:
 """
     user_prompt += json.dumps(data_for_complete, ensure_ascii=False, indent=2)
 

@@ -5,6 +5,9 @@ ARTICLE_GENERATION_DIR="$(cd "$SCRIPT_DIR/../../" && pwd)"
 # Processing settings
 JSON_IDX=1
 
+# Model settings
+MODEL_NAME="gpt-4o"
+
 # Output directories
 NLP_OUTPUT_DIR=$ARTICLE_GENERATION_DIR/output/nlp
 PAPER_SCHEMA_DIR=$NLP_OUTPUT_DIR/schema

@@ -7,35 +7,66 @@
     "subfield": ""
   },
   "abstract": "",
-  "researchContributions": [
+  "contributions": [
     {
-      "contribution": "",
+      "title": "",
       "description": "",
       "novelty": ""
     }
   ],
   "methodology": {
+    "problemFormulation": "",
     "approach": "",
-    "modelArchitecture": "",
-    "trainingStrategy": "",
-    "keyInnovations": []
+    "components": [
+      {
+        "name": "",
+        "role": "",
+        "details": ""
+      }
+    ],
+    "assumptions": [],
+    "limitations": []
   },
-  "experiments": [
+  "evidence": [
     {
-      "experimentName": "",
-      "datasets": [],
-      "baselines": [],
-      "metrics": {},
-      "results": {},
+      "type": "experiment | theorem | caseStudy | userStudy | simulation | analysis",
+      "description": "",
+      "setup": {
+        "context": "",
+        "inputs": [],
+        "conditions": []
+      },
+      "evaluation": {
+        "criteria": [],
+        "metrics": [],
+        "protocol": ""
+      },
+      "results": [
+        {
+          "measure": "",
+          "value": "",
+          "notes": ""
+        }
+      ],
       "analysis": ""
     }
   ],
   "relatedWork": [
     {
       "category": "",
-      "keyPapers": [],
-      "ourDifference": ""
+      "works": [
+        {
+          "reference": "",
+          "summary": ""
+        }
+      ],
+      "relationship": "extends | contrasts | unifies | reproduces"
     }
   ],
-  "futureWork": []
+  "futureWork": [
+    {
+      "direction": "",
+      "motivation": ""
+    }
+  ]
 }
