@@ -9,6 +9,7 @@ from app.ai.prompts import ORCHESTRATOR_AGENT_PROMPT
 
 from .analysis import AnalysisAgent
 from .registry import agent_registry
+from .search import SearchAgent
 from .synthesis import SynthesisAgent
 
 
@@ -19,8 +20,9 @@ def initialize_agent_registry() -> None:
     """
 
     # Register all available agents
-    agent_registry.register(AnalysisAgent)
-    agent_registry.register(SynthesisAgent)
+    # agent_registry.register(AnalysisAgent)
+    # agent_registry.register(SynthesisAgent)
+    agent_registry.register(SearchAgent)
 
 
 def create_orchestrator_agent(llm: LLM, event_callback: Callable) -> FunctionAgent:
