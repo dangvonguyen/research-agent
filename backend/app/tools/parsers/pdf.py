@@ -1,11 +1,13 @@
 """Main PDF parser class that orchestrates PDF parsing and content extraction."""
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import Optional
 
 from app.core.config import settings
 from app.db.models import Paper, PaperContent
+from app.services.llm_service import llm_service
 
 from .api_converter import APIConverter
 from .image_handler import ImageHandler
@@ -29,7 +31,9 @@ class PDFParser:
         # Initialize component modules
         self.api_converter = APIConverter(self.api_key, self.api_url)
         self.markdown_parser = MarkdownParser(self.min_content_length)
-        self.text_processor = TextProcessor(self.max_chunk_words)
+        # Use default LLM for table conversion
+        default_llm = llm_service.get_default_llm()
+        self.text_processor = TextProcessor(self.max_chunk_words, llm=default_llm)
         self.section_classifier = SectionClassifier()
 
     def get_markdown_content(
@@ -227,7 +231,8 @@ class PDFParser:
                         )
 
                     # Split content into paragraphs first to track image positions relative to paragraphs
-                    paragraphs = self.text_processor.split_into_paragraphs(content)
+                    # Convert tables to text if LLM is available (using async method)
+                    paragraphs = self._split_into_paragraphs_with_table_conversion(content)
 
                     # Map images to paragraph indices
                     image_to_paragraph = {}
@@ -391,6 +396,32 @@ class PDFParser:
                 str(e),
             )
             return []
+
+    def _split_into_paragraphs_with_table_conversion(self, content: str) -> list[str]:
+        """
+        Split content into paragraphs and convert tables to text if LLM is available.
+        Handles both sync and async contexts.
+
+        Args:
+            content: Content to split
+
+        Returns:
+            List of paragraphs with tables converted to text
+        """
+        try:
+            # Check if we're in an async context
+            loop = asyncio.get_running_loop()
+            # We're in async context, but parse_paper is sync
+            # Use the sync version for now (tables won't be converted in async context)
+            logger.warning(
+                "Running in async context, table conversion may not work. Using sync method."
+            )
+            return self.text_processor.split_into_paragraphs(content)
+        except RuntimeError:
+            # No event loop running, use asyncio.run to convert tables
+            return asyncio.run(
+                self.text_processor.split_into_paragraphs_async(content)
+            )
 
     def parse_specific_sections(self, paper: Paper) -> list[PaperContent]:
         """
