@@ -4,10 +4,25 @@ import { toast } from "sonner";
 import { apiClient } from "@/api";
 import type { Role, ToolResultOutput } from "@/api/models";
 import {
+  InlineCitation,
+  InlineCitationCard,
+  InlineCitationCardBody,
+  InlineCitationCardTrigger,
+  InlineCitationCarousel,
+  InlineCitationCarouselContent,
+  InlineCitationCarouselItem,
+  InlineCitationCarouselHeader,
+  InlineCitationCarouselIndex,
+  InlineCitationCarouselPrev,
+  InlineCitationCarouselNext,
+  InlineCitationSource,
+  type CitationsData,
   MessageAttachment,
   MessageAttachments,
   MessageContent,
   MessageResponse,
+  PaperCard,
+  type PaperRecommendationsData,
   Reasoning,
   ReasoningContent,
   ReasoningTrigger,
@@ -53,7 +68,7 @@ function Chat({ id, initialMessages }: ChatProps) {
     setMessages((prev) => {
       if (prev.some((msg) => msg.id === messageId)) {
         return prev.map((msg) =>
-          msg.id === messageId ? { ...msg, content: contentParts } : msg,
+          msg.id === messageId ? { ...msg, content: contentParts } : msg
         );
       } else {
         return [
@@ -122,7 +137,7 @@ function Chat({ id, initialMessages }: ChatProps) {
 
   const findToolResult = (
     toolCallId: string,
-    contentParts: MessageContentPart[],
+    contentParts: MessageContentPart[]
   ): MessageToolResultPart | undefined => {
     return contentParts.find((part): part is MessageToolResultPart => {
       return part.type === "tool-result" && part.tool_call_id === toolCallId;
@@ -131,7 +146,7 @@ function Chat({ id, initialMessages }: ChatProps) {
 
   const getToolState = (
     result: MessageToolResultPart | undefined,
-    isStreaming: boolean,
+    isStreaming: boolean
   ): ToolState => {
     if (!result) {
       return isStreaming ? "input-streaming" : "input-available";
@@ -149,7 +164,7 @@ function Chat({ id, initialMessages }: ChatProps) {
   };
 
   const parseToolOutput = (
-    output: ToolResultOutput,
+    output: ToolResultOutput
   ): {
     output?: unknown;
     error?: string;
@@ -186,7 +201,7 @@ function Chat({ id, initialMessages }: ChatProps) {
     part: MessageContentPart,
     index: number,
     message: Message,
-    role: Role,
+    role: Role
   ) => {
     switch (part.type) {
       case "text": {
@@ -243,6 +258,104 @@ function Chat({ id, initialMessages }: ChatProps) {
       case "tool-result": {
         return null;
       }
+      case "ui-event": {
+        // Render UI event based on event_type
+        if (part.event_type === "paper_recommendations") {
+          try {
+            const data = part.data as PaperRecommendationsData;
+            return (
+              <PaperCard
+                key={`${message.id}-${index}-ui-event`}
+                data={data}
+                onAddToLibrary={(paper) => {
+                  // TODO: Implement add to library functionality
+                  console.log("Add to library:", paper);
+                }}
+              />
+            );
+          } catch (error) {
+            console.error("Error rendering paper recommendations:", error);
+            return (
+              <div
+                key={`${message.id}-${index}-ui-event-error`}
+                className="text-sm text-muted-foreground"
+              >
+                Error rendering UI event
+              </div>
+            );
+          }
+        }
+        if (part.event_type === "citations") {
+          try {
+            const data = part.data as unknown as CitationsData;
+            // Normalize to array
+            const citationsArray = Array.isArray(data.citations)
+              ? data.citations
+              : [data.citations];
+
+            // Filter out invalid citations
+            const validCitations = citationsArray.filter(
+              (citation) => citation && citation.url
+            );
+
+            if (validCitations.length === 0) return null;
+
+            // Extract URLs for the trigger badge
+            const sources = validCitations.map((c) => c.url);
+
+            // Render citations inline using ai-elements with carousel
+            return (
+              <InlineCitation
+                key={`${message.id}-${index}-ui-event-citations`}
+                className="inline-flex items-center gap-1"
+              >
+                <InlineCitationCard>
+                  <InlineCitationCardTrigger sources={sources} />
+                  <InlineCitationCardBody>
+                    <InlineCitationCarousel>
+                      <InlineCitationCarouselHeader>
+                        <InlineCitationCarouselPrev />
+                        <InlineCitationCarouselNext />
+                        <InlineCitationCarouselIndex />
+                      </InlineCitationCarouselHeader>
+                      <InlineCitationCarouselContent>
+                        {validCitations.map((citation, idx) => (
+                          <InlineCitationCarouselItem key={idx}>
+                            <InlineCitationSource
+                              title={citation.title}
+                              url={citation.url}
+                              description={citation.text}
+                            />
+                          </InlineCitationCarouselItem>
+                        ))}
+                      </InlineCitationCarouselContent>
+                    </InlineCitationCarousel>
+                  </InlineCitationCardBody>
+                </InlineCitationCard>
+              </InlineCitation>
+            );
+          } catch (error) {
+            console.error("Error rendering citations:", error);
+            return (
+              <div
+                key={`${message.id}-${index}-ui-event-error`}
+                className="text-sm text-muted-foreground"
+              >
+                Error rendering citations
+              </div>
+            );
+          }
+        }
+        // Unknown UI event type
+        return (
+          <div
+            key={`${message.id}-${index}-ui-event-unknown`}
+            className="text-sm text-muted-foreground"
+          >
+            Unknown UI event type: {part.event_type}
+          </div>
+        );
+      }
       default:
         return null;
     }
@@ -255,7 +368,7 @@ function Chat({ id, initialMessages }: ChatProps) {
           "grid w-full h-screen mx-auto px-8 max-w-208",
           messages.length === 0
             ? "grid-rows-[40vh_auto]"
-            : "grid-rows-[1fr_auto]",
+            : "grid-rows-[1fr_auto]"
         )}
       >
         {/* Messages Container */}
@@ -285,7 +398,7 @@ function Chat({ id, initialMessages }: ChatProps) {
 
                 <MessageContent className="w-full">
                   {message.content.map((part, index) =>
-                    renderContentPart(part, index, message, message.role),
+                    renderContentPart(part, index, message, message.role)
                   )}
                 </MessageContent>
               </UIMessage>

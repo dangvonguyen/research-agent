@@ -18,12 +18,20 @@ export type {
   MessageToolResultPart,
 };
 
+// UI Event Part (to be added to OpenAPI schema later)
+export interface MessageUIEventPart {
+  type: "ui-event";
+  event_type: string;
+  data: Record<string, unknown>;
+}
+
 export type MessageContentPart =
   | MessageTextPart
   | MessageReasoningPart
   | MessageFilePart
   | MessageToolCallPart
-  | MessageToolResultPart;
+  | MessageToolResultPart
+  | MessageUIEventPart;
 
 export type ChatStatus = "submitted" | "streaming" | "ready" | "error";
 
@@ -45,7 +53,8 @@ export type StreamContentType =
   | "text"
   | "reasoning"
   | "tool-call"
-  | "tool-result";
+  | "tool-result"
+  | "ui-event";
 
 // Base event
 export interface StreamEventBase {

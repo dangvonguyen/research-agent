@@ -4,6 +4,7 @@ import type { ChatRequest } from "@/api/models";
 import type {
   ChatStatus,
   MessageContentPart,
+  MessageUIEventPart,
   StreamAbort,
   StreamChatChunk,
   StreamContentDelta,
@@ -105,6 +106,12 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
               tool_name: tool_name || "",
               output: { type: "text", value: "" },
             };
+          case "ui-event":
+            return {
+              type: "ui-event",
+              event_type: "",
+              data: {},
+            };
         }
       })();
 
@@ -156,6 +163,21 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         updatedMeta._buffer =
           (meta._buffer || "") +
           (typeof delta === "string" ? delta : JSON.stringify(delta));
+      } else if (part.type === "ui-event") {
+        // UI events are atomic - delta contains the full data
+        if (typeof delta === "object" && delta !== null && "event_type" in delta && "data" in delta) {
+          updatedPart = {
+            ...part,
+            event_type: delta.event_type as string,
+            data: delta.data as Record<string, unknown>,
+          };
+        } else {
+          // Fallback: treat entire delta as data
+          updatedPart = {
+            ...part,
+            data: delta as Record<string, unknown>,
+          };
+        }
       } else {
         updatedPart = part;
       }
@@ -212,6 +234,9 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         } catch (_) {
           updatedMeta.error = "Failed to parse tool result JSON";
         }
+      } else if (part.type === "ui-event") {
+        // UI events are already complete after delta, no parsing needed
+        updatedPart = part;
       }
 
       const newParts = new Map(state.contentParts);
