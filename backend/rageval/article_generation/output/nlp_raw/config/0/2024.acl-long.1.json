@@ -1,0 +1,335 @@
+{
+  "metadata": {
+    "title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+    "authors": [
+      "Zhengxin Zhang",
+      "Dan Zhao",
+      "Xupeng Miao",
+      "Gabriele Oliari",
+      "Zhihao Zhang",
+      "Qing Li",
+      "Yong Jiang",
+      "Zhihao Jia"
+    ],
+    "year": 2023,
+    "paper_type": "methodology"
+  },
+  "problem": {
+    "statement": "Existing LLM finetuning methods require considerable memory and cannot simultaneously mitigate the memory footprint of model weights, optimizer states, and intermediate activations.",
+    "limitations_of_prior_work": [
+      "Parameter-efficient finetuning (PEFT) methods necessitate caching intermediate activations during forward processing, requiring saving more than 70% of activations and almost the same training time compared to full finetuning, thus not effectively reducing the memory footprint.",
+      "QLoRA reduces the memory footprint of an LLM’s weights and optimizer states but does not consider intermediate activations, leading to significant memory increases with large batch sizes and requiring gradient checkpointing for large models, resulting in long training times.",
+      "Side network approaches (e.g., Sung et al., 2022; Zhang et al., 2020) reduce intermediate activation memory but struggle with the inherent model size of LLMs, limiting their applicability to models with fewer than 3 billion parameters."
+    ]
+  },
+  "method": {
+    "name": "Quantized Side Tuning (QST)",
+    "key_idea": "QST enables memory-efficient and fast finetuning of LLMs by first quantizing model weights to 4-bit, then introducing a separate side network that uses downsampled LLM hidden states for task-specific predictions, avoiding back-propagation through the LLM, and employing low-rank adaptors and gradient-free downsample modules to reduce trainable parameters and optimizer states.",
+    "components": [
+      {
+        "name": "Quantized LLM",
+        "function": "Quantizes the LLM's model weights into 4-bit to reduce the memory footprint of the original weights."
+      },
+      {
+        "name": "Side Network",
+        "function": "Separated from the LLM, it utilizes the hidden states of the LLM to make task-specific predictions, avoiding back-propagation through the LLM to reduce intermediate activation memory."
+      },
+      {
+        "name": "Downsample Modules",
+        "function": "Used within the side network to reduce the hidden state dimension of the LLM's output by a reduction factor 'r', significantly reducing trainable parameters and optimizer states."
+      },
+      {
+        "name": "Upsample Module",
+        "function": "Upsamples from low-dimensional hidden states of the side network to high-dimensional hidden states of the LLM for final prediction."
+      },
+      {
+        "name": "LM Head / Classifier",
+        "function": "Reused from the original LLM to make the final prediction after combining the LLM's last layer output and the side network's output."
+      }
+    ],
+    "techniques": [
+      {
+        "name": "4-bit Quantization",
+        "purpose": "To reduce the memory footprint of the LLM’s original weights.",
+        "details": "Quantizes the LLM from 16-bit into 4-bit, considering NF4 and FP4 data types, and uses 8-bit float points to quantize the quantization constants. NF4 is used as the default 4-bit data type, and bfloat16 is used for computation."
+      },
+      {
+        "name": "Side Tuning",
+        "purpose": "To save the memory footprint of intermediate activations by avoiding backward propagation through the quantized LLM.",
+        "details": "The input to each layer of the side network combines the downsampled output of the corresponding quantized LLM layer and the output of the previous layer of the side network. A learnable gate parameter (beta_i = sigmoid(gamma_i)) is used for combination."
+      },
+      {
+        "name": "Low-rank Adaptors and Gradient-free Downsample Modules",
+        "purpose": "To significantly reduce the trainable parameters and the memory footprint for the optimizer states within the side network.",
+        "details": "Leverages methods like LoRA, Adapter, MaxPooling, and AvgPooling for downsampling. Adapter is used as the default downsample module with a rank of 16, and the reduction factor 'r' is set to 16."
+      },
+      {
+        "name": "Weighted Sum for LM Head Input",
+        "purpose": "To resolve the issue of repetition in long-sequence text generation observed in prior side tuning methods like LST, and to preserve the starting point from the pre-trained model.",
+        "details": "Combines the output of the LLM’s last layer (h_f^16bit) with the upsampled output of the side network (h_g^16bit) using a learnable parameter alpha (initialized to 1) before sending to the LM head: h_N^16bit = alpha * h_N^16bit + (1 - alpha) * h_N^16bit."
+      }
+    ]
+  },
+  "type_specific": {
+    "methodology": {
+      "architecture": "A dual-stage process involving a 4-bit quantized LLM and a separate side network, where the side network's hidden state and weight dimensions are 'r' times smaller than the LLM's, and trainable parameters are limited to the side network.",
+      "model_size": "Evaluated on OPT-1.3B, OPT-2.7B, OPT-6.7B, OPT-13B, OPT-30B, OPT-66B, LLaMA-2-7B, LLaMA-2-13B, and LLaMA-2-70B models.",
+      "training_data": "Alpaca dataset (Taori et al., 2023) for MMLU finetuning; a variant of OASST1 (Dettmers et al., 2023) for chatbot finetuning.",
+      "compute_requirements": "4 NVIDIA RTX A5000 GPUs, each with 24GB memory."
+    }
+  },
+  "experiments": {
+    "datasets": [
+      {
+        "name": "GLUE",
+        "task": "Natural Language Understanding (NLU)"
+      },
+      {
+        "name": "MMLU",
+        "task": "Massively Multitask Language Understanding (NLU)"
+      },
+      {
+        "name": "MT-benchmark",
+        "task": "Chatbot performance evaluation"
+      }
+    ],
+    "baselines": [
+      "QLoRA (Dettmers et al., 2023)",
+      "LST (Sung et al., 2022)",
+      "LoRA (He et al., 2021)",
+      "Adapter (Houlsby et al., 2019)"
+    ],
+    "metrics": [
+      "Accuracy",
+      "Pearson correlation coefficients",
+      "Matthews correlation coefficients",
+      "FLOPS per token",
+      "MT-Bench score"
+    ],
+    "settings": [
+      "5-shot (MMLU)",
+      "batch size 16, sequence length 512 (GLUE for OPT-1.3B, 2.7B, 6.7B)",
+      "batch size 4, sequence length 384 (MMLU)",
+      "reduction factor r=16",
+      "Adapter as downsample module with rank 16",
+      "NF4 data type for weights, bfloat16 for computation"
+    ]
+  },
+  "results": {
+    "main_findings": [
+      {
+        "claim": "QST reduces the total memory footprint compared to state-of-the-art methods.",
+        "value": "up to 2.3 ×",
+        "dataset": "GLUE",
+        "setting": "OPT-6.7B",
+        "comparison": "vs QLoRA"
+      },
+      {
+        "claim": "QST speeds up the finetuning process compared to state-of-the-art methods.",
+        "value": "up to 3 ×",
+        "dataset": "MT-benchmark",
+        "setting": "LLaMA-2-70B",
+        "comparison": "vs QLoRA"
+      },
+      {
+        "claim": "QST reduces the total memory footprint compared to full finetuning.",
+        "value": "up to 7 ×",
+        "comparison": "vs Full Finetuning"
+      },
+      {
+        "claim": "QST reduces memory footprint for OPT-6.7B on GLUE.",
+        "metric": "Memory (GB)",
+        "value": "2.3 ×",
+        "dataset": "GLUE",
+        "setting": "OPT-6.7B",
+        "comparison": "vs QLoRA"
+      },
+      {
+        "claim": "QST reduces trainable parameters for OPT-6.7B on GLUE.",
+        "metric": "# Param. (%)",
+        "value": "5.5 ×",
+        "dataset": "GLUE",
+        "setting": "OPT-6.7B",
+        "comparison": "vs QLoRA"
+      },
+      {
+        "claim": "QST introduces an accuracy drop for OPT-6.7B on GLUE.",
+        "metric": "Avg. Accuracy",
+        "value": "1.3%",
+        "dataset": "GLUE",
+        "setting": "OPT-6.7B",
+        "comparison": "vs QLoRA"
+      },
+      {
+        "claim": "QST improves average accuracy on MMLU.",
+        "metric": "Accuracy (%)",
+        "value": "0.1%",
+        "dataset": "MMLU",
+        "comparison": "vs QLoRA"
+      },
+      {
+        "claim": "QST reduces memory footprint on MMLU.",
+        "metric": "Memory (GB)",
+        "value": "1.8 ×",
+        "dataset": "MMLU",
+        "comparison": "vs QLoRA"
+      },
+      {
+        "claim": "QST enhances accuracy for LLaMA-2-13B on MMLU.",
+        "metric": "Accuracy (%)",
+        "value": "2.1%",
+        "dataset": "MMLU",
+        "setting": "LLaMA-2-13B",
+        "comparison": "vs QLoRA"
+      },
+      {
+        "claim": "QST speeds up training for LLaMA-2-70B chatbot.",
+        "metric": "Training Time",
+        "value": "3.2 ×",
+        "dataset": "MT-benchmark",
+        "setting": "LLaMA-2-70B",
+        "comparison": "vs QLoRA-70B"
+      },
+      {
+        "claim": "QST reduces memory footprint for LLaMA-2-70B chatbot.",
+        "metric": "Memory (GB)",
+        "value": "1.7 ×",
+        "dataset": "MT-benchmark",
+        "setting": "LLaMA-2-70B",
+        "comparison": "vs QLoRA-70B"
+      },
+      {
+        "claim": "QST improves MT-Bench score for LLaMA-2-70B chatbot.",
+        "metric": "MT-Bench Score",
+        "value": "0.46",
+        "dataset": "MT-benchmark",
+        "setting": "LLaMA-2-70B",
+        "comparison": "vs QLoRA-70B"
+      },
+      {
+        "claim": "QST's chatbot performance outperforms the original LLaMA-2-70B.",
+        "metric": "MT-Bench Score",
+        "value": "0.21",
+        "dataset": "MT-benchmark",
+        "setting": "LLaMA-2-70B",
+        "comparison": "vs original LLaMA-2-70B"
+      }
+    ],
+    "ablation_insights": [
+      {
+        "component": "reduction factor r",
+        "effect": "MMLU accuracy changes slightly as r varies, while memory footprint and FLOPS per token decrease drastically when r varies from 2 to 16, and slightly when r varies from 16 to 64."
+      },
+      {
+        "component": "NF4 data type",
+        "effect": "Improves the average accuracy by about 0.8% compared with FP4."
+      },
+      {
+        "component": "FP16 computation data type (for QLoRA)",
+        "effect": "QLoRA becomes unstable, failing to finetune on MRPC and QNLI datasets in two out of three runs for OPT-6.7B on GLUE."
+      },
+      {
+        "component": "Adapter as downsample module",
+        "effect": "Achieves the best performance among Linear, LoRA, MaxPooling, and AvgPooling, and reduces trainable parameters and memory footprint."
+      }
+    ],
+    "efficiency_results": {
+      "throughput": "QST achieves around 2.5 × speed up in FLOPS per token compared with baselines.",
+      "latency": "Training time for LLaMA-2-70B is ~25h",
+      "comparison": "QST is 3.2 × faster in training time and 1.7 × more memory-efficient than QLoRA-70B."
+    }
+  },
+  "contributions": [
+    {
+      "type": "framework",
+      "description": "Proposes Quantized Side Tuning (QST), a novel fast and memory-efficient finetuning framework for LLMs."
+    },
+    {
+      "type": "method",
+      "description": "Introduces a dual-stage process that quantizes LLM weights into 4-bit to reduce memory footprint."
+    },
+    {
+      "type": "method",
+      "description": "Develops a side network separated from the LLM that utilizes its hidden states for task-specific predictions, avoiding back-propagation through the LLM to save intermediate activation memory."
+    },
+    {
+      "type": "method",
+      "description": "Leverages low-rank adaptors and gradient-free downsample modules within the side network to significantly reduce trainable parameters and optimizer states."
+    },
+    {
+      "type": "finding",
+      "description": "Demonstrates that QST can reduce total memory footprint by up to 2.3 × and speed up finetuning by up to 3 × while achieving comparable performance to state-of-the-art methods."
+    }
+  ],
+  "comparisons": [
+    {
+      "other_method": "QLoRA",
+      "dimension": "memory footprint components",
+      "difference": "QLoRA reduces memory for weights and optimizer states but not intermediate activations, while QST addresses all three memory contributors (weights, optimizer states, intermediate activations).",
+      "evidence": "QST reduces memory footprint by 2.3 × and trainable parameters by 5.5 × compared to QLoRA for OPT-6.7B on GLUE."
+    },
+    {
+      "other_method": "QLoRA",
+      "dimension": "batch size support and training time",
+      "difference": "QLoRA only supports small-batch training (e.g., batch size 1) and requires gradient checkpointing, leading to long training times, whereas QST supports larger batch sizes efficiently.",
+      "evidence": "QST speeds up training by 3.2 × and reduces memory footprint by 1.7 × compared to QLoRA-70B for chatbot finetuning."
+    },
+    {
+      "other_method": "LST (Ladder Side-Tuning)",
+      "dimension": "memory footprint components and model scale",
+      "difference": "LST only reduces intermediate activation memory and struggles with models larger than 3 billion parameters due to the inherent model size, while QST combines this with 4-bit quantization to handle larger models.",
+      "evidence": "QST achieves an additional reduction of approximately 100GB in memory footprint compared to LST (for LLaMA-2-70B)."
+    },
+    {
+      "other_method": "LST (Ladder Side-Tuning)",
+      "dimension": "text generation quality",
+      "difference": "LST suffers from repetition when generating long-sequence texts because it uses side network hidden states for prediction, while QST combines the LLM's last layer output with the side network's output to mitigate this.",
+      "evidence": "QST's chatbot performance (MT-Bench score 7.07) outperforms the original LLaMA-2-70B (6.86) and QLoRA-70B (6.61)."
+    },
+    {
+      "other_method": "Side network approaches (general)",
+      "dimension": "downsampling method",
+      "difference": "Prior side network work leverages linear layers for downsampling, which introduces significant trainable parameters for large LLMs, whereas QST uses low-rank adaptors and gradient-free downsample modules to reduce trainable parameters and optimizer states.",
+      "evidence": "Using Adapter as the downsample module reduces trainable parameters and memory footprint compared to a Linear downsample module."
+    },
+    {
+      "other_method": "Parameter-Efficient Finetuning (PEFT) methods (general)",
+      "dimension": "memory footprint of intermediate activations",
+      "difference": "Existing PEFT methods necessitate caching intermediate activations during forward processing for backpropagation, whereas QST avoids back-propagation through the LLM, saving this memory.",
+      "evidence": "QST's memory footprint grows less drastically than QLoRA, Adapter, and LoRA as batch size increases due to reducing hidden dimension of intermediate activations."
+    }
+  ],
+  "limitations": [
+    "The high to low precision data type conversion process during quantization can lead to accuracy degradation due to inherent information loss.",
+    "QST may make mistakes on some complex mathematical questions, such as factorization or certain logical reasoning problems.",
+    "For complex algorithms (e.g., dynamic programming), QST can make mistakes in code generation.",
+    "In code generation, QST might still use extra data structures even when explicitly instructed not to."
+  ],
+  "future_work": [],
+  "key_terms": [
+    {
+      "term": "Quantized Side Tuning (QST)",
+      "definition": "A novel fast and memory-efficient finetuning framework that quantizes an LLM's model weights into 4-bit and introduces a side network separated from the LLM to make task-specific predictions, avoiding back-propagation through the LLM."
+    },
+    {
+      "term": "Side Network",
+      "definition": "A network separated from the main LLM that utilizes the hidden states of the LLM to make task-specific predictions, designed to avoid performing back-propagation through the LLM and thus reduce the memory footprint of intermediate activations."
+    },
+    {
+      "term": "4-bit Quantization",
+      "definition": "The process of converting a data type with more bits (e.g., 16-bit floating points) into a data type with fewer bits (e.g., 4-bit floating points), used in QST to reduce the memory footprint of LLM model weights."
+    },
+    {
+      "term": "Parameter-Efficient Finetuning (PEFT)",
+      "definition": "Methods that update a subset of trainable parameters from an LLM or introduce a small number of new parameters while keeping the vast majority of original LLM parameters frozen."
+    },
+    {
+      "term": "NF4 (NormalFloat4)",
+      "definition": "An information-theoretically optimal 4-bit data type that ensures each quantization bin has an equal number of values assigned from the input tensor, used by QST for storing LLM weights."
+    },
+    {
+      "term": "Reduction Factor (r)",
+      "definition": "A factor by which the hidden state and weight dimensions of the side network are made smaller compared to those of the main LLM."
+    }
+  ]
+}

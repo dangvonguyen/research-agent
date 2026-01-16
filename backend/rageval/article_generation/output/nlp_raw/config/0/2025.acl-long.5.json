@@ -1,0 +1,164 @@
+{
+  "metadata": {
+    "title": "The Impossibility of Fair LLMs",
+    "authors": [
+      "Jacy Reese Anthis",
+      "Kristian Lum",
+      "Michael Ekstrand",
+      "Avi Feller",
+      "Chenhao Tan"
+    ],
+    "year": 2024,
+    "paper_type": "analysis"
+  },
+  "problem": {
+    "statement": "It remains unclear how Large Language Model (LLM) fairness could be evaluated with more rigorous definitions, such as group fairness or fair representations, given the inherent challenges in extending existing technical fairness frameworks to general-purpose AI.",
+    "limitations_of_prior_work": [
+      "Existing technical fairness frameworks have been extensively studied and applied to systems with structured data and specific use cases, but their applicability to general-purpose LLMs is an open question.",
+      "Multiple group fairness metrics, such as those defined by rates of false positives and false negatives or demographical parity and calibration, cannot be simultaneously achieved in real-world environments, even to an approximation.",
+      "Recent work on LLM fairness has largely focused on association-based metrics, which, despite capturing important information about disparities, do not constitute fairness as conceptualized in rigorous technical frameworks.",
+      "Extant work on LLM fairness has primarily addressed empirical challenges, saying little about the inherent challenges of applying conventional fairness frameworks to general-purpose LLMs."
+    ]
+  },
+  "method": {
+    "name": "Conceptual Analysis of LLM Fairness Frameworks",
+    "key_idea": "Analyzes fundamental affordances of Large Language Models (LLMs) against established technical fairness frameworks to demonstrate the inherent intractability of achieving fairness in general-purpose LLMs.",
+    "techniques": [
+      {
+        "name": "Compatibility Assessment",
+        "purpose": "To examine the alignment and contradictions between LLM affordances and existing fairness frameworks.",
+        "details": "Considered each of the fundamental affordances of the LLM paradigm (e.g., flexibility, unstructured data, multimodal capabilities, general-purpose nature) alongside each of the fairness frameworks (e.g., fairness through unawareness, multi-sided fairness, group fairness, individual fairness, counterfactual fairness)."
+      },
+      {
+        "name": "Critique of Fairness Frameworks",
+        "purpose": "To identify specific inherent challenges that render each fairness framework intractable for general-purpose LLMs.",
+        "details": "Systematically argued that each framework either does not logically extend to the general-purpose AI context or is infeasible in practice, primarily due to unstructured training data, diverse combinations of human populations, use cases, and sensitive attributes."
+      }
+    ]
+  },
+  "type_specific": {
+    "analysis": {
+      "focus": "The inherent intractability of achieving fairness in general-purpose Large Language Models (LLMs) using existing technical fairness frameworks.",
+      "models_studied": [
+        "General-purpose LLMs",
+        "ChatGPT",
+        "Claude",
+        "Gemini",
+        "GPT-4",
+        "Llama"
+      ],
+      "phenomena_investigated": [
+        "The impossibility of fairness through unawareness (FTU) in LLMs due to unstructured data and inferable sensitive attributes.",
+        "The obsolescence of producer-side fairness criteria in LLMs that circumvent content producers.",
+        "The intractability of achieving group fairness across the multitude of populations and use cases for general-purpose LLMs.",
+        "The challenges of debiasing for multiple, intersecting sensitive attributes in LLMs without distorting information for other contexts.",
+        "The non-compositionality of fairness in multi-model AI systems and its implications for LLM development and deployment."
+      ],
+      "methodology": "Conceptual and theoretical analysis, critiquing the logical extension and practical feasibility of various technical fairness frameworks (e.g., group fairness, fair representations, fairness through unawareness, multi-sided fairness, individual fairness, counterfactual fairness) when applied to general-purpose LLMs, considering their unstructured training data, flexibility, and diverse stakeholders.",
+      "key_discoveries": [
+        {
+          "finding": "Fairness through unawareness (FTU) is impossible for LLMs by design.",
+          "evidence": "LLMs are trained on massive amounts of unstructured data, primarily natural language, where sensitive attributes are pervasive and readily inferable, making their removal infeasible without distortion or incoherence."
+        },
+        {
+          "finding": "Producer-side fairness criteria can be rendered obsolete by LLMs.",
+          "evidence": "LLMs can entirely circumvent content producers by extracting information from websites without directing users to the original source, thus eliminating exposure or other benefits for producers."
+        },
+        {
+          "finding": "General-purpose LLMs cannot be made fair across many contexts.",
+          "evidence": "The flexibility of LLMs across wide ranges of populations, use cases, and sensitive attributes makes conventional fairness metrics intractable due to combinatorial increases in complexity and conflicting fairness requirements."
+        },
+        {
+          "finding": "Fairness does not compose in multi-model AI systems involving LLMs.",
+          "evidence": "A fairness guarantee for individual models does not extend to a system composed of those models, which is particularly challenging when different systems operate with different modalities or training data."
+        }
+      ]
+    }
+  },
+  "results": {},
+  "contributions": [
+    {
+      "type": "finding",
+      "description": "Demonstrates that fairness through unawareness of sensitive attributes is made impossible by the unstructured training data and limited transparency of LLMs."
+    },
+    {
+      "type": "finding",
+      "description": "Shows that standards for the fair treatment of content producers can be rendered obsolete by the LLM capacity for large-scale consumption and redistribution of content."
+    },
+    {
+      "type": "finding",
+      "description": "Argues that general-purpose LLMs cannot be made fair across many contexts because of the combinations of populations, use cases, and other factors that impose different fairness requirements."
+    },
+    {
+      "type": "finding",
+      "description": "Establishes that fairness does not compose, and LLM development and deployment involve the composition of different models, each with their own fairness challenges."
+    },
+    {
+      "type": "analysis",
+      "description": "Identifies important and tractable work to be done on LLM fairness, particularly in crafting standards of developer responsibility, refining in-depth methods for context-specific evaluation, and building scalable evaluations."
+    }
+  ],
+  "comparisons": [
+    {
+      "other_method": "Association-based fairness metrics (e.g., WinoBias, BBQ)",
+      "dimension": "Definition of fairness",
+      "difference": "Association-based metrics (disparities) do not constitute fairness as conceptualized in rigorous technical frameworks (e.g., group fairness, causal fairness), despite capturing important information.",
+      "evidence": "Strong model performance on benchmarks like WinoBias and BBQ does not constitute fairness per se."
+    },
+    {
+      "other_method": "Extant work on LLM fairness",
+      "dimension": "Focus of challenges",
+      "difference": "Prior work has focused on *empirical* challenges, while this work focuses on *inherent* challenges that would persist even if empirical ones were overcome.",
+      "evidence": "Even if every empirical challenge were addressed, the inherent challenges that are the focus of the present work would remain."
+    },
+    {
+      "other_method": "Li et al. (2024) and counterfactual fairness",
+      "dimension": "Scope of counterfactual fairness",
+      "difference": "Li et al. (2024) only discussed counterfactual fairness by summarizing papers that merely perturb LLM input, which does not acknowledge or address the inherent challenges of generalizing across populations and realistic counterfactuals.",
+      "evidence": "Our work, in contrast, critiques the assumption that bias and fairness can be so easily measured."
+    }
+  ],
+  "limitations": [
+    "The claims and analysis were not developed mathematically, and the outcome of such analysis would depend on particular assumptions and operationalizations.",
+    "It is possible that compelling new technical frameworks, perhaps developed specifically for general-purpose LLMs or other general-purpose systems, will circumvent the inherent challenges described.",
+    "There are many open empirical challenges that were not addressed in this work, particularly the quantification of how much fairness metrics can be partially satisfied in real-world settings and the development of scalable methods for context-specific alignment with fairness and other social values."
+  ],
+  "future_work": [
+    "Developing standards for the responsibility of LLM developers to support users and third parties with information on actual usage and system responses.",
+    "Refining in-depth methods for context-specific evaluation of LLM fairness, articulating specific connections to real use cases and corresponding harms.",
+    "Building scalable evaluations that iterate through participatory design and use AI capabilities to scale fairness across diverse contexts of human-AI interaction.",
+    "Exploring the intersection of technical fairness frameworks and scalable human-AI alignment methodologies (e.g., RLHF, DPO, constitutional AI, SELF-ALIGN) to incorporate technical frameworks and context-adaptive methods.",
+    "Developing AI-automated evaluation pipelines, including 'LLM-as-a-judge' fairness rubrics, high-quality simulations of human data, and the generation and validation of tests or simulated user queries.",
+    "Utilizing interpretability tools to allow participatory and iterative exploration of how bias manifests in LLMs and to make fairer models through context-specific adjustments."
+  ],
+  "key_terms": [
+    {
+      "term": "Fairness through unawareness (FTU)",
+      "definition": "A framework that measures fairness based on whether the model input explicitly contains sensitive attributes, typically by excising sensitive attributes from structured training data."
+    },
+    {
+      "term": "Multi-sided fairness",
+      "definition": "A framework requiring that a system is fair with respect to each group of stakeholders, typically divided into consumers, subjects, and producers of content."
+    },
+    {
+      "term": "Group fairness",
+      "definition": "A framework requiring independence between model classification and sensitive attributes, often conditional on relevant information, with metrics like demographic parity, equalized odds, and calibration."
+    },
+    {
+      "term": "Individual fairness",
+      "definition": "A framework requiring that the model output is Lipschitz continuous with respect to the model input, meaning similar inputs lead to similar outputs."
+    },
+    {
+      "term": "Counterfactual fairness",
+      "definition": "A framework requiring that the model would have produced the same output for an individual if they had a different level of the sensitive attribute."
+    },
+    {
+      "term": "Fair representations",
+      "definition": "A framework requiring that data representations do not contain information that can identify the sensitive attributes of individuals, mapping a dataset to a novel representation space that preserves individual information while removing sensitive attribute information."
+    },
+    {
+      "term": "Composition",
+      "definition": "The process where the output of one model is often used as the input to another model."
+    }
+  ]
+}

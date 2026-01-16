@@ -1,0 +1,404 @@
+{
+  "metadata": {
+    "title": "Open-ended Long Text Generation via Masked Language Modeling",
+    "authors": [
+      "Xiaobo Liang",
+      "Zecheng Tang",
+      "Juntao Li",
+      "Min Zhang"
+    ],
+    "year": 2023,
+    "venue": "ACL 2023",
+    "paper_type": "methodology"
+  },
+  "problem": {
+    "statement": "The paper addresses the low inference efficiency of autoregressive (AR) models in Open-ended Long Text Generation (Open-LTG) and the collapse problem of pre-trained masked language models (MLMs) for long text modeling.",
+    "limitations_of_prior_work": [
+      "Autoregressive (AR) language models like BART and GPTs suffer from decreased inference efficiency with increased generation length, hindering their application in Open-LTG.",
+      "BART requires at least 1.3 seconds to generate a story with 200 tokens on an NVIDIA A100 GPU, and with planning, it can take more than 30 seconds for a 200-token story.",
+      "Non-autoregressive (NAR) models like BERT-CRF, despite high inference efficiency, have not proven their effectiveness in open-ended long text generation.",
+      "Pre-trained MLMs (e.g., RoBERTa) fail to model Open-LTG (around 140 tokens), generating uninformative content with high-frequency and repeated tokens."
+    ],
+    "research_questions": [
+      "What causes the collapse problem in Open-LTG when using pre-trained MLMs?"
+    ]
+  },
+  "method": {
+    "name": "Iterative NAR model with Dynamic Sliding Window Attention (DSWA) and Linear Temperature Decay (LTD)",
+    "key_idea": "Enhances long text generation capability of pre-trained Masked Language Models (MLMs) in an iterative Non-Autoregressive (NAR) setting by introducing Dynamic Sliding Window Attention (DSWA) and Linear Temperature Decay (LTD) to alleviate long-distance collapse and improve sampling.",
+    "components": [
+      {
+        "name": "MLM Encoder",
+        "function": "Extracts representations of sentences, serving as both encoder and decoder with shared parameters."
+      },
+      {
+        "name": "Mixed-Attention Mechanism",
+        "function": "Utilizes target hidden states as query vector and the concatenated vector of source and target hidden states as key and value to aggregate source and target representations without breaking the original attention mechanism."
+      },
+      {
+        "name": "Length Prediction Module",
+        "function": "Uses a mean-pooling layer followed by a classification layer to predict the target length based on the source representation, initializing the full mask sequence for inference."
+      }
+    ],
+    "techniques": [
+      {
+        "name": "Dynamic Sliding Window Attention (DSWA)",
+        "purpose": "To alleviate the multi-modality problem and ensure informative tokens in output distribution by restricting attention to neighbor tokens.",
+        "details": "Dynamically adjusts the window size (S_win) of each layer during inference using a schedule: S_win = max(α_min, (L-i)/L * α_max) * S_fix, where i is current layer, L is max layers, S_fix is fixed training window size, and α_min/α_max are coefficient bounds."
+      },
+      {
+        "name": "Linear Temperature Decay (LTD)",
+        "purpose": "To improve the effectiveness of sampling by adjusting the confidence score of output distributions.",
+        "details": "Applies a linear schedule to temperature (T) during iterative refinement: T = β * (1 - t/T_max), where β is a hyper-parameter, t is current iteration, and T_max is maximum iteration. This flattens distributions in early steps and sharpens them in later steps."
+      },
+      {
+        "name": "Iterative Refinement Strategy",
+        "purpose": "To obtain better generation performance by progressively improving the output.",
+        "details": "Initializes with a fully masked sequence and iteratively regenerates low-confidence tokens in subsequent steps."
+      },
+      {
+        "name": "Nucleus Sampling",
+        "purpose": "Decoding strategy for Open-LTG.",
+        "details": "Used with hyper-parameter top-p=0.9 for inference."
+      },
+      {
+        "name": "SMART mechanism",
+        "purpose": "To mitigate the discrepancy between training and inference context.",
+        "details": "Updates all target tokens according to model predictions at each iteration step during inference."
+      }
+    ]
+  },
+  "type_specific": {
+    "methodology": {
+      "architecture": "Encoder-based model (RoBERTa) with mixed attention, comprising self-attention and feed-forward layers, enhanced with a sliding window mechanism for self-attention.",
+      "model_size": "125M parameters (RoBERTa base)",
+      "training_objective": "Minimize the conditional Masked Language Model (MLM) loss, similar to the pre-training stage.",
+      "training_data": "Parallel text generation datasets: ROCStories, WritingPrompts, WikiPlots, and OPINION, fine-tuned without additional corpus.",
+      "compute_requirements": "Inference conducted on a single NVIDIA A100 40GB GPU.",
+      "inference_cost": "Achieves 133 to 1753 tokens/second depending on the dataset and target length."
+    }
+  },
+  "experiments": {
+    "datasets": [
+      {
+        "name": "ROCStories (ROC)",
+        "task": "storytelling",
+        "size": "9,818 test examples"
+      },
+      {
+        "name": "WritingPrompts (WP)",
+        "task": "storytelling",
+        "size": "4,000 test examples"
+      },
+      {
+        "name": "WikiPlots",
+        "task": "storytelling",
+        "size": "5,000 test examples"
+      },
+      {
+        "name": "OPINION",
+        "task": "multi-paragraph opinionated article writing",
+        "size": "7,562 test examples"
+      }
+    ],
+    "baselines": [
+      "BART (Lewis et al., 2020)",
+      "HINT (Guan et al., 2021b)",
+      "PAIR (Hua and Wang, 2020)",
+      "BERT-CRF (Su et al., 2021)"
+    ],
+    "metrics": [
+      "BLEU (B-n)",
+      "ROUGE (R-n)",
+      "Lexical Repetition (LR-n)",
+      "Semantic Repetition (SR-n)",
+      "average semantic overlap (S-m)",
+      "Distinct (D-n)",
+      "BERTScore (P, R, F1)",
+      "Perplexity (PPL)",
+      "METEOR",
+      "Fluency (human evaluation)",
+      "Coherence (human evaluation)",
+      "Relevance (human evaluation)"
+    ],
+    "settings": [
+      "Backbone model: RoBERTa base",
+      "Nucleus sampling: top-p=0.9",
+      "Max iteration steps: 6 for ROC, 8 for WP, WikiPlots, OPINION",
+      "DSWA hyper-parameters: α_min=0.125, α_max=0.75, S_win=64",
+      "LTD hyper-parameter β: 1.6 for ROC, 1.8 for WP and WikiPlots, 1.5 for OPINION",
+      "Length prediction strategies: Fixed Length or Prediction Module (with specific offsets)",
+      "Inference batch size: 1"
+    ]
+  },
+  "results": {
+    "main_findings": [
+      {
+        "claim": "Our approach achieves better performance on all storytelling datasets compared to strong baselines.",
+        "metric": "BLEU-1",
+        "value": "33.22",
+        "dataset": "ROCStories",
+        "setting": "with DSWA and LTD",
+        "comparison": "vs. HINT (32.97), vs. BART (30.06)"
+      },
+      {
+        "claim": "Our approach achieves better performance on all storytelling datasets compared to strong baselines.",
+        "metric": "ROUGE-1",
+        "value": "26.82",
+        "dataset": "ROCStories",
+        "setting": "with DSWA and LTD",
+        "comparison": "vs. HINT (25.54), vs. BART (22.37)"
+      },
+      {
+        "claim": "Our approach achieves better performance on all storytelling datasets compared to strong baselines.",
+        "metric": "BERTScore F1",
+        "value": "78.03",
+        "dataset": "ROCStories",
+        "setting": "with DSWA and LTD",
+        "comparison": "vs. HINT (77.74), vs. BART (76.57)"
+      },
+      {
+        "claim": "Our approach achieves better performance on all storytelling datasets compared to strong baselines.",
+        "metric": "BLEU-1",
+        "value": "32.80",
+        "dataset": "WritingPrompts",
+        "setting": "with DSWA and LTD",
+        "comparison": "vs. HINT (22.44), vs. BART (29.29)"
+      },
+      {
+        "claim": "Our approach achieves better performance on all storytelling datasets compared to strong baselines.",
+        "metric": "ROUGE-1",
+        "value": "26.67",
+        "dataset": "WritingPrompts",
+        "setting": "with DSWA and LTD",
+        "comparison": "vs. HINT (18.66), vs. BART (23.57)"
+      },
+      {
+        "claim": "Our approach achieves better performance on all storytelling datasets compared to strong baselines.",
+        "metric": "BERTScore F1",
+        "value": "72.12",
+        "dataset": "WritingPrompts",
+        "setting": "with DSWA and LTD",
+        "comparison": "vs. HINT (69.38), vs. BART (71.50)"
+      },
+      {
+        "claim": "Our approach achieves better performance on all storytelling datasets compared to strong baselines.",
+        "metric": "BLEU-1",
+        "value": "30.06",
+        "dataset": "WikiPlots",
+        "setting": "with DSWA and LTD",
+        "comparison": "vs. HINT (19.86), vs. BART (27.15)"
+      },
+      {
+        "claim": "Our approach achieves better performance on all storytelling datasets compared to strong baselines.",
+        "metric": "ROUGE-1",
+        "value": "25.88",
+        "dataset": "WikiPlots",
+        "setting": "with DSWA and LTD",
+        "comparison": "vs. HINT (19.36), vs. BART (22.63)"
+      },
+      {
+        "claim": "Our approach achieves better performance on all storytelling datasets compared to strong baselines.",
+        "metric": "BERTScore F1",
+        "value": "72.63",
+        "dataset": "WikiPlots",
+        "setting": "with DSWA and LTD",
+        "comparison": "vs. HINT (70.18), vs. BART (72.36)"
+      },
+      {
+        "claim": "Our model achieves better results than PAIR on multi-paragraph opinionated article writing when using iterative refinement.",
+        "metric": "BLEU-4",
+        "value": "37.76",
+        "dataset": "OPINION",
+        "setting": "with iterative refinement",
+        "comparison": "vs. PAIR_full (36.09)"
+      },
+      {
+        "claim": "Our model achieves better results than PAIR on multi-paragraph opinionated article writing when using iterative refinement.",
+        "metric": "ROUGE-L",
+        "value": "59.24",
+        "dataset": "OPINION",
+        "setting": "with iterative refinement",
+        "comparison": "vs. PAIR_full (56.86)"
+      },
+      {
+        "claim": "Our model achieves better results than PAIR on multi-paragraph opinionated article writing when using iterative refinement.",
+        "metric": "METEOR",
+        "value": "59.70",
+        "dataset": "OPINION",
+        "setting": "with iterative refinement",
+        "comparison": "vs. PAIR_full (51.39)"
+      },
+      {
+        "claim": "Our method achieves better human evaluation scores for fluency compared to BART.",
+        "metric": "Win percentage",
+        "value": "38.0%",
+        "dataset": "mixed dataset",
+        "setting": "human evaluation",
+        "comparison": "vs. BART"
+      },
+      {
+        "claim": "Our method achieves better human evaluation scores for coherence compared to BART.",
+        "metric": "Win percentage",
+        "value": "39.5%",
+        "dataset": "mixed dataset",
+        "setting": "human evaluation",
+        "comparison": "vs. BART"
+      },
+      {
+        "claim": "Our method achieves better human evaluation scores for relevance compared to BART.",
+        "metric": "Win percentage",
+        "value": "47.5%",
+        "dataset": "mixed dataset",
+        "setting": "human evaluation",
+        "comparison": "vs. BART"
+      }
+    ],
+    "ablation_insights": [
+      {
+        "component": "DSWA",
+        "effect": "Performance drops without DSWA.",
+        "delta": "BLEU-1 drops by 1.1 points (33.22 to 32.12) on ROCStories."
+      },
+      {
+        "component": "DSWA",
+        "effect": "Performance drops without DSWA.",
+        "delta": "ROUGE-L drops by 0.55 points (18.22 to 17.67) on ROCStories."
+      },
+      {
+        "component": "LTD",
+        "effect": "Model generates more repetition text without LTD.",
+        "delta": "Repetition increases by 8.01 points (3.28 to 11.29) on ROCStories."
+      },
+      {
+        "component": "LTD",
+        "effect": "Perplexity increases without LTD.",
+        "delta": "PPL increases by 25.07 points (53.00 to 78.07) on ROCStories."
+      },
+      {
+        "component": "All strategies (DSWA and LTD)",
+        "effect": "Performance drops significantly without any strategy.",
+        "delta": "BLEU-1 drops by 1.36 points (33.22 to 31.86) on ROCStories."
+      },
+      {
+        "component": "All strategies (DSWA and LTD)",
+        "effect": "Performance drops significantly without any strategy.",
+        "delta": "ROUGE-L drops by 1.26 points (18.22 to 16.96) on ROCStories."
+      },
+      {
+        "component": "All strategies (DSWA and LTD)",
+        "effect": "Perplexity increases significantly without any strategy.",
+        "delta": "PPL increases by 14.75 points (53.00 to 67.75) on ROCStories."
+      },
+      {
+        "component": "DSWA",
+        "effect": "Performance drops without DSWA.",
+        "delta": "BLEU-1 drops by 3.43 points (32.80 to 29.37) on WritingPrompts."
+      },
+      {
+        "component": "DSWA",
+        "effect": "Performance drops without DSWA.",
+        "delta": "ROUGE-L drops by 0.66 points (12.97 to 12.31) on WritingPrompts."
+      },
+      {
+        "component": "LTD",
+        "effect": "Model generates more repetition text without LTD.",
+        "delta": "Repetition increases by 17.07 points (0.73 to 17.80) on WritingPrompts."
+      },
+      {
+        "component": "All strategies (DSWA and LTD)",
+        "effect": "Performance drops significantly without any strategy.",
+        "delta": "BLEU-1 drops by 19.85 points (32.80 to 12.95) on WritingPrompts."
+      },
+      {
+        "component": "All strategies (DSWA and LTD)",
+        "effect": "Performance drops significantly without any strategy.",
+        "delta": "ROUGE-L drops by 6.37 points (12.97 to 6.60) on WritingPrompts."
+      },
+      {
+        "component": "All strategies (DSWA and LTD)",
+        "effect": "Model generates significantly more repetition text without any strategy.",
+        "delta": "Repetition increases by 89.85 points (0.73 to 90.58) on WritingPrompts."
+      }
+    ],
+    "efficiency_results": {
+      "throughput": "ROC: 391 tokens/s; WP: 882 tokens/s; WikiPlots: 1753 tokens/s",
+      "comparison": "Our model achieves 2.9x speedup on ROC, 6.4x speedup on WP, and 13.3x speedup on WikiPlots compared to BART."
+    }
+  },
+  "contributions": [
+    {
+      "type": "finding",
+      "description": "First to explore Open-LTG with NAR models based on pre-trained MLMs and identify their collapse problem for long text generation."
+    },
+    {
+      "type": "method",
+      "description": "Introduced Dynamic Sliding Window Attention (DSWA) to alleviate long-distance collapse problems in MLMs for Open-LTG."
+    },
+    {
+      "type": "method",
+      "description": "Introduced Linear Temperature Decay (LTD) to improve sampling effectiveness and maintain informative context in iterative NAR generation."
+    },
+    {
+      "type": "finding",
+      "description": "Demonstrated that pre-trained MLMs with DSWA and LTD can achieve more than 3x to 13x speedup with better performance than strong AR models on Open-LTG tasks."
+    }
+  ],
+  "comparisons": [
+    {
+      "other_method": "BART",
+      "dimension": "Inference efficiency",
+      "difference": "BART is an autoregressive model, leading to low inference efficiency, while our method uses a non-autoregressive approach to significantly speed up generation.",
+      "evidence": "BART requires at least 1.3 seconds to generate a story with 200 tokens; our approach achieves 2.9x to 13.3x speedup with better performance."
+    },
+    {
+      "other_method": "BERT-CRF",
+      "dimension": "Effectiveness in Open-LTG",
+      "difference": "BERT-CRF, a NAR model, has high inference efficiency but its effectiveness in open-ended long text generation has not been proven, whereas our method demonstrates competitive performance.",
+      "evidence": "BERT-CRF achieves BLEU-1 of 18.90 on ROCStories, while our method achieves 33.22."
+    },
+    {
+      "other_method": "PAIR_full",
+      "dimension": "Suitability for planning sequence completion",
+      "difference": "PAIR_full is an AR model, while our method, based on a masked language model (RoBERTa), is more suitable for completing planning sequences.",
+      "evidence": "Our model achieves a BLEU-4 of 37.76 on the OPINION dataset with refinement, compared to PAIR_full's 36.09."
+    }
+  ],
+  "limitations": [
+    "The model may suffer from 'off-prompt' generation when the provided prompt is very short, leading to a lack of focus on meaningful content or simply copying prompt text.",
+    "The model may generate incoherent text between sentences due to not considering the logical order during initialization, relying solely on training data to learn automatically.",
+    "The non-autoregressive model may generate grammatically incorrect sentences during the iteration refinement procedure due to multi-modality problems.",
+    "The method relies on pre-trained language models (e.g., RoBERTa) and may inherit problematic biases from them."
+  ],
+  "future_work": [
+    "Improve the text quality and overall fluency for Open-LTG scenarios.",
+    "Investigate how to generate a suitable initialization to help the model produce coherent results.",
+    "Add grammar corrections for each iteration to help the model produce better results."
+  ],
+  "key_terms": [
+    {
+      "term": "Open-ended Long Text Generation (Open-LTG)",
+      "definition": "The task of generating free-form, long-form text content."
+    },
+    {
+      "term": "Dynamic Sliding Window Attention (DSWA)",
+      "definition": "A strategy that dynamically adjusts the window size of each attention layer during inference to restrict attention to neighbor tokens, alleviating multi-modality problems."
+    },
+    {
+      "term": "Linear Temperature Decay (LTD)",
+      "definition": "An inference strategy that adjusts the temperature with a linear schedule during iterative refinement to penalize flat output distributions in early steps and encourage peaked ones in later steps, improving sampling effectiveness."
+    },
+    {
+      "term": "Mixed-attention mechanism",
+      "definition": "An attention mechanism that utilizes target hidden states as query vectors and the concatenated vector of source and target hidden states as key and value pairs."
+    },
+    {
+      "term": "Iterative refinement strategy",
+      "definition": "A generation approach where a fully masked sequence is initialized and low-confidence tokens are iteratively regenerated in subsequent steps to improve performance."
+    },
+    {
+      "term": "Recurrent segment generation",
+      "definition": "A decoding strategy that divides one-pass parallel decoding into multiple steps, generating segments incrementally, where each step depends on previously generated context to maintain segment-level coherence."
+    }
+  ]
+}

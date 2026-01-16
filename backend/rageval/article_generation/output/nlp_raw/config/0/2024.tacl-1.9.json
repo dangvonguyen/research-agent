@@ -1,0 +1,466 @@
+{
+  "metadata": {
+    "title": "Lost in the Middle: How Language Models Use Long Contexts",
+    "authors": [
+      "Nelson F. Liu",
+      "Kevin Lin",
+      "John Hewitt",
+      "Ashwin Paranjape",
+      "Michele Bevilacqua",
+      "Fabio Petroni",
+      "Percy Liang"
+    ],
+    "paper_type": "analysis",
+    "venue": "Transactions of the Association for Computational Linguistics"
+  },
+  "problem": {
+    "statement": "While recent language models have the ability to take long contexts as input, relatively little is known about how well they use longer context.",
+    "limitations_of_prior_work": [
+      "Transformer language models were often trained with relatively small context windows (between 512 and 2048 tokens).",
+      "It remains unclear how extended-context language models make use of their input contexts when performing downstream tasks.",
+      "Prior work like Ivgi et al. (2023) only studied coarse changes in relevant information position (beginning vs. random), not finer-grained changes."
+    ]
+  },
+  "method": {
+    "name": "Controlled Positional Analysis Framework",
+    "key_idea": "Empirically investigate how language models use long input contexts by making controlled changes to the input context size and the position of the relevant information within the input context and studying their effects on language model performance.",
+    "category": "controlled experimentation",
+    "components": [
+      {
+        "name": "Multi-document Question Answering Task",
+        "function": "Requires models to reason over provided documents to find relevant information and use it to answer a given question, mimicking retrieval-augmented generation."
+      },
+      {
+        "name": "Key-Value Retrieval Task",
+        "function": "A synthetic task designed as a minimal testbed for the basic ability to retrieve matching tokens from the input context, using randomly generated UUIDs."
+      }
+    ],
+    "techniques": [
+      {
+        "name": "Modulating Position of Relevant Information",
+        "purpose": "To study the effect of where relevant information appears in the input context.",
+        "details": "Adjusting the order of documents or key-value pairs to change the position of the relevant item (e.g., beginning, middle, end)."
+      },
+      {
+        "name": "Modulating Input Context Length",
+        "purpose": "To study the effect of overall context size.",
+        "details": "Increasing or decreasing the number of distractor documents or key-value pairs."
+      },
+      {
+        "name": "Query-Aware Contextualization",
+        "purpose": "To investigate if placing the query bidirectionally improves decoder-only models' context usage.",
+        "details": "Placing the query before and after the documents or key-value pairs in the prompt."
+      }
+    ]
+  },
+  "type_specific": {
+    "analysis": {
+      "focus": "how language models use long input contexts",
+      "models_studied": [
+        "MPT-30B-Instruct",
+        "LongChat-13B (16K)",
+        "OpenAI’s GPT-3.5-Turbo",
+        "GPT-3.5-Turbo (16K)",
+        "Anthropic’s Claude-1.3",
+        "Claude-1.3 (100K)",
+        "Flan-T5-XXL",
+        "Flan-UL2",
+        "MPT-30B",
+        "Llama-2-7B",
+        "Llama-2-13B",
+        "Llama-2-70B",
+        "Llama-2-7B-chat-hf",
+        "Llama-2-13B-chat-hf",
+        "Llama-2-70b-chat-hf",
+        "GPT-4 (8K)"
+      ],
+      "phenomena_investigated": [
+        "Impact of relevant information position on language model performance in long contexts.",
+        "Effect of input context length on language model performance.",
+        "Role of model architecture (decoder-only vs. encoder-decoder) in context utilization.",
+        "Impact of query-aware contextualization on retrieval and QA tasks.",
+        "Effect of instruction fine-tuning on positional biases in language models.",
+        "Trade-off of providing more context in open-domain question answering.",
+        "Emergence of U-shaped performance curve (primacy and recency bias) across model sizes."
+      ],
+      "methodology": "Empirical investigation via controlled experiments, making controlled changes to input context size and the position of relevant information, and studying their effects on language model performance.",
+      "key_discoveries": [
+        {
+          "finding": "Language model performance degrades significantly when relevant information is in the middle of long contexts, exhibiting a U-shaped performance curve (primacy and recency bias).",
+          "evidence": "Observed across multiple models and tasks, e.g., GPT-3.5-Turbo's multi-document QA performance drops by more than 20% in the worst case."
+        },
+        {
+          "finding": "Extended-context models do not necessarily use their input context better than their non-extended counterparts when the context fits both models' windows.",
+          "evidence": "Performance between GPT-3.5-Turbo and GPT-3.5-Turbo (16K) was nearly identical in 10- and 20-document settings."
+        },
+        {
+          "finding": "Encoder-decoder models are relatively robust to changes in relevant information position within their training-time sequence length.",
+          "evidence": "Flan-UL2 showed a 1.9% absolute difference between best- and worst-case performance within its 2048-token training window."
+        },
+        {
+          "finding": "Query-aware contextualization dramatically improves performance on synthetic key-value retrieval but minimally affects multi-document QA trends.",
+          "evidence": "GPT-3.5-Turbo (16K) achieved perfect performance on key-value retrieval with query-aware contextualization, compared to 45.6% worst-case without it."
+        },
+        {
+          "finding": "Both base and instruction fine-tuned language models exhibit a U-shaped performance curve, though instruction fine-tuning can slightly mitigate the bias.",
+          "evidence": "MPT-30B and MPT-30B-Instruct both showed a U-shaped curve, with MPT-30B-Instruct reducing worst-case disparity from nearly 10% to around 4%."
+        },
+        {
+          "finding": "In open-domain QA, language model reader performance saturates long before retriever recall, indicating ineffective use of additional retrieved documents.",
+          "evidence": "Using 50 documents instead of 20 only marginally improved performance (~1.5% for GPT-3.5-Turbo and ~1% for Claude-1.3)."
+        },
+        {
+          "finding": "The U-shaped performance curve (primacy and recency bias) only appears in sufficiently large language models (13B and 70B Llama-2 models), while smaller models (7B Llama-2) are solely recency-biased.",
+          "evidence": "Llama-2-7B models were solely recency-biased, while Llama-2-13B and Llama-2-70B models exhibited a U-shaped curve."
+        }
+      ]
+    }
+  },
+  "experiments": {
+    "datasets": [
+      {
+        "name": "NaturalQuestions-Open",
+        "task": "multi-document question answering"
+      },
+      {
+        "name": "NaturalQuestions-Open",
+        "task": "open-domain question answering"
+      },
+      {
+        "name": "Synthetic Key-Value Pairs",
+        "task": "key-value retrieval"
+      }
+    ],
+    "baselines": [
+      "Closed-book setting",
+      "Oracle setting",
+      "MPT-30B-Instruct",
+      "LongChat-13B (16K)",
+      "GPT-3.5-Turbo",
+      "GPT-3.5-Turbo (16K)",
+      "Claude-1.3",
+      "Claude-1.3 (100K)",
+      "Flan-T5-XXL",
+      "Flan-UL2",
+      "MPT-30B",
+      "Llama-2-7B",
+      "Llama-2-13B",
+      "Llama-2-70B",
+      "Llama-2-7B-chat-hf",
+      "Llama-2-13B-chat-hf",
+      "Llama-2-70b-chat-hf",
+      "GPT-4 (8K)"
+    ],
+    "metrics": [
+      "Accuracy",
+      "Retriever Recall"
+    ],
+    "settings": [
+      "Varying position of relevant information (1st to 20th document/key-value pair)",
+      "Varying input context length (10, 20, 30 documents for QA; 75, 140, 300 key-value pairs for retrieval)",
+      "Closed-book (no documents)",
+      "Oracle (single relevant document)",
+      "Query-aware contextualization",
+      "Random distractors",
+      "Randomized distractor order"
+    ]
+  },
+  "results": {
+    "main_findings": [
+      {
+        "claim": "GPT-3.5-Turbo's multi-document QA performance can drop by more than 20% in the worst case when relevant information is in the middle of the context.",
+        "value": "more than 20%",
+        "setting": "worst case",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "GPT-3.5-Turbo's worst-case performance in 20- and 30-document settings is lower than its closed-book performance.",
+        "value": "lower than 56.1%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "20- and 30-document settings",
+        "comparison": "vs. closed-book (56.1% Accuracy)",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "GPT-3.5-Turbo (16K) worst-case performance without query-aware contextualization on key-value retrieval.",
+        "value": "45.6%",
+        "dataset": "Synthetic Key-Value Pairs",
+        "setting": "without query-aware contextualization",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "GPT-3.5-Turbo (16K) achieves perfect performance on key-value retrieval with query-aware contextualization.",
+        "value": "perfect performance",
+        "dataset": "Synthetic Key-Value Pairs",
+        "setting": "with query-aware contextualization, 300 key-value pairs",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "Flan-UL2 (within 2048-token context window) shows minimal performance difference due to relevant information position.",
+        "value": "1.9% absolute difference",
+        "setting": "within 2048-token context window",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "Using 50 documents instead of 20 documents in open-domain QA marginally improves performance for GPT-3.5-Turbo.",
+        "value": "~1.5%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "open-domain QA, 50 vs 20 retrieved documents",
+        "comparison": "vs. 20 retrieved documents",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "Using 50 documents instead of 20 documents in open-domain QA marginally improves performance for Claude-1.3.",
+        "value": "~1%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "open-domain QA, 50 vs 20 retrieved documents",
+        "comparison": "vs. 20 retrieved documents",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "MPT-30B-Instruct's instruction fine-tuning reduces the worst-case performance disparity in multi-document QA.",
+        "value": "from nearly 10% to around 4%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "multi-document QA",
+        "comparison": "vs. MPT-30B base model",
+        "metric": "Accuracy disparity"
+      },
+      {
+        "claim": "Llama-2 13B base model exhibits a significant accuracy disparity between best- and worst-case performance.",
+        "value": "20-point accuracy disparity",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "multi-document QA, 20 total documents",
+        "metric": "Accuracy disparity"
+      },
+      {
+        "claim": "Applying additional fine-tuning to Llama-2 13B reduces its positional bias.",
+        "value": "10-point worst-case degradation",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "multi-document QA, 20 total documents",
+        "comparison": "vs. Llama-2 13B base model",
+        "metric": "Accuracy degradation"
+      },
+      {
+        "claim": "GPT-3.5-Turbo achieves 75% accuracy when relevant information is at the 1st position.",
+        "value": "75%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "20 total retrieved documents, 1st position",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "GPT-3.5-Turbo achieves 53% accuracy when relevant information is at the 10th position.",
+        "value": "53%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "20 total retrieved documents, 10th position",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "GPT-3.5-Turbo achieves 63% accuracy when relevant information is at the 20th position.",
+        "value": "63%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "20 total retrieved documents, 20th position",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "GPT-3.5-Turbo achieves 56.1% accuracy in the closed-book setting.",
+        "value": "56.1%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "closed-book",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "GPT-3.5-Turbo achieves 88.3% accuracy in the oracle setting.",
+        "value": "88.3%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "oracle",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "Claude-1.3 and Claude-1.3 (100K) achieve near 100% accuracy on key-value retrieval.",
+        "value": "near 100%",
+        "dataset": "Synthetic Key-Value Pairs",
+        "setting": "75, 140, and 300 key-value pairs",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "GPT-4 (8K) achieves 88% accuracy when relevant information is at the 1st position.",
+        "value": "88%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "20 total retrieved documents, 1st position (500 question sample)",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "GPT-4 (8K) achieves 75% accuracy when relevant information is at the 10th position.",
+        "value": "75%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "20 total retrieved documents, 10th position (500 question sample)",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "GPT-4 (8K) achieves 77% accuracy when relevant information is at the 20th position.",
+        "value": "77%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "20 total retrieved documents, 20th position (500 question sample)",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "Llama-2-70b-chat-hf achieves 52% accuracy when relevant information is at the 1st position.",
+        "value": "52%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "20 total retrieved documents, 1st position",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "Llama-2-70b-chat-hf achieves 72% accuracy when relevant information is at the 20th position.",
+        "value": "72%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "20 total retrieved documents, 20th position",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "Llama-2-7b-hf achieves 22% accuracy when relevant information is at the 1st position.",
+        "value": "22%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "20 total retrieved documents, 1st position",
+        "metric": "Accuracy"
+      },
+      {
+        "claim": "Llama-2-7b-hf achieves 42% accuracy when relevant information is at the 20th position.",
+        "value": "42%",
+        "dataset": "NaturalQuestions-Open",
+        "setting": "20 total retrieved documents, 20th position",
+        "metric": "Accuracy"
+      }
+    ],
+    "ablation_insights": [
+      {
+        "component": "Position of relevant information",
+        "effect": "Performance degrades significantly when relevant information is located in the middle of the input context.",
+        "delta": "GPT-3.5-Turbo's multi-document QA performance drops by more than 20% in the worst case."
+      },
+      {
+        "component": "Extended-context models vs. non-extended counterparts",
+        "effect": "Performance between extended-context models and their non-extended counterparts is nearly identical when the input context fits both models' context windows.",
+        "delta": "GPT-3.5-Turbo and GPT-3.5-Turbo (16K) showed nearly superimposed performance in 10- and 20-document settings."
+      },
+      {
+        "component": "Encoder-decoder model architecture",
+        "effect": "Encoder-decoder models are relatively robust to changes in the position of relevant information within their training-time sequence length.",
+        "delta": "Flan-UL2 showed a 1.9% absolute difference between best- and worst-case performance within its 2048-token training window."
+      },
+      {
+        "component": "Query-aware contextualization",
+        "effect": "Dramatically improves performance on the key-value retrieval task but minimally affects multi-document question answering trends.",
+        "delta": "GPT-3.5-Turbo (16K) with query-aware contextualization achieved perfect performance on key-value retrieval, compared to 45.6% worst-case without it."
+      },
+      {
+        "component": "Instruction fine-tuning (MPT-30B-Instruct vs. MPT-30B)",
+        "effect": "Improves absolute performance and slightly reduces the worst-case performance disparity.",
+        "delta": "Reduces worst-case performance disparity from nearly 10% to around 4%."
+      },
+      {
+        "component": "Model size (Llama-2 7B vs. 13B/70B)",
+        "effect": "The U-shaped performance curve (primacy and recency bias) only appears in sufficiently large language models; smaller models are solely recency-biased.",
+        "delta": "Llama-2-7B models are solely recency-biased, while 13B and 70B models exhibit a U-shaped curve."
+      },
+      {
+        "component": "Supervised fine-tuning and reinforcement learning from human feedback (Llama-2-chat vs. base)",
+        "effect": "Dramatically improves performance on multi-document QA, slightly mitigates positional bias in smaller models (13B), but minimally affects trends on larger models (70B).",
+        "delta": "Llama-2 13B base model had a 20-point accuracy disparity, reduced to a 10-point worst-case degradation with fine-tuning."
+      }
+    ]
+  },
+  "contributions": [
+    {
+      "type": "finding",
+      "description": "Show that language model performance degrades significantly when changing the position of relevant information, indicating that models struggle to robustly access and use information in long input contexts."
+    },
+    {
+      "type": "finding",
+      "description": "Identify a U-shaped performance curve, where performance is often lowest when models must use information in the middle of long input contexts."
+    },
+    {
+      "type": "analysis",
+      "description": "Provide a preliminary investigation of the role of model architecture, query-aware contextualization, and instruction fine-tuning to better understand how language models use context."
+    },
+    {
+      "type": "analysis",
+      "description": "Conduct a practical case study of open-domain question answering, finding that the performance of language model readers saturates far before retriever recall."
+    },
+    {
+      "type": "benchmark",
+      "description": "Introduce new evaluation protocols for future long-context models, requiring minimal difference in best- and worst-case performance to claim robust context usage."
+    },
+    {
+      "type": "dataset",
+      "description": "Release code and evaluation data to facilitate further work on understanding and improving how language models use their input context."
+    }
+  ],
+  "comparisons": [
+    {
+      "other_method": "Ivgi et al. (2023)",
+      "dimension": "Analysis of relevant information position",
+      "difference": "Prior work compared relevant paragraph at the beginning vs. a random position, while this work studies finer-grained changes in the position of relevant information.",
+      "evidence": "This work studies finer-grained changes in the position of relevant information."
+    },
+    {
+      "other_method": "Little Retrieval Test of Papailiopoulos et al. (2023) and fine-grained line retrieval task of Li et al. (2023)",
+      "dimension": "Task design for retrieval ability",
+      "difference": "This work explicitly seeks to distill and simplify the task by removing as much natural language semantics as possible (using random UUIDs instead).",
+      "evidence": "Using random UUIDs instead of natural language features to remove potential confounders."
+    },
+    {
+      "other_method": "Prior work (Khandelwal et al., 2018; Press et al., 2021)",
+      "dimension": "Positional bias in language models",
+      "difference": "Prior work found non-instruction fine-tuned language models are biased towards recent tokens (recency bias), while this work shows language models are capable of using longer-range information (primacy bias) when prompted with instruction-formatted data.",
+      "evidence": "Our results show that language models are capable of using longer-range information (i.e., the beginning of the input context) when prompted with instruction-formatted data."
+    },
+    {
+      "other_method": "Prior work (Khandelwal et al., 2018; Sun et al., 2021)",
+      "dimension": "Appearance of primacy bias",
+      "difference": "Hypothesize that prior work did not previously observe any primacy bias in language models because the models they studied were too small (less than 1B parameters).",
+      "evidence": "Only the larger models (13B and 70B Llama-2) exhibit the U-shaped performance curve—the smallest Llama-2 models (7B) are solely recency-biased."
+    }
+  ],
+  "limitations": [
+    "Exploration of other decoding methods is left to future work.",
+    "Ambiguity in NaturalQuestions-Open means that a small number of distractor passages may contain a reasonable answer.",
+    "Evaluating GPT-4 on the full multi-document QA and key-value retrieval experiments would cost upwards of $6000, limiting the scope of GPT-4 evaluation.",
+    "The Llama tokenizer produces longer sequences than other tokenizers, leading to 20 examples (out of 2655) exceeding Llama-2’s maximum context length of 4096 tokens being discarded."
+  ],
+  "future_work": [
+    "Explore other decoding methods.",
+    "Conduct further work on understanding and improving how language models use their input context.",
+    "Investigate effective reranking of retrieved documents (pushing relevant information closer to the start of the input context) or ranked list truncation (retrieving fewer documents when appropriate) for improving language-model-based readers."
+  ],
+  "key_terms": [
+    {
+      "term": "U-shaped performance curve",
+      "definition": "A phenomenon where language model performance is highest when relevant information occurs at the very beginning (primacy bias) or end of the input context (recency bias), and significantly degrades when models must access relevant information in the middle of long contexts."
+    },
+    {
+      "term": "primacy bias",
+      "definition": "The tendency for language models to be better at using relevant information that occurs at the very beginning of the input context."
+    },
+    {
+      "term": "recency bias",
+      "definition": "The tendency for language models to be better at using relevant information that occurs at the very end of the input context."
+    },
+    {
+      "term": "serial-position effect",
+      "definition": "A psychological phenomenon where, in free-association recall of elements from a list, humans tend to best remember the first and last elements of the list, observed analogously in language models."
+    },
+    {
+      "term": "query-aware contextualization",
+      "definition": "A technique involving placing the query before and after the data (documents or key-value pairs) in the input context to enable bidirectional attention to the query."
+    },
+    {
+      "term": "closed-book setting",
+      "definition": "An experimental condition where language models are not given any documents in their input context and must rely solely on their parametric memory to generate the correct answer."
+    },
+    {
+      "term": "oracle setting",
+      "definition": "An experimental condition where language models are given only the single document that contains the answer and must use it to answer the question."
+    }
+  ]
+}

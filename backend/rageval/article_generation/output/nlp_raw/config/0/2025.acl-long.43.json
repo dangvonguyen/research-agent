@@ -1,0 +1,367 @@
+{
+  "metadata": {
+    "title": "HyBGRAG: Hybrid Retrieval-Augmented Generation on Textual and Relational Knowledge Bases",
+    "authors": [
+      "Meng-Chich Lee",
+      "Qi Zhu",
+      "Costas Mavromatis",
+      "Zhen Han",
+      "Soji Adeshina",
+      "Vassilis N. Ioannidis",
+      "Huzeifa Rangwala",
+      "Christos Faloutsos"
+    ],
+    "year": 2024,
+    "paper_type": "rag_system"
+  },
+  "problem": {
+    "statement": "The paper addresses the challenge of effectively answering 'hybrid' questions that require a synergy of both textual and relational information from a semi-structured knowledge base (SKB), a task existing RAG and GRAG methods struggle with.",
+    "limitations_of_prior_work": [
+      "Existing RAG or GRAG methods focus solely on retrieving either textual or relational information, limiting their applicability for hybrid questions.",
+      "Existing methods cannot effectively tackle Hybrid Question Answering (HQA) which requires a synergy between textual and relational retrieval.",
+      "In hybrid questions, the aspects required to retrieve different types of information may not be easily distinguishable by LLMs.",
+      "LLMs struggle to distinguish between the textual and relational aspects of a question on the first attempt, necessitating further refinements."
+    ],
+    "research_questions": [
+      "RQ1. Effectiveness: How well does HYBGRAG perform in real-world benchmarks?",
+      "RQ2. Ablation Study: Are all the design choices in HYBGRAG necessary?",
+      "RQ3. Interpretability: How does HYBGRAG refine its question routing based on feedback?"
+    ]
+  },
+  "method": {
+    "name": "HYBGRAG",
+    "category": "Retrieval-Augmented Generation, Multi-agent system",
+    "key_idea": "HYBGRAG handles hybrid questions with a retriever bank, which leverages both textual and relational information simultaneously, and performs self-reflection to iteratively improve its question routing based on feedback from a carefully designed critic module.",
+    "components": [
+      {
+        "name": "retriever bank",
+        "function": "Composed of multiple retrieval modules and a router, it is responsible for selecting and using the appropriate retrieval module to retrieve references."
+      },
+      {
+        "name": "text retrieval module",
+        "function": "Retrieves documents using vector similarity search (VSS) between the question and documents in the embedding space, typically used when no entities can be extracted by the hybrid module."
+      },
+      {
+        "name": "hybrid retrieval module",
+        "function": "Takes identified topic entities and useful relations as input, uses a graph retriever to extract entities in their ego-graph, and then ranks associated documents using VSS between the question and documents."
+      },
+      {
+        "name": "router",
+        "function": "An LLM that performs question routing by identifying topic entities and useful relations, and then determines whether to use the text or hybrid retrieval module."
+      },
+      {
+        "name": "critic module",
+        "function": "Provides feedback to help the router perform better question routing, divided into a validator and a commenter."
+      },
+      {
+        "name": "LLM validator (Cval)",
+        "function": "Validates if the top retrieved references meet the requirements specified by the question, performing a binary classification task using reasoning paths as validation context."
+      },
+      {
+        "name": "LLM commenter (Ccom)",
+        "function": "Provides corrective feedback to the router to help refine question routing, leveraging in-context learning with pre-collected examples."
+      }
+    ],
+    "techniques": [
+      {
+        "name": "self-reflection",
+        "purpose": "To iteratively improve the accuracy of question routing and retrieval.",
+        "details": "The router refines its actions based on feedback from the critic module over multiple iterations."
+      },
+      {
+        "name": "question routing",
+        "purpose": "To determine the optimal retrieval strategy (textual or hybrid) and identify relevant entities/relations.",
+        "details": "An LLM router identifies topic entities and useful relations, then selects the appropriate retrieval module."
+      },
+      {
+        "name": "vector similarity search (VSS)",
+        "purpose": "To retrieve and rank documents based on semantic similarity.",
+        "details": "Used in the text retrieval module and as a ranker in the hybrid retrieval module for documents associated with extracted entities."
+      },
+      {
+        "name": "graph retriever",
+        "purpose": "To extract relational information from the knowledge graph.",
+        "details": "Extracts entities within the ego-graph of identified topic entities, connected by useful relations."
+      },
+      {
+        "name": "few-shot examples",
+        "purpose": "To guide the LLM router in identifying relational aspects.",
+        "details": "Used by the router to identify topic entities and useful relations based on entity and relation types."
+      },
+      {
+        "name": "divide-and-conquer",
+        "purpose": "To improve the performance and leverage pre-trained LLMs for the critic module.",
+        "details": "The critic module is split into an LLM validator and an LLM commenter, each with independent contexts."
+      },
+      {
+        "name": "in-context learning (ICL)",
+        "purpose": "To enable the commenter to provide high-quality, sophisticated feedback.",
+        "details": "The commenter uses a small number of successful experiences (approx. 30) as examples to generate corrective feedback."
+      }
+    ]
+  },
+  "type_specific": {
+    "rag_system": {
+      "retriever": {
+        "type": "hybrid",
+        "model": "VSS, graph retriever",
+        "index_type": "Not specified"
+      },
+      "corpus": {
+        "name": "semi-structured knowledge base (SKB) consisting of a knowledge graph (KG) and unstructured text documents",
+        "size": "Not specified",
+        "chunking": "Not specified"
+      },
+      "retrieval_strategy": "Iterative self-reflection based question routing with a hybrid retriever bank (textual and relational information)",
+      "generator": {
+        "model": "Llama 3.1 70B, Claude 3 Sonnet",
+        "context_integration": "Retrieved references are incorporated into the prompt for generation and validation, using Chain-of-Thought (CoT) prompting."
+      },
+      "challenges_addressed": [
+        "Hybrid Question Answering (HQA) requiring both textual and relational information",
+        "LLM's struggle to distinguish between textual and relational aspects of a question on the first attempt"
+      ]
+    }
+  },
+  "experiments": {
+    "datasets": [
+      {
+        "name": "STARK-MAG",
+        "task": "Retrieval for Hybrid Question Answering",
+        "size": "2665 questions"
+      },
+      {
+        "name": "STARK-PRIME",
+        "task": "Retrieval for Hybrid Question Answering",
+        "size": "2801 questions"
+      },
+      {
+        "name": "CRAG",
+        "task": "End-to-End RAG (textual and relational questions)",
+        "size": "1335 textual and relation questions"
+      }
+    ],
+    "baselines": [
+      "QAGNN",
+      "Think-on-Graph",
+      "Dense Retriever",
+      "VSS (Text Retrieval Module)",
+      "Multi-VSS",
+      "VSS w/ LLM Reranker",
+      "ReAct",
+      "Reflexion",
+      "AVATAR",
+      "Hybrid Retrieval Module (Ours)",
+      "CoT LLM",
+      "Text-Only RAG",
+      "Graph-Only RAG",
+      "Text & Graph RAG",
+      "Corrective RAG",
+      "Router for SR (Single-Agent)"
+    ],
+    "metrics": [
+      "Hit@1",
+      "Hit@5",
+      "Recall@20",
+      "MRR",
+      "Accuracy ↑",
+      "Halluc. ↓",
+      "Missing",
+      "Score_a ↑"
+    ],
+    "settings": [
+      "Retrieval evaluation on STARK",
+      "End-to-end RAG evaluation on CRAG",
+      "Up to 4 self-reflection iterations",
+      "Using Claude 3 Sonnet as base LLM (default)",
+      "Using Claude 3 Haiku for model size comparison",
+      "Using Llama 3.1 70B for CRAG evaluation",
+      "Validator without validation context (ablation)",
+      "Commenter with 5-shot examples (ablation)",
+      "Oracle for critic module (ablation)"
+    ]
+  },
+  "results": {
+    "main_findings": [
+      {
+        "claim": "achieves significant performance gains with an average relative improvement in Hit@1 of 51%",
+        "value": "51%",
+        "metric": "Hit@1",
+        "dataset": "STARK benchmark",
+        "setting": "retrieval task",
+        "comparison": "vs. all baselines"
+      },
+      {
+        "claim": "outperforms all baselines significantly on STARK-MAG",
+        "metric": "Hit@1",
+        "value": "0.6540",
+        "dataset": "STARK-MAG",
+        "setting": "retrieval task",
+        "comparison": "vs. AVATAR (0.4436)"
+      },
+      {
+        "claim": "outperforms all baselines significantly on STARK-PRIME",
+        "metric": "Hit@1",
+        "value": "0.2856",
+        "dataset": "STARK-PRIME",
+        "setting": "retrieval task",
+        "comparison": "vs. AVATAR (0.1844)"
+      },
+      {
+        "claim": "achieves a relative improvement in Hit@1 of 47% on STARK-MAG",
+        "metric": "Hit@1",
+        "value": "47.4%",
+        "dataset": "STARK-MAG",
+        "setting": "retrieval task",
+        "comparison": "vs. second-best baseline (AVATAR)"
+      },
+      {
+        "claim": "achieves a relative improvement in Hit@1 of 55% on STARK-PRIME",
+        "metric": "Hit@1",
+        "value": "54.9%",
+        "dataset": "STARK-PRIME",
+        "setting": "retrieval task",
+        "comparison": "vs. second-best baseline (AVATAR)"
+      },
+      {
+        "claim": "outperforms all baselines in end-to-end RAG on CRAG using Llama 3.1 70B",
+        "metric": "Score_a",
+        "value": "0.1618",
+        "dataset": "CRAG",
+        "setting": "end-to-end RAG with Llama 3.1 70B",
+        "comparison": "vs. Text & Graph RAG (0.0330)"
+      },
+      {
+        "claim": "outperforms all baselines in end-to-end RAG on CRAG using Claude 3 Sonnet",
+        "metric": "Score_a",
+        "value": "0.3363",
+        "dataset": "CRAG",
+        "setting": "end-to-end RAG with Claude 3 Sonnet",
+        "comparison": "vs. Text & Graph RAG (0.2404)"
+      }
+    ],
+    "ablation_insights": [
+      {
+        "component": "Validator with validation context",
+        "effect": "Improves performance compared to without context.",
+        "delta": "HYBGRAG (w/ Context, ICL) Hit@1 of 0.6540 vs. Val. w/o Context Hit@1 of 0.6105 on STARK-MAG"
+      },
+      {
+        "component": "Commenter with in-context learning (ICL)",
+        "effect": "Improves performance compared to few-shot examples.",
+        "delta": "HYBGRAG (w/ Context, ICL) Hit@1 of 0.6540 vs. Com. w/ 5-Shot Hit@1 of 0.6465 on STARK-MAG"
+      },
+      {
+        "component": "Self-reflection iterations",
+        "effect": "Performance improves significantly with more iterations.",
+        "delta": "STARK-MAG Hit@1 improves from ~0.45 (1 iteration) to ~0.65 (4 iterations); STARK-PRIME Hit@1 improves from ~0.15 (1 iteration) to ~0.28 (4 iterations)"
+      },
+      {
+        "component": "Multi-agent design (HYBGRAG)",
+        "effect": "Outperforms single-agent and no-agent baselines, highlighting the importance of self-reflection and effective feedback.",
+        "delta": "HYBGRAG (Multi-Agent) Hit@1 of 0.6540 vs. Router for SR (Single-Agent) Hit@1 of 0.6206 and Hybrid RM (No-Agent) Hit@1 of 0.5028 on STARK-MAG"
+      }
+    ],
+    "efficiency_results": {
+      "throughput": "Claude 3 Haiku offers 1.96× speedup compared to Claude 3 Sonnet",
+      "comparison": "Hybrid retrieval module achieves 24% relative improvement in Hit@1 with only 2 API calls, and HYBGRAG achieves 51% with at most 14 API calls, both without training, compared to AVATAR requiring at least 500 API calls during training."
+    }
+  },
+  "contributions": [
+    {
+      "type": "method",
+      "description": "Proposes HYBGRAG, an agentic system that automatically refines question routing with self-reflection via a critic module."
+    },
+    {
+      "type": "method",
+      "description": "Develops an adaptive framework that solves textual, relational, and hybrid questions using a unified retriever bank."
+    },
+    {
+      "type": "finding",
+      "description": "Demonstrates interpretability by justifying decision-making with an intuitive refinement path similar to Chain-of-Thought."
+    },
+    {
+      "type": "finding",
+      "description": "Achieves effectiveness by significantly outperforming all baselines on real-world Hybrid Question Answering (HQA) benchmarks."
+    }
+  ],
+  "comparisons": [
+    {
+      "other_method": "Regular RAG",
+      "dimension": "Information retrieval scope",
+      "difference": "Regular RAG focuses solely on retrieving textual information, overlooking interconnections between documents and failing to meet relational aspect requirements.",
+      "evidence": "Figure 1(a) and Table 1 show it misses relational aspects."
+    },
+    {
+      "other_method": "Graph RAG (GRAG)",
+      "dimension": "Information retrieval scope",
+      "difference": "GRAG relies solely on relational information, misidentifying textual aspects as part of the relational one.",
+      "evidence": "Figure 1(b) and Table 1 show it misses textual aspects."
+    },
+    {
+      "other_method": "AVATAR",
+      "dimension": "Self-reflection mechanism",
+      "difference": "AVATAR proposes iterative prompt optimization via contrastive reasoning but may struggle to generate correct output on the first attempt, while HYBGRAG uses a carefully designed critic module for more effective feedback.",
+      "evidence": "HYBGRAG achieves 47.4% relative Hit@1 improvement over AVATAR on STARK-MAG and 54.9% on STARK-PRIME."
+    },
+    {
+      "other_method": "Self-reflective LLMs (e.g., Reflexion)",
+      "dimension": "Retrieval refinement and feedback design",
+      "difference": "Existing self-reflective LLMs lack appropriate retrieval tools and guidance on how to refine retrieval effectively, and using pre-trained LLMs as critics without careful design results in suboptimal self-evaluation and overly implicit feedback.",
+      "evidence": "HYBGRAG outperforms Reflexion by a significant margin on STARK (e.g., 0.6540 Hit@1 vs 0.4071 on STARK-MAG)."
+    },
+    {
+      "other_method": "Hybrid Retrieval Module (without critic module)",
+      "dimension": "Handling incorrect initial extractions",
+      "difference": "The full HYBGRAG system significantly improves performance by tackling incorrect entity and relation extractions in the first iteration through its critic module, which the standalone Hybrid Retrieval Module lacks.",
+      "evidence": "HYBGRAG Hit@1 of 0.6540 vs. Hybrid Retrieval Module Hit@1 of 0.5028 on STARK-MAG."
+    },
+    {
+      "other_method": "Router for SR (Single-Agent)",
+      "dimension": "Critic module design",
+      "difference": "The single-agent baseline relies on the router to make decisions and provide feedback, which generates plain text feedback that is less effective than HYBGRAG's carefully designed corrective feedback from a multi-agent critic module.",
+      "evidence": "HYBGRAG (Multi-Agent) Hit@1 of 0.6540 vs. Router for SR (Single-Agent) Hit@1 of 0.6206 on STARK-MAG."
+    }
+  ],
+  "limitations": [
+    "HYBGRAG uses only the simplest retrieval modules, and various alternatives (e.g., cross-encoder ranker, PPR for hybrid retriever) are not explored.",
+    "HYBGRAG does not offer significant advantages in terms of domain adaptation, performing worse on STARK-PRIME (medicinal domain) than STARK-MAG (academic domain).",
+    "The commentator in HYBGRAG selects random experiences when performing In-Context Learning (ICL), which may not be optimal."
+  ],
+  "future_work": [
+    "Exploring alternative retrieval modules, such as replacing the ranker with a cross-encoder ranker.",
+    "Using top-K entities from Personalized PageRank (PPR) as the retriever in the hybrid retrieval module.",
+    "Implementing a more sophisticated selection mechanism for ICL experiences in the commentator, e.g., selecting questions most relevant to the current one.",
+    "Further enhancing the capabilities of HYBGRAG to address current limitations."
+  ],
+  "key_terms": [
+    {
+      "term": "Semi-structured knowledge base (SKB)",
+      "definition": "A knowledge base where text documents are interconnected by relations, consisting of a knowledge graph (KG) and unstructured text documents associated with KG entities."
+    },
+    {
+      "term": "Hybrid questions",
+      "definition": "Questions that require both textual and relational information from a semi-structured knowledge base (SKB) to be answered correctly."
+    },
+    {
+      "term": "Hybrid Question Answering (HQA)",
+      "definition": "Given a SKB and a hybrid question, the task is to retrieve a set of documents where each document satisfies the requirements specified by both the relational and textual aspects of the question."
+    },
+    {
+      "term": "Retriever bank",
+      "definition": "A component of HYBGRAG composed of multiple retrieval modules (text and hybrid) and a router, designed to handle diverse question types."
+    },
+    {
+      "term": "Critic module",
+      "definition": "A component of HYBGRAG that provides feedback to the router to help refine question routing, consisting of an LLM validator and an LLM commenter."
+    },
+    {
+      "term": "Self-reflection",
+      "definition": "An iterative process where HYBGRAG improves its question routing based on feedback from the critic module."
+    },
+    {
+      "term": "Question routing",
+      "definition": "The process by which the LLM router determines the selection and usage of the appropriate retrieval module (text or hybrid) and identifies relevant topic entities and useful relations."
+    }
+  ]
+}

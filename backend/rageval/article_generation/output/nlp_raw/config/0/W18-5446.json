@@ -1,0 +1,277 @@
+{
+  "metadata": {
+    "title": "GLUE: A Multi-Task Benchmark and Analysis Platform for Natural Language Understanding",
+    "authors": [
+      "Alex Wang",
+      "Amanpreet Singh",
+      "Julian Michael",
+      "Felix Hill",
+      "Omer Levy",
+      "Samuel R. Bowman"
+    ],
+    "year": 2018,
+    "paper_type": "benchmark"
+  },
+  "problem": {
+    "statement": "Most NLU models above the word level are designed for a specific task and struggle with out-of-domain data.",
+    "limitations_of_prior_work": [
+      "Most NLU models above the word level are designed for a specific task.",
+      "Most NLU models struggle with out-of-domain data."
+    ]
+  },
+  "method": {
+    "name": "General Language Understanding Evaluation (GLUE)",
+    "key_idea": "GLUE is a benchmark of nine diverse NLU tasks, an auxiliary dataset for probing models for understanding of specific linguistic phenomena, and an online platform for evaluating and comparing models.",
+    "components": [
+      {
+        "name": "Nine diverse NLU tasks",
+        "function": "A suite of nine NLU tasks covering a broad range of domains, data quantities, and difficulties to spur development of generalizable NLU systems."
+      },
+      {
+        "name": "Diagnostic Dataset",
+        "function": "A dataset of 550 hand-crafted NLI examples tagged with linguistic phenomena, designed to probe trained models for specific types of knowledge."
+      },
+      {
+        "name": "Online evaluation platform and leaderboard",
+        "function": "A platform for evaluating and comparing models, primarily based on private test data to ensure fair usage."
+      }
+    ]
+  },
+  "type_specific": {
+    "benchmark": {
+      "benchmark_name": "General Language Understanding Evaluation (GLUE)",
+      "tasks_covered": [
+        "CoLA (acceptability)",
+        "SST-2 (sentiment)",
+        "MRPC (paraphrase)",
+        "QQP (paraphrase)",
+        "STS-B (textual sim.)",
+        "MNLI (NLI)",
+        "QNLI (QA/NLI)",
+        "RTE (NLI)",
+        "WNLI (coref/NLI)"
+      ],
+      "evaluation_dimensions": [
+        {
+          "dimension": "Task-specific performance",
+          "metrics": [
+            "accuracy",
+            "F1",
+            "Pearson correlation",
+            "Spearman correlation",
+            "Matthews correlation"
+          ]
+        },
+        {
+          "dimension": "Aggregate performance",
+          "metrics": [
+            "average performance across tasks"
+          ]
+        }
+      ],
+      "models_evaluated": [
+        "ELMo",
+        "Single-task (BiLSTM)",
+        "Multi-task (BiLSTM)",
+        "CBoW",
+        "Skip-Thought",
+        "InferSent",
+        "DisSent",
+        "GenSen"
+      ],
+      "key_findings": [
+        "The best models still achieve fairly low absolute scores.",
+        "Analysis with our diagnostic dataset yields similarly weak performance over all phenomena tested, with some exceptions.",
+        "Experiments indicate that solving GLUE is beyond the capability of current transfer learning methods."
+      ],
+      "leaderboard_top": {
+        "model": "Multi-task",
+        "score": "69.0 Avg"
+      }
+    }
+  },
+  "experiments": {
+    "datasets": [
+      {
+        "name": "CoLA",
+        "task": "acceptability"
+      },
+      {
+        "name": "SST-2",
+        "task": "sentiment"
+      },
+      {
+        "name": "MRPC",
+        "task": "paraphrase"
+      },
+      {
+        "name": "QQP",
+        "task": "paraphrase"
+      },
+      {
+        "name": "STS-B",
+        "task": "textual sim."
+      },
+      {
+        "name": "MNLI",
+        "task": "NLI"
+      },
+      {
+        "name": "QNLI",
+        "task": "QA/NLI"
+      },
+      {
+        "name": "RTE",
+        "task": "NLI"
+      },
+      {
+        "name": "WNLI",
+        "task": "coref/NLI"
+      },
+      {
+        "name": "Diagnostic Dataset",
+        "task": "NLI",
+        "size": "550 examples"
+      }
+    ],
+    "baselines": [
+      "ELMo",
+      "Single-task",
+      "Multi-task",
+      "CBoW",
+      "Skip-Thought",
+      "InferSent",
+      "DisSent",
+      "GenSen"
+    ],
+    "metrics": [
+      "accuracy",
+      "F1",
+      "Pearson correlation",
+      "Spearman correlation",
+      "Matthews correlation"
+    ],
+    "settings": [
+      "multi-task learning",
+      "single benchmark task",
+      "pretrained models"
+    ]
+  },
+  "results": {
+    "main_findings": [
+      {
+        "claim": "The Multi-task model achieved the highest average performance on the GLUE benchmark.",
+        "value": "69.0",
+        "dataset": "GLUE benchmark",
+        "metric": "Avg",
+        "comparison": "vs. other baselines"
+      },
+      {
+        "claim": "The Single-task model achieved an average score on the GLUE benchmark.",
+        "value": "64.8",
+        "dataset": "GLUE benchmark",
+        "metric": "Avg"
+      },
+      {
+        "claim": "The CBoW model achieved an average score on the GLUE benchmark.",
+        "value": "58.9",
+        "dataset": "GLUE benchmark",
+        "metric": "Avg"
+      },
+      {
+        "claim": "The Skip-Thought model achieved an average score on the GLUE benchmark.",
+        "value": "61.5",
+        "dataset": "GLUE benchmark",
+        "metric": "Avg"
+      },
+      {
+        "claim": "The InferSent model achieved an average score on the GLUE benchmark.",
+        "value": "64.7",
+        "dataset": "GLUE benchmark",
+        "metric": "Avg"
+      },
+      {
+        "claim": "The DisSent model achieved an average score on the GLUE benchmark.",
+        "value": "62.1",
+        "dataset": "GLUE benchmark",
+        "metric": "Avg"
+      },
+      {
+        "claim": "The GenSen model achieved an average score on the GLUE benchmark.",
+        "value": "66.6",
+        "dataset": "GLUE benchmark",
+        "metric": "Avg"
+      },
+      {
+        "claim": "The Multi-task model achieved the highest accuracy on SST-2.",
+        "value": "91.6",
+        "dataset": "SST-2",
+        "metric": "accuracy"
+      },
+      {
+        "claim": "The Multi-task model achieved the highest accuracy on QQP.",
+        "value": "85.3",
+        "dataset": "QQP",
+        "metric": "accuracy"
+      },
+      {
+        "claim": "The Multi-task model achieved the highest Pearson correlation on STS-B.",
+        "value": "72.8",
+        "dataset": "STS-B",
+        "metric": "Pearson correlation"
+      },
+      {
+        "claim": "The Multi-task model achieved the highest accuracy on QNLI.",
+        "value": "81.7",
+        "dataset": "QNLI",
+        "metric": "accuracy"
+      }
+    ]
+  },
+  "contributions": [
+    {
+      "type": "benchmark",
+      "description": "A suite of nine NLU tasks, built on established annotated datasets and covering a diverse range of text genres, dataset sizes, and difficulties."
+    },
+    {
+      "type": "framework",
+      "description": "An online evaluation platform and leaderboard, based primarily on private test data."
+    },
+    {
+      "type": "dataset",
+      "description": "An expert-constructed analysis dataset for probing models for understanding of specific linguistic phenomena."
+    },
+    {
+      "type": "finding",
+      "description": "Experiments indicate that solving GLUE is beyond the capability of current transfer learning methods."
+    }
+  ],
+  "comparisons": [
+    {
+      "other_method": "Single-task models",
+      "dimension": "overall performance",
+      "difference": "Models trained with multi-task learning generally outperform models trained on a single benchmark task.",
+      "evidence": "Multi-task model achieved 69.0 Avg score vs. Single-task model's 64.8 Avg score."
+    },
+    {
+      "other_method": "Pretrained models (CBoW, Skip-Thought, InferSent, DisSent, GenSen)",
+      "dimension": "overall performance",
+      "difference": "Models trained directly on the GLUE tasks generally outperform pretrained models.",
+      "evidence": "Multi-task model achieved 69.0 Avg score, higher than any pretrained model (e.g., GenSen 66.6 Avg)."
+    }
+  ],
+  "limitations": [
+    "Current transfer learning methods achieve fairly low absolute scores on the GLUE benchmark.",
+    "Current models show weak performance over all phenomena tested by the diagnostic dataset, with some exceptions."
+  ],
+  "key_terms": [
+    {
+      "term": "General Language Understanding Evaluation (GLUE)",
+      "definition": "A benchmark consisting of nine diverse NLU tasks, an auxiliary dataset for probing models for understanding of specific linguistic phenomena, and an online platform for evaluating and comparing models."
+    },
+    {
+      "term": "Diagnostic Dataset",
+      "definition": "A dataset of hand-crafted NLI examples designed to highlight common linguistic phenomena (e.g., world knowledge, logical operators, lexical entailments) that models must grasp."
+    }
+  ]
+}

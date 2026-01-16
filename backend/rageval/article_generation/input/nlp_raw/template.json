@@ -1,0 +1,750 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NLP Research Paper Structured Extraction",
+  "description": "Comprehensive schema for extracting structured, verifiable information from NLP research papers. Each field should contain atomic, factual information with specific values rather than vague descriptions.",
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Bibliographic information. Extract exact values as written in the paper.",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "authors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "year": {
+          "type": "integer"
+        },
+        "venue": {
+          "type": "string"
+        },
+        "paper_type": {
+          "type": "string",
+          "enum": [
+            "methodology",
+            "rag_system",
+            "survey",
+            "benchmark",
+            "dataset",
+            "analysis",
+            "position"
+          ],
+          "description": "Primary paper category"
+        }
+      },
+      "required": [
+        "title",
+        "authors",
+        "year",
+        "paper_type"
+      ]
+    },
+    "problem": {
+      "type": "object",
+      "description": "Research motivation and gap analysis. Be specific about what prior work cannot do.",
+      "properties": {
+        "statement": {
+          "type": "string",
+          "description": "One clear sentence: what challenge or gap does this paper address? Avoid vague terms like 'improve performance'."
+        },
+        "limitations_of_prior_work": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "2-4 specific technical limitations of existing approaches that motivate this work. Each should name the prior approach and its concrete shortcoming."
+        },
+        "research_questions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Explicit research questions if stated in the paper."
+        }
+      },
+      "required": [
+        "statement"
+      ]
+    },
+    "method": {
+      "type": "object",
+      "description": "Technical approach. Extract the method name exactly as introduced, and describe mechanisms rather than outcomes.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Exact name of the proposed method/model/framework (e.g., 'BERT', 'Chain-of-Thought', 'ReAct')"
+        },
+        "category": {
+          "type": "string",
+          "description": "High-level approach type (e.g., 'encoder-only transformer', 'retrieval-augmented generation', 'prompt engineering', 'fine-tuning')"
+        },
+        "key_idea": {
+          "type": "string",
+          "description": "One sentence capturing the core technical insight. Focus on the mechanism, not the result. Example: 'Uses iterative retrieval where each step's query is conditioned on previous retrieved passages.'"
+        },
+        "components": {
+          "type": "array",
+          "description": "Main architectural or logical components. Each should be a distinct, named part of the system.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Component name as used in the paper"
+              },
+              "function": {
+                "type": "string",
+                "description": "What this component does and how. Include input/output if relevant."
+              }
+            },
+            "required": [
+              "name",
+              "function"
+            ]
+          }
+        },
+        "techniques": {
+          "type": "array",
+          "description": "Specific techniques, algorithms, or design choices used. Include implementation details.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Technique name (e.g., 'cross-attention', 'contrastive learning', 'beam search')"
+              },
+              "purpose": {
+                "type": "string",
+                "description": "Why this technique is used in this context"
+              },
+              "details": {
+                "type": "string",
+                "description": "How it works or is configured (e.g., 'temperature=0.7', 'top-k=50')"
+              }
+            },
+            "required": [
+              "name",
+              "purpose"
+            ]
+          }
+        }
+      },
+      "required": [
+        "name",
+        "key_idea"
+      ]
+    },
+    "type_specific": {
+      "type": "object",
+      "description": "Paper-type-specific details. Populate ONLY the sub-object matching metadata.paper_type. Leave others empty.",
+      "properties": {
+        "methodology": {
+          "type": "object",
+          "description": "For papers proposing new models, architectures, or algorithms",
+          "properties": {
+            "architecture": {
+              "type": "string",
+              "description": "Architecture type and key structural choices (e.g., '12-layer encoder-decoder transformer with sparse attention')"
+            },
+            "model_size": {
+              "type": "string",
+              "description": "Parameter count or model scale (e.g., '7B parameters', '350M parameters')"
+            },
+            "training_objective": {
+              "type": "string",
+              "description": "Loss function or training goal (e.g., 'masked language modeling', 'next token prediction', 'contrastive loss')"
+            },
+            "training_data": {
+              "type": "string",
+              "description": "Training corpus with scale (e.g., 'C4 corpus, 750GB text', 'Wikipedia + BookCorpus, 16GB')"
+            },
+            "compute_requirements": {
+              "type": "string",
+              "description": "Hardware and time (e.g., '64 A100 GPUs for 2 weeks', '8 V100 GPUs, 3 days')"
+            },
+            "inference_cost": {
+              "type": "string",
+              "description": "Inference latency or throughput if reported (e.g., '50ms per query', '1000 tokens/second')"
+            }
+          }
+        },
+        "rag_system": {
+          "type": "object",
+          "description": "For retrieval-augmented generation papers",
+          "properties": {
+            "retriever": {
+              "type": "object",
+              "description": "Retrieval component details",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "sparse",
+                    "dense",
+                    "hybrid",
+                    "learned"
+                  ],
+                  "description": "sparse=BM25/TF-IDF, dense=embedding-based, hybrid=combination, learned=end-to-end trained"
+                },
+                "model": {
+                  "type": "string",
+                  "description": "Retriever model name (e.g., 'Contriever', 'DPR', 'ColBERT')"
+                },
+                "index_type": {
+                  "type": "string",
+                  "description": "Index structure (e.g., 'FAISS HNSW', 'Elasticsearch', 'SCANN')"
+                }
+              }
+            },
+            "corpus": {
+              "type": "object",
+              "description": "Knowledge source details",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Corpus name (e.g., 'Wikipedia', 'PubMed', 'Common Crawl')"
+                },
+                "size": {
+                  "type": "string",
+                  "description": "Corpus scale (e.g., '21M passages', '100M documents')"
+                },
+                "chunking": {
+                  "type": "string",
+                  "description": "How documents are segmented (e.g., '100-word passages', 'sentence-level', 'semantic chunking')"
+                }
+              }
+            },
+            "retrieval_strategy": {
+              "type": "string",
+              "description": "Retrieval approach (e.g., 'single-hop', 'iterative multi-hop', 'adaptive retrieval', 'self-RAG')"
+            },
+            "generator": {
+              "type": "object",
+              "description": "Generation component details",
+              "properties": {
+                "model": {
+                  "type": "string",
+                  "description": "Generator model (e.g., 'LLaMA-2-7B', 'GPT-4', 'Flan-T5')"
+                },
+                "context_integration": {
+                  "type": "string",
+                  "description": "How retrieved content is incorporated (e.g., 'prepended to prompt', 'fusion-in-decoder', 'cross-attention')"
+                }
+              }
+            },
+            "challenges_addressed": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Specific RAG challenges tackled (e.g., 'lost in the middle', 'retrieval noise', 'hallucination', 'latency')"
+            }
+          }
+        },
+        "survey": {
+          "type": "object",
+          "description": "For literature review and survey papers",
+          "properties": {
+            "scope": {
+              "type": "string",
+              "description": "Research area covered (e.g., 'retrieval-augmented generation for NLP', 'prompt engineering techniques')"
+            },
+            "time_range": {
+              "type": "string",
+              "description": "Temporal coverage (e.g., '2018-2024', 'since the introduction of transformers')"
+            },
+            "papers_reviewed": {
+              "type": "integer",
+              "description": "Approximate number of papers covered"
+            },
+            "taxonomy": {
+              "type": "array",
+              "description": "Organizational structure proposed by the survey",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "Category name in the taxonomy"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "What this category covers"
+                  },
+                  "example_methods": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Representative methods in this category"
+                  }
+                },
+                "required": [
+                  "category"
+                ]
+              }
+            },
+            "trends_identified": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Key research trends observed"
+            },
+            "open_problems": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Unsolved challenges identified by the survey"
+            }
+          }
+        },
+        "benchmark": {
+          "type": "object",
+          "description": "For evaluation benchmark papers",
+          "properties": {
+            "benchmark_name": {
+              "type": "string",
+              "description": "Name of the benchmark"
+            },
+            "tasks_covered": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Tasks or capabilities evaluated"
+            },
+            "num_examples": {
+              "type": "string",
+              "description": "Total examples or test instances (e.g., '10,000 questions', '500 multi-hop queries')"
+            },
+            "evaluation_dimensions": {
+              "type": "array",
+              "description": "What aspects are measured",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "dimension": {
+                    "type": "string",
+                    "description": "Evaluation aspect (e.g., 'factual accuracy', 'reasoning', 'robustness')"
+                  },
+                  "metrics": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Metrics for this dimension"
+                  }
+                },
+                "required": [
+                  "dimension",
+                  "metrics"
+                ]
+              }
+            },
+            "models_evaluated": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Models tested on this benchmark"
+            },
+            "key_findings": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Main conclusions about model capabilities or gaps"
+            },
+            "leaderboard_top": {
+              "type": "object",
+              "description": "Best performing model at time of publication",
+              "properties": {
+                "model": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "dataset": {
+          "type": "object",
+          "description": "For dataset release papers",
+          "properties": {
+            "dataset_name": {
+              "type": "string",
+              "description": "Official dataset name"
+            },
+            "task": {
+              "type": "string",
+              "description": "Target task (e.g., 'question answering', 'summarization', 'NER')"
+            },
+            "size": {
+              "type": "string",
+              "description": "Dataset scale (e.g., '100K examples', '50K dialogues')"
+            },
+            "languages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Languages included"
+            },
+            "domains": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Content domains (e.g., 'biomedical', 'news', 'scientific papers')"
+            },
+            "collection_method": {
+              "type": "string",
+              "description": "How data was gathered (e.g., 'crowdsourced', 'web scraping', 'expert annotation')"
+            },
+            "annotation_process": {
+              "type": "string",
+              "description": "How labels were created"
+            },
+            "quality_control": {
+              "type": "string",
+              "description": "Validation procedures (e.g., 'inter-annotator agreement κ=0.85', 'expert review')"
+            },
+            "splits": {
+              "type": "object",
+              "description": "Train/dev/test distribution",
+              "properties": {
+                "train": {
+                  "type": "string"
+                },
+                "dev": {
+                  "type": "string"
+                },
+                "test": {
+                  "type": "string"
+                }
+              }
+            },
+            "baseline_results": {
+              "type": "array",
+              "description": "Initial model performance on this dataset",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "model": {
+                    "type": "string"
+                  },
+                  "metric": {
+                    "type": "string"
+                  },
+                  "score": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "analysis": {
+          "type": "object",
+          "description": "For empirical analysis and study papers",
+          "properties": {
+            "focus": {
+              "type": "string",
+              "description": "What is being analyzed (e.g., 'emergent abilities in LLMs', 'attention patterns in transformers')"
+            },
+            "models_studied": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Models examined in the analysis"
+            },
+            "phenomena_investigated": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Specific behaviors or properties studied"
+            },
+            "methodology": {
+              "type": "string",
+              "description": "Analysis approach (e.g., 'probing classifiers', 'ablation study', 'behavioral testing')"
+            },
+            "key_discoveries": {
+              "type": "array",
+              "description": "Main findings from the analysis",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "finding": {
+                    "type": "string",
+                    "description": "What was discovered"
+                  },
+                  "evidence": {
+                    "type": "string",
+                    "description": "Supporting data or experiment"
+                  }
+                },
+                "required": [
+                  "finding"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "experiments": {
+      "type": "object",
+      "description": "Experimental setup. Include all datasets, baselines, and metrics used for evaluation.",
+      "properties": {
+        "datasets": {
+          "type": "array",
+          "description": "Evaluation datasets",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Dataset name (e.g., 'SQuAD 2.0', 'Natural Questions', 'MMLU')"
+              },
+              "task": {
+                "type": "string",
+                "description": "Task type (e.g., 'extractive QA', 'open-domain QA', 'multiple choice')"
+              },
+              "size": {
+                "type": "string",
+                "description": "Test set size if mentioned"
+              }
+            },
+            "required": [
+              "name",
+              "task"
+            ]
+          }
+        },
+        "baselines": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Compared methods/models with exact names"
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Evaluation metrics (e.g., 'Exact Match', 'F1', 'ROUGE-L', 'BLEU')"
+        },
+        "settings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Experimental conditions (e.g., 'zero-shot', '5-shot', 'fine-tuned', 'with retrieval')"
+        }
+      }
+    },
+    "results": {
+      "type": "object",
+      "description": "Quantitative outcomes. Every finding must include specific numbers with context.",
+      "properties": {
+        "main_findings": {
+          "type": "array",
+          "description": "Primary experimental results. Each must be verifiable with exact values.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "claim": {
+                "type": "string",
+                "description": "What is being claimed (e.g., 'outperforms GPT-4 on factual QA')"
+              },
+              "metric": {
+                "type": "string",
+                "description": "Evaluation metric used"
+              },
+              "value": {
+                "type": "string",
+                "description": "Exact numeric result with unit (e.g., '85.3%', '42.1 F1', '+2.4 points')"
+              },
+              "dataset": {
+                "type": "string",
+                "description": "Dataset or benchmark"
+              },
+              "setting": {
+                "type": "string",
+                "description": "Experimental condition (e.g., 'zero-shot', 'with 10 retrieved passages')"
+              },
+              "comparison": {
+                "type": "string",
+                "description": "Baseline being compared (e.g., 'vs. GPT-4', 'vs. previous SOTA')"
+              }
+            },
+            "required": [
+              "claim",
+              "value"
+            ]
+          }
+        },
+        "ablation_insights": {
+          "type": "array",
+          "description": "What each component contributes. Include performance delta when removing/modifying.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "component": {
+                "type": "string",
+                "description": "What was ablated or modified"
+              },
+              "effect": {
+                "type": "string",
+                "description": "Observed impact on performance"
+              },
+              "delta": {
+                "type": "string",
+                "description": "Quantified change (e.g., '-3.2% F1', 'drops 5 points')"
+              }
+            },
+            "required": [
+              "component",
+              "effect"
+            ]
+          }
+        },
+        "efficiency_results": {
+          "type": "object",
+          "description": "Computational performance if reported",
+          "properties": {
+            "latency": {
+              "type": "string",
+              "description": "Response time (e.g., '120ms per query')"
+            },
+            "throughput": {
+              "type": "string",
+              "description": "Processing rate (e.g., '500 queries/second')"
+            },
+            "memory": {
+              "type": "string",
+              "description": "Memory usage (e.g., '16GB GPU memory')"
+            },
+            "comparison": {
+              "type": "string",
+              "description": "Efficiency vs. baselines"
+            }
+          }
+        }
+      }
+    },
+    "contributions": {
+      "type": "array",
+      "description": "Explicit contributions claimed by authors. Use paper's own framing.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "method",
+              "dataset",
+              "benchmark",
+              "finding",
+              "framework",
+              "analysis",
+              "taxonomy"
+            ],
+            "description": "Contribution category"
+          },
+          "description": {
+            "type": "string",
+            "description": "One sentence describing the contribution"
+          }
+        },
+        "required": [
+          "type",
+          "description"
+        ]
+      }
+    },
+    "comparisons": {
+      "type": "array",
+      "description": "Direct comparisons with related work. Focus on technical differences, not just performance.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "other_method": {
+            "type": "string",
+            "description": "Method being compared to"
+          },
+          "dimension": {
+            "type": "string",
+            "description": "Aspect of comparison (e.g., 'architecture', 'training data', 'retrieval strategy')"
+          },
+          "difference": {
+            "type": "string",
+            "description": "How this work differs (technical mechanism, not just 'better')"
+          },
+          "evidence": {
+            "type": "string",
+            "description": "Supporting result (e.g., '+5.2% F1 on NQ')"
+          }
+        },
+        "required": [
+          "other_method",
+          "difference"
+        ]
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Acknowledged weaknesses or constraints. Include both stated and implied limitations."
+    },
+    "future_work": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Suggested extensions or open problems mentioned by authors"
+    },
+    "key_terms": {
+      "type": "array",
+      "description": "Technical terms defined, introduced, or used with specific meaning in this paper",
+      "items": {
+        "type": "object",
+        "properties": {
+          "term": {
+            "type": "string",
+            "description": "The term or concept"
+          },
+          "definition": {
+            "type": "string",
+            "description": "How the paper defines or uses this term"
+          }
+        },
+        "required": [
+          "term",
+          "definition"
+        ]
+      }
+    }
+  },
+  "required": [
+    "metadata",
+    "problem",
+    "method",
+    "results",
+    "contributions"
+  ]
+}

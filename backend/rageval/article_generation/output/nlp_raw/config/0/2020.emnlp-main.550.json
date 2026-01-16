@@ -1,0 +1,336 @@
+{
+  "metadata": {
+    "title": "Dense Passage Retrieval for Open-Domain Question Answering",
+    "authors": [
+      "Vladimir Karpukhin",
+      "Barlas Oğuz",
+      "Sewon Min",
+      "Patrick Lewis",
+      "Ledell Wu",
+      "Sergey Edunov",
+      "Danqi Chen",
+      "Wen-tau Yih"
+    ],
+    "year": 2020,
+    "paper_type": "methodology"
+  },
+  "problem": {
+    "statement": "The paper addresses the challenge of improving passage retrieval in open-domain question answering, where traditional sparse vector space models are the de facto method and dense retrieval methods have not consistently outperformed them without complex pretraining.",
+    "limitations_of_prior_work": [
+      "Traditional sparse vector space models like TF-IDF or BM25 struggle to retrieve contexts with semantic matches (synonyms or paraphrases) that lack lexical overlap.",
+      "ORQA (Lee et al., 2019)'s Inverse Cloze Task (ICT) pretraining is computationally intensive, and it is unclear if regular sentences are good surrogates for questions in the objective function.",
+      "ORQA (Lee et al., 2019)'s context encoder is not fine-tuned using pairs of questions and answers, potentially leading to suboptimal representations."
+    ]
+  },
+  "method": {
+    "name": "Dense Passage Retriever (DPR)",
+    "category": "dense retrieval",
+    "key_idea": "The embedding is optimized for maximizing inner products of the question and relevant passage vectors, with an objective comparing all pairs of questions and passages in a batch, using a simple dual-encoder framework without additional pretraining.",
+    "components": [
+      {
+        "name": "Passage Encoder (E_P)",
+        "function": "Maps any text passage to a d-dimensional real-valued vector."
+      },
+      {
+        "name": "Question Encoder (E_Q)",
+        "function": "Maps the input question to a d-dimensional vector."
+      },
+      {
+        "name": "FAISS",
+        "function": "An extremely efficient, open-source library for similarity search and clustering of dense vectors, used to index all M passages offline for efficient retrieval."
+      }
+    ],
+    "techniques": [
+      {
+        "name": "Dot Product Similarity",
+        "purpose": "To define the similarity between the question and the passage vectors.",
+        "details": "sim(q, p) = E_Q(q)^T E_P(p)"
+      },
+      {
+        "name": "Negative Log Likelihood Loss",
+        "purpose": "To optimize the encoders such that relevant pairs have higher similarity than irrelevant ones.",
+        "details": "Maximizes the log likelihood of the positive passage among positive and negative passages in a batch."
+      },
+      {
+        "name": "In-batch negatives",
+        "purpose": "To efficiently reuse computation and increase the number of training examples.",
+        "details": "For a batch of B questions and their relevant passages, any (q_i, p_j) pair is a positive example when i = j, and negative otherwise, effectively creating B-1 negative passages for each question."
+      },
+      {
+        "name": "BM25 negative passages",
+        "purpose": "To provide 'hard' negative examples during training.",
+        "details": "One additional BM25 negative passage (top passages returned by BM25 that don't contain the answer but match most question tokens) is added per question."
+      },
+      {
+        "name": "BERT (base, uncased)",
+        "purpose": "To implement the question and passage encoders.",
+        "details": "Two independent BERT networks are used, and the representation at the [CLS] token is taken as the output vector, with d = 768."
+      }
+    ]
+  },
+  "type_specific": {
+    "methodology": {
+      "architecture": "Dual-encoder framework using two independent BERT (base, uncased) networks.",
+      "training_objective": "Negative log likelihood of the positive passage, optimizing for maximizing inner products of question and relevant passage vectors.",
+      "training_data": "Pairs of questions and passages from Natural Questions (79,168 questions), TriviaQA (78,785 questions), WebQuestions (3,417 questions), CuratedTREC (1,353 questions), and SQuAD v1.1 (78,713 questions), using a Wikipedia dump (Dec. 20, 2018) pre-processed into 21,015,324 passages of 100 words.",
+      "compute_requirements": "Computing dense embeddings for 21 million passages takes approximately 8.8 hours on 8 GPUs. Building the FAISS index on 21 million vectors takes 8.5 hours on a single server. Reader training was done on eight 32GB GPUs.",
+      "inference_cost": "DPR processes 995.0 questions per second, returning top 100 passages per question, on an Intel Xeon CPU E5-2698 v4 @ 2.20GHz with 512GB memory using FAISS. BM25/Lucene processes 23.7 questions per second per CPU thread. Reader inference latency is around 20ms for the single passage case."
+    }
+  },
+  "experiments": {
+    "datasets": [
+      {
+        "name": "Natural Questions (NQ)",
+        "task": "end-to-end question answering"
+      },
+      {
+        "name": "TriviaQA",
+        "task": "trivia questions"
+      },
+      {
+        "name": "WebQuestions (WQ)",
+        "task": "question answering"
+      },
+      {
+        "name": "CuratedTREC (TREC)",
+        "task": "open-domain QA from unstructured corpora"
+      },
+      {
+        "name": "SQuAD v1.1",
+        "task": "reading comprehension"
+      }
+    ],
+    "baselines": [
+      "Lucene-BM25",
+      "BM25+BERT (Lee et al., 2019)",
+      "ORQA (Lee et al., 2019)",
+      "HardEM (Min et al., 2019a)",
+      "GraphRetriever (Min et al., 2019b)",
+      "PathRetriever (Asai et al., 2020)",
+      "REALM Wiki (Guu et al., 2020)",
+      "REALM News (Guu et al., 2020)"
+    ],
+    "metrics": [
+      "Top-20 retrieval accuracy",
+      "Top-100 retrieval accuracy",
+      "Exact Match"
+    ],
+    "settings": [
+      "Single (DPR trained using individual datasets)",
+      "Multi (DPR trained using combined datasets excluding SQuAD)",
+      "In-batch negative training with batch size 128",
+      "One additional BM25 negative passage per question",
+      "Trained for up to 40 epochs for large datasets and 100 epochs for small datasets",
+      "Learning rate of 10^-5 using Adam, linear scheduling with warm-up, and dropout rate 0.1",
+      "Reader considers up to 100 retrieved passages",
+      "Reader samples one positive and 23 negative passages from top 100 retrieved passages (m=24)",
+      "Reader training batch size of 16 for large datasets and 4 for small datasets"
+    ]
+  },
+  "results": {
+    "main_findings": [
+      {
+        "claim": "DPR outperforms Lucene-BM25 in top-20 passage retrieval accuracy on Natural Questions.",
+        "value": "78.4%",
+        "metric": "Top-20 retrieval accuracy",
+        "dataset": "Natural Questions",
+        "setting": "Single",
+        "comparison": "vs. BM25 (59.1%)"
+      },
+      {
+        "claim": "DPR outperforms Lucene-BM25 in top-20 passage retrieval accuracy on TriviaQA.",
+        "value": "79.4%",
+        "metric": "Top-20 retrieval accuracy",
+        "dataset": "TriviaQA",
+        "setting": "Single",
+        "comparison": "vs. BM25 (66.9%)"
+      },
+      {
+        "claim": "DPR outperforms Lucene-BM25 in top-20 passage retrieval accuracy on WebQuestions.",
+        "value": "73.2%",
+        "metric": "Top-20 retrieval accuracy",
+        "dataset": "WebQuestions",
+        "setting": "Single",
+        "comparison": "vs. BM25 (55.0%)"
+      },
+      {
+        "claim": "DPR outperforms Lucene-BM25 in top-20 passage retrieval accuracy on CuratedTREC.",
+        "value": "79.8%",
+        "metric": "Top-20 retrieval accuracy",
+        "dataset": "CuratedTREC",
+        "setting": "Single",
+        "comparison": "vs. BM25 (70.9%)"
+      },
+      {
+        "claim": "DPR outperforms BM25 in Top-5 accuracy on Natural Questions.",
+        "value": "65.2%",
+        "metric": "Top-5 accuracy",
+        "dataset": "Natural Questions",
+        "setting": "in-batch negative training with 1 BM25 negative",
+        "comparison": "vs. BM25 (42.9%)"
+      },
+      {
+        "claim": "DPR establishes new state-of-the-art on Natural Questions for end-to-end QA.",
+        "value": "41.5%",
+        "metric": "Exact Match",
+        "dataset": "Natural Questions",
+        "setting": "Single",
+        "comparison": "vs. ORQA (33.3%)"
+      },
+      {
+        "claim": "DPR achieves state-of-the-art on TriviaQA for end-to-end QA.",
+        "value": "56.8%",
+        "metric": "Exact Match",
+        "dataset": "TriviaQA",
+        "setting": "Single",
+        "comparison": "vs. GraphRetriever (56.0%)"
+      },
+      {
+        "claim": "DPR (Multi) achieves state-of-the-art on WebQuestions for end-to-end QA.",
+        "value": "42.4%",
+        "metric": "Exact Match",
+        "dataset": "WebQuestions",
+        "setting": "Multi",
+        "comparison": "vs. REALM Wiki (40.2%)"
+      },
+      {
+        "claim": "BM25+DPR (Multi) achieves state-of-the-art on CuratedTREC for end-to-end QA.",
+        "value": "50.6%",
+        "metric": "Exact Match",
+        "dataset": "CuratedTREC",
+        "setting": "Multi",
+        "comparison": "vs. REALM Wiki (46.8%)"
+      },
+      {
+        "claim": "DPR trained with only 1,000 examples outperforms BM25.",
+        "value": "~60%",
+        "metric": "Top-20 retrieval accuracy",
+        "dataset": "Natural Questions (development set)",
+        "setting": "1,000 training examples",
+        "comparison": "vs. BM25 (~59.1%)"
+      }
+    ],
+    "ablation_insights": [
+      {
+        "component": "In-batch negative training",
+        "effect": "Substantially improves retrieval accuracy.",
+        "delta": "+6.0% Top-20 accuracy (69.1% vs 63.1% on NQ dev for Gold 7 negatives)"
+      },
+      {
+        "component": "Batch size for in-batch negatives",
+        "effect": "Accuracy consistently improves as batch size grows.",
+        "delta": "+3.9% Top-20 accuracy (73.0% for batch size 128 vs 69.1% for batch size 8 on NQ dev)"
+      },
+      {
+        "component": "Additional BM25 negative passages",
+        "effect": "Adding a single BM25 negative passage substantially improves results.",
+        "delta": "+5.0% Top-20 accuracy (78.0% vs 73.0% on NQ dev for 1 BM25 negative)"
+      },
+      {
+        "component": "Number of additional BM25 negative passages",
+        "effect": "Adding two BM25 negatives does not help further compared to one.",
+        "delta": "-0.9% Top-20 accuracy (76.4% vs 77.3% on NQ dev for 2 vs 1 BM25 negatives with 31 gold negatives)"
+      },
+      {
+        "component": "Distant supervision for positive passages",
+        "effect": "Has only a small impact on retrieval accuracy.",
+        "delta": "-1.0% Top-k accuracy (77.1% vs 78.1% Top-20 on NQ dev)"
+      },
+      {
+        "component": "Similarity function (L2 vs Dot Product)",
+        "effect": "L2 performs comparably to dot product, and both are superior to cosine.",
+        "delta": "-2.0% Top-20 accuracy (76.1% for L2 NLL vs 78.1% for DP NLL on NQ dev)"
+      },
+      {
+        "component": "Loss function (Triplet Loss vs Negative Log Likelihood)",
+        "effect": "Using triplet loss does not affect the results much.",
+        "delta": "-0.9% Top-20 accuracy (77.2% for DP Triplet vs 78.1% for DP NLL on NQ dev)"
+      },
+      {
+        "component": "Cross-dataset generalization (DPR trained on NQ applied to WQ/TREC)",
+        "effect": "Generalizes well, with some performance loss but still greatly outperforms BM25.",
+        "delta": "-3 to -5 points Top-20 retrieval accuracy (69.9% vs 75.0% for WQ, 86.3% vs 89.1% for TREC)"
+      }
+    ],
+    "efficiency_results": {
+      "latency": "around 20ms per query (for reader, single passage case)",
+      "throughput": "995.0 questions per second (for DPR retrieval of top 100 passages)",
+      "comparison": "DPR retrieval is incredibly efficient (995.0 questions/second) compared to BM25/Lucene (23.7 questions/second per CPU thread)."
+    }
+  },
+  "contributions": [
+    {
+      "type": "finding",
+      "description": "Demonstrated that simply fine-tuning question and passage encoders on existing question-passage pairs is sufficient to greatly outperform BM25, suggesting additional pretraining may not be needed."
+    },
+    {
+      "type": "finding",
+      "description": "Verified that a higher retrieval precision translates to a higher end-to-end QA accuracy in open-domain question answering."
+    },
+    {
+      "type": "method",
+      "description": "Proposed Dense Passage Retriever (DPR), a simple and effective dense retrieval model that achieves new state-of-the-art results on multiple open-domain QA benchmarks."
+    }
+  ],
+  "comparisons": [
+    {
+      "other_method": "ORQA (Lee et al., 2019)",
+      "dimension": "Training approach and pretraining",
+      "difference": "ORQA uses a sophisticated inverse cloze task (ICT) objective for additional pretraining and does not fine-tune the context encoder with question-answer pairs, while DPR trains both encoders using only question-passage pairs without additional pretraining.",
+      "evidence": "DPR achieves 41.5% EM on NQ, outperforming ORQA's 33.3% EM."
+    },
+    {
+      "other_method": "REALM (Guu et al., 2020)",
+      "dimension": "Pretraining and training regime",
+      "difference": "REALM includes additional pretraining tasks and employs an expensive end-to-end training regime with asynchronous passage encoder tuning, whereas DPR does not rely on additional pretraining or complex joint training schemes.",
+      "evidence": "DPR achieves 41.5% EM on NQ, outperforming REALM News's 40.4% EM."
+    },
+    {
+      "other_method": "BM25",
+      "dimension": "Representation and semantic matching",
+      "difference": "BM25 is a sparse, term-matching method sensitive to keywords, while DPR uses dense, learned representations that capture lexical variations and semantic relationships.",
+      "evidence": "DPR outperforms BM25 by 9%-19% absolute in Top-20 passage retrieval accuracy (e.g., 78.4% vs 59.1% on NQ)."
+    },
+    {
+      "other_method": "Joint training of retriever and reader (following ORQA)",
+      "dimension": "Training pipeline",
+      "difference": "The paper's approach trains the retriever and reader in isolation, while the compared method jointly trains them with a fixed passage encoder and backpropagation to the question encoder from a combined loss.",
+      "evidence": "Joint training obtains 39.8% EM on NQ dev, which is lower than DPR's 41.5% EM with pipeline training."
+    }
+  ],
+  "limitations": [
+    "DPR shows lower performance on SQuAD due to high lexical overlap between passages and questions (giving BM25 an advantage) and a biased training distribution from only 500+ Wikipedia articles.",
+    "Building an index for dense vectors is computationally intensive and time-consuming (8.8 hours for embeddings, 8.5 hours for FAISS index for 21M passages) compared to Lucene's 30 minutes.",
+    "DPR might lack sufficient capacity to represent salient phrases which appear rarely, as shown in qualitative examples where BM25 performs better."
+  ],
+  "key_terms": [
+    {
+      "term": "Open-domain question answering (QA)",
+      "definition": "A task that answers factoid questions using a large collection of documents."
+    },
+    {
+      "term": "Retriever",
+      "definition": "A component that first selects a small subset of passages where some of them contain the answer to the question."
+    },
+    {
+      "term": "Reader",
+      "definition": "A machine reader that can thoroughly examine the retrieved contexts and identify the correct answer."
+    },
+    {
+      "term": "Sparse vector space models",
+      "definition": "Models like TF-IDF or BM25, which match keywords efficiently with an inverted index and represent questions and contexts in high-dimensional, sparse vectors."
+    },
+    {
+      "term": "Dense, latent semantic encoding",
+      "definition": "Representations complementary to sparse methods, capable of mapping synonyms or paraphrases to vectors close to each other even without exact token matching."
+    },
+    {
+      "term": "Dense Passage Retriever (DPR)",
+      "definition": "A system that uses a dense encoder (E_P) to map any text passage to a d-dimensional real-valued vector and builds an index for all passages for efficient retrieval."
+    },
+    {
+      "term": "In-batch negatives",
+      "definition": "A training strategy where computation is reused to effectively train on B^2 (q_i, p_j) question/passage pairs in each batch, with (q_i, p_j) being a positive example when i = j and negative otherwise."
+    }
+  ]
+}

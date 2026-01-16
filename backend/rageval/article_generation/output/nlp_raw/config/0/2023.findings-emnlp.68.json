@@ -1,0 +1,207 @@
+{
+  "metadata": {
+    "title": "The Internal State of an LLM Knows When It's Lying",
+    "authors": [
+      "Amos Azaria",
+      "Tom Mitchell"
+    ],
+    "year": 2023,
+    "paper_type": "methodology"
+  },
+  "problem": {
+    "statement": "Large Language Models (LLMs) frequently generate inaccurate or false information with a confident tone, which can cause significant harm as users may accept the LLM as a knowledgeable source.",
+    "limitations_of_prior_work": [
+      "LLMs tend to hallucinate facts and provide inaccurate information using confident and compelling language (Ji et al., 2023).",
+      "Existing methods for reducing hallucination often assume the LLM is a black box or require fine-tuning, which may cause a model to not perform as well on other tasks (Peng et al., 2023; Bakker et al., 2022; Ouyang et al., 2022; Kirkpatrick et al., 2017).",
+      "Contrast-Consistent Search (CCS) requires rephrasing a statement into a question, evaluating the LLM on two different versions of the prompt, and requires training data from the same dataset (topic) as the test set (Burns et al., 2022).",
+      "Most prior works on hallucination consider it in relation to a given input (e.g., a passage) that the model operates on, rather than the veracity of the LLM's output without a specific input."
+    ]
+  },
+  "method": {
+    "name": "Statement Accuracy Prediction, based on Language Model Activations (SAPLMA)",
+    "key_idea": "SAPLMA trains a classifier to output the probability that a statement is truthful, based on the hidden layer activations of an LLM as it reads or generates the statement.",
+    "category": "internal state analysis",
+    "components": [
+      {
+        "name": "LLM (Facebook OPT-6.7b, LLAMA2-7b)",
+        "function": "Generates or reads statements, providing hidden layer activations from its 32 layers."
+      },
+      {
+        "name": "Classifier",
+        "function": "Receives as input the activation values from selected hidden layers of the LLM and determines if a statement is true or false."
+      }
+    ],
+    "techniques": [
+      {
+        "name": "Feedforward neural network",
+        "purpose": "Serve as the classifier for SAPLMA.",
+        "details": "Features three hidden layers with decreasing numbers of hidden units (256, 128, 64), all utilizing ReLU activations, and a final sigmoid output layer."
+      },
+      {
+        "name": "Adam optimizer",
+        "purpose": "Train the SAPLMA classifier.",
+        "details": "The classifier is trained for 5 epochs."
+      },
+      {
+        "name": "Out-of-distribution training",
+        "purpose": "Ensure the classifier extracts the LLM's internal belief about truthfulness generally, rather than learning topic-specific patterns.",
+        "details": "For each topic in the true-false dataset, the classifier is trained using activation values obtained from all other topics and tested on the current topic."
+      }
+    ]
+  },
+  "type_specific": {
+    "methodology": {
+      "architecture": "The base LLMs are Facebook OPT-6.7b and LLAMA2-7b, both composed of 32 layers. The SAPLMA classifier is a relatively shallow feedforward neural network.",
+      "model_size": "OPT-6.7b, LLAMA2-7b",
+      "training_objective": "Binary classification to predict whether a statement is true or false based on the LLM's hidden layer values.",
+      "training_data": "A custom 'true-false dataset' comprising 6,084 sentences from 6 different topics ('Cities', 'Inventions', 'Chemical Elements', 'Animals', 'Companies', and 'Scientific Facts').",
+      "inference_cost": "Requires very little computational power at inference time and can be computed alongside the LLM’s output."
+    }
+  },
+  "experiments": {
+    "datasets": [
+      {
+        "name": "true-false dataset",
+        "task": "truthfulness classification",
+        "size": "6,084 sentences (1,458 Cities, 876 Inventions, 930 Chemical Elements, 1,008 Animals, 1,200 Companies, 612 Scientific Facts)"
+      },
+      {
+        "name": "LLM-generated sentences (OPT-6.7b)",
+        "task": "truthfulness classification",
+        "size": "245 labeled statements"
+      }
+    ],
+    "baselines": [
+      "BERT",
+      "3-shot (OPT-6.7b)",
+      "5-shot (OPT-6.7b)",
+      "It-is-true (OPT-6.7b)"
+    ],
+    "metrics": [
+      "Accuracy",
+      "AUC"
+    ],
+    "settings": [
+      "Out-of-distribution training for SAPLMA on the true-false dataset (trained on all topics except the test topic).",
+      "SAPLMA trained on the entire true-false dataset and tested on LLM-generated sentences.",
+      "Few-shot baselines provided with truth values from the same topic as the test set.",
+      "LLM-generated sentences created using the most probable next word at each step (no sampling).",
+      "Optimal threshold for classification determined from a held-out validation set (30% of the generated sentences) for Table 4 results."
+    ]
+  },
+  "results": {
+    "main_findings": [
+      {
+        "claim": "SAPLMA (20th-layer, OPT-6.7b) achieves significantly higher average accuracy in classifying truthfulness of externally generated sentences compared to baselines.",
+        "value": "0.7098",
+        "metric": "Accuracy",
+        "dataset": "true-false dataset",
+        "setting": "externally generated sentences during reading",
+        "comparison": "vs. BERT (0.5434), 3-shot (0.5374), 5-shot (0.5370), It-is-true (0.5593)"
+      },
+      {
+        "claim": "SAPLMA (16th-layer, LLAMA2-7b) achieves the highest average accuracy in classifying truthfulness of externally generated sentences.",
+        "value": "0.8298",
+        "metric": "Accuracy",
+        "dataset": "true-false dataset",
+        "setting": "externally generated sentences during reading",
+        "comparison": "vs. other SAPLMA layer configurations (e.g., last-layer 0.7107, 28th-layer 0.7321, 24th-layer 0.7622, 20th-layer 0.8060)"
+      },
+      {
+        "claim": "SAPLMA (28th-layer, OPT-6.7b) outperforms baselines in classifying truthfulness of sentences generated by the LLM itself, using a 0.5 threshold.",
+        "value": "0.6362",
+        "metric": "Accuracy",
+        "dataset": "LLM-generated sentences (OPT-6.7b)",
+        "setting": "classifier output threshold 0.5",
+        "comparison": "vs. BERT (0.5115), 3-shot (0.5041), 5-shot (0.5125)"
+      },
+      {
+        "claim": "SAPLMA (28th-layer, OPT-6.7b) accuracy improves on LLM-generated sentences when using an optimal threshold from a validation set.",
+        "value": "0.7134",
+        "metric": "Accuracy",
+        "dataset": "LLM-generated sentences (OPT-6.7b)",
+        "setting": "optimal threshold from validation set",
+        "comparison": "vs. BERT (0.5705)"
+      },
+      {
+        "claim": "GPT-4 achieves high accuracy when prompted to determine the truthfulness of LLM-generated statements.",
+        "value": "84.4%",
+        "metric": "Accuracy",
+        "dataset": "LLM-generated sentences (OPT-6.7b)",
+        "setting": "prompting with 30 statements at a time"
+      }
+    ],
+    "ablation_insights": [
+      {
+        "component": "Randomly permuted true/false labels in training data",
+        "effect": "The average accuracy on the random training data is significantly lower, indicating the model exploits data structure.",
+        "delta": "Drops from 86.4% (average training accuracy for SAPLMA with OPT-6.7b’s 20th layer) to 62.5%."
+      }
+    ]
+  },
+  "contributions": [
+    {
+      "type": "dataset",
+      "description": "The release of a dataset of true-false statements along with a method for generating such information."
+    },
+    {
+      "type": "method",
+      "description": "Demonstrating that an LLM might “know” when a statement that it has just generated is false, and proposing SAPLMA, a method for extracting this information."
+    }
+  ],
+  "comparisons": [
+    {
+      "other_method": "BERT",
+      "dimension": "truthfulness classification",
+      "difference": "SAPLMA leverages LLM hidden layer activations, while BERT uses its own embeddings.",
+      "evidence": "SAPLMA (0.7098 average accuracy) outperforms BERT (0.5434 average accuracy) on externally generated sentences using OPT-6.7b."
+    },
+    {
+      "other_method": "Few-shot learning (3-shot, 5-shot)",
+      "dimension": "truthfulness classification",
+      "difference": "SAPLMA uses a separate classifier trained on hidden states, whereas few-shot learning directly prompts the LLM.",
+      "evidence": "SAPLMA (0.7098 average accuracy) outperforms 3-shot (0.5374) and 5-shot (0.5370) on externally generated sentences using OPT-6.7b."
+    },
+    {
+      "other_method": "It-is-true baseline (LLM-assigned sentence probability)",
+      "dimension": "truthfulness signal",
+      "difference": "LLM-assigned sentence probability is highly susceptible to syntax, exact words, and statement length, making it a weak signal for veracity, while SAPLMA's internal state analysis is more reliable.",
+      "evidence": "SAPLMA (0.7098 average accuracy) outperforms the It-is-true baseline (0.5593 average accuracy) on externally generated sentences using OPT-6.7b."
+    },
+    {
+      "other_method": "Contrast-Consistent Search (CCS)",
+      "dimension": "applicability and performance",
+      "difference": "CCS requires specific prompt rephrasing and training data from the same topic as the test set, making it unsuitable for general LLM-generated statements, unlike SAPLMA.",
+      "evidence": "CCS increases accuracy by only approximately 4% over the 0-shot LLM query, while our approach demonstrates a nearly 20% increase over the 0-shot LLM."
+    }
+  ],
+  "limitations": [
+    "The paper primarily focuses on detecting if a statement is true or false, but in practice, it may be more beneficial to detect if the LLM is positive about a statement's correctness or if it is unsure.",
+    "The work was only tested in English.",
+    "The activation values were collected when each sentence was generated separately; in longer responses, activation values develop over time and would need to be decoupled to test the most recent statement's truthfulness.",
+    "Certain ethical issues, such as bias, may persist and potentially be transferred from the LLM to SAPLMA."
+  ],
+  "future_work": [
+    "Apply the method to larger LLMs.",
+    "Run experiments with humans to demonstrate increased trust and understanding of LLM limitations when augmented with SAPLMA.",
+    "Study how the activations develop over time as additional words are generated.",
+    "Consider multilingual input.",
+    "Consider fusing multiple layers together and using intermediate activation values for all words in a statement.",
+    "Consider providing SAPLMA with the probabilities of the generated words.",
+    "Adapt the approach to bias mitigation."
+  ],
+  "key_terms": [
+    {
+      "term": "Hallucination",
+      "definition": "Generating inaccurate or false information with a confident tone."
+    },
+    {
+      "term": "Statement Accuracy Prediction, based on Language Model Activations (SAPLMA)",
+      "definition": "A method designed to determine the truthfulness of statements generated by an LLM using the values in its hidden layers."
+    },
+    {
+      "term": "Implicit truth",
+      "definition": "A fact that is universally acknowledged without needing to be explicitly stated."
+    }
+  ]
+}
