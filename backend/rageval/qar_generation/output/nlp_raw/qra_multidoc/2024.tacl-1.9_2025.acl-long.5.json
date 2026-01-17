@@ -1,0 +1,248 @@
+{
+    "qa_multi_document_information_integration": [
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "How do the evaluation challenges for GPT-4 in multi-document QA, as described by the Controlled Positional Analysis Framework, relate to the conceptual impossibility of achieving fairness in general-purpose LLMs like GPT-4?",
+            "answer": "The Controlled Positional Analysis Framework notes that evaluating GPT-4 on full multi-document QA and key-value retrieval experiments would be prohibitively expensive, limiting the scope of its evaluation. This empirical challenge in comprehensive evaluation for GPT-4 aligns with the conceptual analysis of LLM fairness, which argues that general-purpose LLMs like GPT-4 cannot be made fair across many contexts due to the combinatorial complexity of populations, use cases, and sensitive attributes, making comprehensive evaluation for fairness intractable.",
+            "ref": [
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "<sup>6</sup>We also evaluate GPT-4 (8K) on a subset of multi-document QA experiments, finding similar results and trends as other models (though GPT-4 has higher absolute performance). Evaluating GPT-4 on the full multi-document QA and key-value retrieval experiments would cost upwards of $6000. See Appendix D for GPT-4 results and discussion."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We evaluate GPT-4 (8K) on a subset of 500 random multi-document QA examples with 20 total documents in each input context (Figure 15). GPT-4 achieves higher absolute performance than any other language model, but still shows a U-shaped performance curve—its performance is highest when relevant information occurs at the very start or end of the context, and performance degrades when it must use information in the middle of its input context."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Our analysis provides a better understanding of how language models use their input context and introduces new evaluation protocols for future long-context models; to claim that a language model can robustly use information within long input contexts, it is necessary to show that its performance is minimally affected by the position of the relevant information in the input context (e.g., minimal difference in best- and worst-case performance)."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "The rise of general-purpose artificial intelligence (AI) systems, particularly large language models (LLMs), has raised pressing moral questions about how to reduce bias and ensure fairness at scale. Researchers have documented a sort of “bias” in the significant correlations between demographics (e.g., race, gender) in LLM prompts and responses, but it remains unclear how LLM fairness could be evaluated with more rigorous definitions, such as group fairness or fair representations. We analyze a variety of technical fairness frameworks and find inherent challenges in each that make the development of a fair LLM intractable. We show that each framework either does not logically extend to the general-purpose AI context or is infeasible in practice, primarily due to the large amounts of unstructured training data and the many potential combinations of human populations, use cases, and sensitive attributes."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "General-purpose LLMs cannot be made fair across many contexts because of the combinations of populations, use cases, and other factors that impose different fairness requirements (Section 4.3)."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "LLMs, particularly general-purpose LLMs, present a challenge for group fairness metrics in part because LLMs tend to be deployed across a wide range of input and output distributions. Lechner et al. (2021) showed that it is impossible for a non-trivial model to perform fairly across all different data distributions, such as regions or demographic groups, to which it might be applied. In current discussions of algorithmic fairness (e.g., recidivism prediction in criminal justice), fairness is typically targeted at a local jurisdiction, which ensures that the model is performing fairly for that location’s particular demographic mix (e.g., age, race) but typically cannot also ensure fairness in different locations. The purpose and use of LLMs makes it infeasible to restrict them to this sort of target population. Interviews with AI practitioners have shown that this complexity is already a substantial challenge in the deployment of conventional AI systems (Madaio et al., 2022a)."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "Given the issues discussed in Section 4.1, it may not be tractable to exclude sensitive attributes from training data, and each of the populations and use cases can require fairness metrics to be enforced for a different set of sensitive attributes. The effort required increases combinatorially with the importance of intersections of sensitive attributes (Himmelreich et al., 2024)."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "How does instruction fine-tuning, as applied to MPT-30B-Instruct to mitigate positional bias, compare conceptually to the challenges of achieving fairness through unawareness in general-purpose LLMs like Llama or ChatGPT?",
+            "answer": "Instruction fine-tuning for MPT-30B-Instruct helps reduce positional bias by improving absolute performance and slightly reducing worst-case disparity in context usage. In contrast, the conceptual analysis of LLM fairness argues that fairness through unawareness is impossible for general-purpose LLMs like Llama or ChatGPT because sensitive attributes are pervasive and inferable from their unstructured training data, making their removal infeasible without distorting information, which is a more fundamental challenge than mitigating a specific performance bias.",
+            "ref": [
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "The models we evaluated are all instruction fine-tuned—after their initial pre-training, they undergo supervised fine-tuning on a dataset of instructions and responses. The task specification and/or instruction is commonly placed at the beginning of the input context in supervised instruction fine-tuning data, which might lead instruction fine-tuned language models to place more weight on the start of the input context. To better understand the potential effects of instruction fine-tuning on how language models use long input contexts, we compare the multi-document question answering performance of MPT-30B-Instruct against its base model (i.e., before instruction fine-tuning) MPT-30B. We use the same experimental setup as §2.\n\nFigure 10 compares the multi-document QA performance of MPT-30B and MPT-30B-Instruct as a function of the position of the relevant information in the input context. Surprisingly, we see that both MPT-30B and MPT-30B-Instruct exhibit a U-shaped performance curve, where performance is highest when relevant information occurs at the very beginning or very end of the context. Although the absolute performance of MPT-30B-Instruct is uniformly higher than that of MPT-30B, their overall performance trends are similar. We also observe that instruction fine-tuning slightly reduces the worst-case performance disparity from nearly 10% between the base model best- and worst-case performance to around 4%."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Figure 10: Multi-document QA performance of MPT-30B-Instruct compared against its base model (i.e., before instruction fine-tuning) MPT-30B. Both models have a U-shaped performance curve, where performance is much higher when relevant information occurs at the start or end of the input context, indicating that the instruction fine-tuning process itself is not necessarily responsible for these performance trends."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "The framework of fairness through unawareness (FTU), which measures fairness based on whether the model input explicitly contains sensitive attributes, emerged for models built on structured data, typically in which data is organized into variables used for prediction or classification. For example, a financial lending model could use a person’s age, gender, and credit score to make a prediction about loan repayment in which FTU means that “gender” is excised from the training data. Legal, policy, and feasibility constraints often lead to the FTU approach in practice. In one of the most widely known allegations of algorithmic discrimination, a group of heterosexual married couples who used the Apple Card noticed after online discussion that each woman was extended a much lower credit limit than her husband. The company managing the Apple Card, Goldman Sachs, defended itself by saying, “In all cases, we have not and will not make decisions based on factors like gender” (Telford, 2019).\n\nBy design, LLMs are trained on massive amounts of unstructured data, primarily natural language but also visual and audio modalities. FTU is impossible in these contexts because of the pervasiveness of sensitive attributes. Indeed, LLMs are readily able to infer personal characteristics such as the age, location, and gender of an author. For example, Staab et al. (2024) show that ChatGPT, Claude, and other LLMs can easily guess personal characteristics based on Reddit profiles."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "Efforts to remove sensitive attributes can produce incoherence or distortion. For simplicity, we provide an example in which national origin (the sensitive attribute under consideration) is explicitly specified: Consider the sentence, “Alice grew up in Portugal, so Alice had an easy time on the trip to South America.” Simply removing Alice’s origin, “Portugal” or “in Portugal,” would result in an ungrammatical sentence. Other approaches for removing national origin would still result in distortion. Substituting the neutral phrase “a country” or “in a country” would remove important narrative information, such as the author conveying that Alice visited Brazil, the only South American country in which Portuguese is an official language. The story may go on to describe Alice’s global travel, in which her national origin plays an important role in how she reacts to new experiences.\n\nEfforts to remove more implicit sensitive attributes (e.g., of the text author) may result in even more distortion of content, and identifying them may be very challenging and has not been addressed in prior fairness studies (e.g., the aforementioned Liang et al. (2023)). Consider how relative status can be conveyed through pronoun usage, such as the use of first-person pronouns being more common in groups of lower social status (Kacewicz et al., 2014). Moreover, in languages with gendered nouns (e.g., Spanish, German), enforcing a notion of gender fairness may require introducing entirely new vocabulary, and if nationality, native language, religion, beliefs, or other attributes of cultural background are considered sensitive, then the corresponding languages, dialects, and subdialects would also be impossible to extraplate. Even with attributes that could be removed without distortion in certain cases, it is infeasible to enforce fairness with respect to all relevant sensitive attributes across a large corpus while retaining sufficient information for model performance."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "Even with a model such as Llama, for which the weights are shared freely online, there is little public information about training data (Dubey et al., 2024)."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "While Flan-UL2, an encoder-decoder model, shows robustness to relevant information position, how does this architectural characteristic contrast with the inherent difficulties of applying group fairness frameworks to general-purpose LLMs like Claude or Gemini, which are typically decoder-only?",
+            "answer": "Flan-UL2, an encoder-decoder model, demonstrates relative robustness to changes in relevant information position within its training-time sequence length, showing only a 1.9% absolute difference between best- and worst-case performance. This architectural robustness contrasts with the inherent difficulties of applying group fairness frameworks to general-purpose LLMs like Claude or Gemini, which are challenged by their flexibility across diverse populations, use cases, and sensitive attributes, making it intractable to define and achieve group fairness across the multitude of contexts.",
+            "ref": [
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We experiment with Flan-T5-XXL (Raffel et al., 2020; Chung et al., 2022) and Flan-UL2 (Tay et al., 2023). Flan-T5-XXL is trained with a sequences of 512 tokens (encoder and decoder). Flan-UL2 is initially trained with sequences of 512 tokens (encoder and decoder), but is then pre-trained for an extra 100K steps with 1024 tokens (encoder and decoder) before instruction fine-tuning on sequences with 2048 tokens in the encoder and 512 tokens in the decoder. However, since these models use relative positional embeddings, they can (in principle) extrapolate beyond these maximum context lengths; Shaham et al. (2023) find that both models can perform well with sequences of up to 8K tokens.\n\nFigure 8 compares the performance of decoder-only and encoder-decoder models. When Flan-UL2 is evaluated on sequences within its 2048-token training-time context window (Figure 8; left subplot), its performance is relatively robust to changes in the position of relevant information within the input context (1.9% absolute difference between best- and worst-case performance). When evaluated on settings with sequences longer than 2048 tokens (Figure 8; center and right), Flan-UL2 performance begins to degrade when relevant information is placed in the middle. Flan-T5-XXL shows a similar trend, where longer input contexts result in a greater performance degradation when placing relevant information in the middle of the input context. We hypothesize that encoder-decoder models may make better use of their context windows because their bidirectional encoder allows processing each document in the context of future documents, potentially improving relative importance estimation between documents."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Figure 8: When encoder-decoder models (Flan-UL2 and Flan-T5-XXL) evaluated on sequences that are *shorter* than their encoder’s training-time maximum sequence length (2048 and 512 tokens, respectively), they are relatively robust to changes in the position of relevant information within their input context (left subplot). In contrast, when these models are evaluated on sequences *longer* than those seen during training (center and right subplots), we observe a U-shaped performance curve—performance is higher when relevant information occurs at the beginning or end of the input context, as opposed to the middle of the input context."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "The rise of general-purpose artificial intelligence (AI) systems, particularly large language models (LLMs), has raised pressing moral questions about how to reduce bias and ensure fairness at scale. Researchers have documented a sort of “bias” in the significant correlations between demographics (e.g., race, gender) in LLM prompts and responses, but it remains unclear how LLM fairness could be evaluated with more rigorous definitions, such as group fairness or fair representations. We analyze a variety of technical fairness frameworks and find inherent challenges in each that make the development of a fair LLM intractable. We show that each framework either does not logically extend to the general-purpose AI context or is infeasible in practice, primarily due to the large amounts of unstructured training data and the many potential combinations of human populations, use cases, and sensitive attributes."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "Interest in LLMs has accelerated in recent years as models such as ChatGPT, Claude, and Gemini have become more pervasive in everyday life, including sensitive contexts such as health and hiring."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "For a concrete example, consider the February 2024 public controversy in which Google’s frontier LLM, Gemini, was found to diversify race and gender appearances in images even when prompts specified historical settings that would be of a particular race and gender, such as soldiers and political figures in American and European historical settings that were almost exclusively men of European descent (Milmo and Hern, 2024). While there is much to be debated in how race and gender should be portrayed in image generation, third parties bemoaned the lack of information on the mechanisms by which these images were generated, and the current LLM fairness literature does not fully address such complex cases with diverse stakeholders."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "Much of the excitement surrounding LLMs is based on their general-purpose flexibility across wide ranges of populations, use cases, and sensitive attributes. This flexibility makes many conventional fairness metrics intractable, which we illustrate with the group fairness framework."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "LLMs, particularly general-purpose LLMs, present a challenge for group fairness metrics in part because LLMs tend to be deployed across a wide range of input and output distributions. Lechner et al. (2021) showed that it is impossible for a non-trivial model to perform fairly across all different data distributions, such as regions or demographic groups, to which it might be applied. In current discussions of algorithmic fairness (e.g., recidivism prediction in criminal justice), fairness is typically targeted at a local jurisdiction, which ensures that the model is performing fairly for that location’s particular demographic mix (e.g., age, race) but typically cannot also ensure fairness in different locations. The purpose and use of LLMs makes it infeasible to restrict them to this sort of target population."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "Given the issues discussed in Section 4.1, it may not be tractable to exclude sensitive attributes from training data, and each of the populations and use cases can require fairness metrics to be enforced for a different set of sensitive attributes. The effort required increases combinatorially with the importance of intersections of sensitive attributes (Himmelreich et al., 2024)."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "Considering that models like GPT-3.5-Turbo and Claude-1.3 exhibit a U-shaped performance curve when processing long contexts, how does this finding about their context utilization relate to the argument that general-purpose LLMs cannot be made fair across many contexts?",
+            "answer": "GPT-3.5-Turbo and Claude-1.3 exhibit a U-shaped performance curve, where performance degrades significantly when relevant information is in the middle of long contexts. This finding highlights a specific performance limitation in how these general-purpose LLMs utilize context. This relates to the argument that general-purpose LLMs cannot be made fair across many contexts because their inherent flexibility and broad applicability across diverse populations and use cases lead to conflicting fairness requirements and combinatorial complexity, making it impossible to satisfy all fairness criteria simultaneously, much like they struggle to uniformly process information across all positions in a long context.",
+            "ref": [
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "While recent language models have the ability to take long contexts as input, relatively little is known about how well they use longer context. We analyze the performance of language models on two tasks that require identifying relevant information in their input contexts: multi-document question answering and key-value retrieval. We find that performance can degrade significantly when changing the position of relevant information, indicating that current language models do not robustly make use of information in long input contexts. In particular, we observe that performance is often highest when relevant information occurs at the beginning or end of the input context, and significantly degrades when models must access relevant information in the middle of long contexts, even for explicitly long-context models. Our analysis provides a better understanding of how language models use their input context and provides new evaluation protocols for future long-context language models."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Figure 1: Changing the location of relevant information (in this case, the position of the passage that answers an input question) within the language model’s input context results in a U-shaped performance curve—models are better at using relevant information that occurs at the very beginning (primacy bias) or end of its input context (recency bias), and performance degrades significantly when models must access and use information located in the middle of its input context."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We use the OpenAI API to experiment with GPT-3.5-Turbo and GPT-3.5-Turbo (16K).<sup>5</sup> GPT-3.5-Turbo has a maximum context length of 4K tokens, and GPT-3.5-Turbo (16K) is a version with an extended maximum context length of 16K tokens. We evaluate Claude-1.3 and Claude-1.3 (100K) with the Anthropic API; Claude-1.3 has a maximum context length of 8K tokens, and Claude-1.3 (100K) has an extended context length of 100K tokens.<sup>6</sup>"
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We experiment with input contexts containing 10, 20, and 30 total documents. Figure 5 presents multi-document question answering performance when varying the position of relevant information within the input context. To contextualize model performance, we also evaluate on the closed-book and oracle settings (Table 1).\n\n<b>Model performance is highest when relevant information occurs at the beginning or end of its input context.</b> As illustrated in Figure 5, changing the position of relevant information in the input context leads to substantial decreases in model performance. In particular, we see a distinctive U-shaped performance curve—models are often much better at using relevant information that occurs at the very beginning (primacy bias) and very end of contexts (recency bias), and suffer degraded performance when forced to use information within the middle of its input context. For example, GPT-3.5-Turbo’s multi-document QA performance can drop by more than 20%—in the worst case, performance in 20- and 30-document settings is lower than performance without *any* input documents (i.e., closed-book performance; 56.1%). These results indicate that current models cannot effectively reason over their entire context window when prompted for downstream tasks."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "The rise of general-purpose artificial intelligence (AI) systems, particularly large language models (LLMs), has raised pressing moral questions about how to reduce bias and ensure fairness at scale. Researchers have documented a sort of “bias” in the significant correlations between demographics (e.g., race, gender) in LLM prompts and responses, but it remains unclear how LLM fairness could be evaluated with more rigorous definitions, such as group fairness or fair representations. We analyze a variety of technical fairness frameworks and find inherent challenges in each that make the development of a fair LLM intractable. We show that each framework either does not logically extend to the general-purpose AI context or is infeasible in practice, primarily due to the large amounts of unstructured training data and the many potential combinations of human populations, use cases, and sensitive attributes."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "General-purpose LLMs cannot be made fair across many contexts because of the combinations of populations, use cases, and other factors that impose different fairness requirements (Section 4.3)."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "Much of the excitement surrounding LLMs is based on their general-purpose flexibility across wide ranges of populations, use cases, and sensitive attributes. This flexibility makes many conventional fairness metrics intractable, which we illustrate with the group fairness framework."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "LLMs, particularly general-purpose LLMs, present a challenge for group fairness metrics in part because LLMs tend to be deployed across a wide range of input and output distributions. Lechner et al. (2021) showed that it is impossible for a non-trivial model to perform fairly across all different data distributions, such as regions or demographic groups, to which it might be applied. In current discussions of algorithmic fairness (e.g., recidivism prediction in criminal justice), fairness is typically targeted at a local jurisdiction, which ensures that the model is performing fairly for that location’s particular demographic mix (e.g., age, race) but typically cannot also ensure fairness in different locations. The purpose and use of LLMs makes it infeasible to restrict them to this sort of target population."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "Given the issues discussed in Section 4.1, it may not be tractable to exclude sensitive attributes from training data, and each of the populations and use cases can require fairness metrics to be enforced for a different set of sensitive attributes. The effort required increases combinatorially with the importance of intersections of sensitive attributes (Himmelreich et al., 2024)."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "How do the evaluation protocols introduced by the Controlled Positional Analysis Framework, which require minimal difference in best- and worst-case performance for robust context usage, align with or diverge from the critique that association-based fairness metrics like WinoBias and BBQ do not constitute rigorous fairness for general-purpose LLMs?",
+            "answer": "The Controlled Positional Analysis Framework introduces evaluation protocols that require minimal difference in best- and worst-case performance for models like Llama-2-70B-chat-hf to claim robust context usage, focusing on consistent performance across varying information positions. This aligns with a desire for robust and consistent model behavior. However, this diverges from the critique of association-based fairness metrics like WinoBias and BBQ, which, despite capturing disparities, are argued not to constitute rigorous fairness for general-purpose LLMs because they do not address the fundamental intractability of achieving true group or individual fairness across the multitude of contexts, populations, and use cases inherent to LLMs.",
+            "ref": [
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Our analysis provides a better understanding of how language models use their input context and introduces new evaluation protocols for future long-context models; to claim that a language model can robustly use information within long input contexts, it is necessary to show that its performance is minimally affected by the position of the relevant information in the input context (e.g., minimal difference in best- and worst-case performance)."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Figure 16: Multi-document QA performance (20 total documents) of Llama-2 models of varying sizes (7B, 13B, 70B parameters), with and without additional supervised fine-tuning and reinforcement learning from human feedback (“-chat-” models).\n\nComparing Llama-2 models of varying sizes, we find that only the larger models (13B and 70B) exhibit the U-shaped performance curve (i.e., both primacy and recency bias)—the smallest Llama-2 models (7B) are solely recency-biased. Given these results, we hypothesize that prior work (e.g., Khandelwal et al., 2018; Sun et al., 2021) did not previously observe any primacy bias in language models because the models they studied were too small (less than 1B parameters)."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "The rise of general-purpose artificial intelligence (AI) systems, particularly large language models (LLMs), has raised pressing moral questions about how to reduce bias and ensure fairness at scale. Researchers have documented a sort of “bias” in the significant correlations between demographics (e.g., race, gender) in LLM prompts and responses, but it remains unclear how LLM fairness could be evaluated with more rigorous definitions, such as group fairness or fair representations."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "Two recent reviews of this nascent literature (Galegos et al., 2023; Li et al., 2024) enumerate a variety of fairness metrics that each constitute an association between a feature of the embedding space or model output and a sensitive attribute. NLP research in this area includes disparities of sentiment and toxicity in Wikipedia sentence completion across the profession, gender, race, religion, or political ideology of the article subject (Dhamala et al., 2021), the tendency to generate violent words after a phrase such as “Two muslims walked into a” [sic] (Abid et al., 2021), and variation in the topics introduced when completing sentences from fiction novels (Lucy and Bamman, 2021). Other approaches include creating datasets of LLM text continuations that include stereotypes, demean, or otherwise harms in ways related to gender and sexuality (Fleisig et al., 2023); evaluating an LLM used for the conventional machine learning task of predicting outcomes based on a text-converted tabular dataset (Li et al., 2023); recommending music or movies to a user who specifies their sensitive attribute, such as race or religion (Zhang et al., 2023); and testing whether the model gives the same “yes” or “no” answer when asked for advice by users who specify their gender (Tamkin et al., 2023).\n\nHowever, a lack of disparities in these test cases would not constitute fairness as conceptualized in technical frameworks or in other fields such as philosophy (e.g., Binns, 2021). For example, within the scope of group fairness, which uses conditional equivalencies of model output across sensitive attributes, the simplest notion—unconditional equivalence—is known as demographic parity. Demographic parity is an important metric to study, but achieving it (i.e., zero disparity) is rarely, if ever, viewed as achieving fairness. While the popular benchmarks that have been applied to LLM-generated text to date, such as WinoBias (Zhao et al., 2018b) and BBQ (Parrish et al., 2022), capture important information about the associations between generated text and sensitive attributes, strong model performance does not constitute fairness per se. Indeed, even without considering the technical fairness frameworks, the limitations of these benchmarks as proxies for issues such as stereotyping is well-established (Blodgett et al., 2021; Lum et al., 2024). There is little reason to think that the disparity measures, which are the most common fairness metrics in NLP, serve as sufficient proxies for the fairness frameworks, even with narrow-purpose AI."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "Work to date has measured associations and disparities as LLMs provide different output when different demographics are specified explicitly (e.g., “White” and “Black”) or implicitly (e.g., dialects). However, these cannot substitute for more rigorously developed fairness frameworks, such as group fairness and causal fairness. When we consider these frameworks, the inherent challenges render general fairness impossible for an LLM."
+                }
+            ]
+        }
+    ],
+    "qa_multi_document_compare": [
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "How does GPT-3.5-Turbo's accuracy on NaturalQuestions-Open when relevant information is at the 1st position compare to GPT-4 (8K)'s accuracy in the same setting?",
+            "answer": "GPT-3.5-Turbo achieves 75% accuracy when relevant information is at the 1st position with 20 total retrieved documents on NaturalQuestions-Open. GPT-4 (8K) achieves 88% accuracy in the same setting.",
+            "ref": [
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "| Position of Document with the Answer | gpt-3.5-turbo-0613 (Accuracy) | gpt-3.5-turbo-0613 (closed-book) (Accuracy) |\n|--------------------------------------|-------------------------------|---------------------------------------------|\n| 1st                                  | 75                            | 56.1                                        |\n| 2nd                                  | 66                            | 56.1                                        |\n| 3rd                                  | 65                            | 56.1                                        |\n| 4th                                  | 60                            | 56.1                                        |\n| 5th                                  | 57                            | 56.1                                        |\n| 6th                                  | 56                            | 56.1                                        |\n| 7th                                  | 55                            | 56.1                                        |\n| 8th                                  | 54                            | 56.1                                        |\n| 9th                                  | 53                            | 56.1                                        |\n| 10th                                 | 53                            | 56.1                                        |\n| 11th                                 | 54                            | 56.1                                        |\n| 12th                                 | 54                            | 56.1                                        |\n| 13th                                 | 55                            | 56.1                                        |\n| 14th                                 | 56                            | 56.1                                        |\n| 15th                                 | 57                            | 56.1                                        |\n| 16th                                 | 58                            | 56.1                                        |\n| 17th                                 | 59                            | 56.1                                        |\n| 18th                                 | 60                            | 56.1                                        |\n| 19th                                 | 61                            | 56.1                                        |\n| 20th                                 | 63                            | 56.1                                        |"
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We evaluate GPT-4 (8K) on a subset of 500 random multi-document QA examples with 20 total documents in each input context (Figure 15). GPT-4 achieves higher absolute performance than any other language model, but still shows a U-shaped performance curve—its performance is highest when relevant information occurs at the very start or end of the context, and performance degrades when it must use information in the middle of its input context."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "| Position | claude-1.3 | claude-1.3-100k | gpt-3.5-turbo-0613 | mpt-30b-instruct | longchat-13b-16k | gpt-4-0613 |\n|----------|------------|-----------------|--------------------|------------------|------------------|------------|\n| 1st      | 60         | 60              | 78                 | 54               | 68               | 88         |\n| 5th      | 58         | 57              | 57                 | 53               | 57               | 77         |\n| 10th     | 57         | 57              | 57                 | 53               | 57               | 75         |\n| 15th     | 58         | 58              | 57                 | 54               | 56               | 75         |\n| 20th     | 60         | 60              | 61                 | 57               | 57               | 77         |"
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "What is the difference in positional bias observed between Llama-2-7B models and Llama-2-13B models on the NaturalQuestions-Open dataset?",
+            "answer": "Llama-2-7B models are solely recency-biased, while Llama-2-13B models exhibit a U-shaped performance curve (primacy and recency bias) on the NaturalQuestions-Open dataset.",
+            "ref": [
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Comparing Llama-2 models of varying sizes, we find that only the larger models (13B and 70B) exhibit the U-shaped performance curve (i.e., both primacy and recency bias)—the smallest\n\nLlama-2 models (7B) are solely recency-biased. Given these results, we hypothesize that prior work (e.g., Khandelwal et al., 2018; Sun et al., 2021) did not previously observe any primacy bias in language models because the models they studied were too small (less than 1B parameters)."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "How does instruction fine-tuning affect the worst-case performance disparity between MPT-30B and MPT-30B-Instruct on multi-document QA using NaturalQuestions-Open?",
+            "answer": "Instruction fine-tuning for MPT-30B-Instruct reduces the worst-case performance disparity from nearly 10% for MPT-30B to around 4% on multi-document QA using NaturalQuestions-Open.",
+            "ref": [
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Figure 10 compares the multi-document QA performance of MPT-30B and MPT-30B-Instruct as a function of the position of the relevant information in the input context. Surprisingly, we see that both MPT-30B and MPT-30B-Instruct exhibit a U-shaped performance curve, where performance is highest when relevant information occurs at the very beginning or very end of the context. Although the absolute performance of MPT-30B-Instruct is uniformly higher than that of MPT-30B, their overall performance trends are similar. We also observe that instruction fine-tuning slightly reduces the worst-case performance disparity from nearly 10% between the\n\nFigure 10: Multi-document QA performance. A line graph showing accuracy for two models across document positions (1st to 20th). The y-axis is Accuracy (44-56). The x-axis is Position of Document with the Answer. Models: mpt-30b (yellow solid) and mpt-30b-instruct (cyan dashed).\n\n| Position | mpt-30b | mpt-30b-instruct |\n|----------|---------|------------------|\n| 1st      | 48      | 53               |\n| 5th      | 44      | 52               |\n| 10th     | 44      | 52               |\n| 15th     | 43      | 53               |\n| 20th     | 53      | 57               |\n\nFigure 10: Multi-document QA performance of MPT-30B-Instruct compared against its base model (i.e., before instruction fine-tuning) MPT-30B. Both models have a U-shaped performance curve, where performance is much higher when relevant information occurs at the start or end of the input context, indicating that the instruction fine-tuning process itself is not necessarily responsible for these performance trends.\n\nbase model best- and worst-case performance to around 4%."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "What is the difference between the Controlled Positional Analysis Framework used to study LLM context usage and the Conceptual Analysis of LLM Fairness Frameworks used to study LLM fairness?",
+            "answer": "The Controlled Positional Analysis Framework empirically investigates how LLMs use long input contexts by making controlled changes to context size and relevant information position. The Conceptual Analysis of LLM Fairness Frameworks analyzes fundamental affordances of LLMs against established technical fairness frameworks to demonstrate the inherent intractability of achieving fairness.",
+            "ref": [
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We empirically investigate this question via controlled experiments with a variety of state-of-the-art open (MPT-30B-Instruct, LongChat-13B (16K)) and closed (OpenAI’s GPT-3.5-Turbo and Anthropic’s Claude-1.3) language models in settings that require accessing and using information within an input context. In particular, our experiments make controlled changes to the input context size and the position of the relevant information within the input context and study their effects on language model performance. If language models can robustly use information within long input contexts, then their performance should be *minimally affected* by the position of the relevant information in the input context."
+                },
+                {
+                    "paper_title": "The Impossibility of Fair LLMs",
+                    "content": "We analyze a variety of technical fairness frameworks and find inherent challenges in each that make the development of a fair LLM intractable. We show that each framework either does not logically extend to the general-purpose AI context or is infeasible in practice, primarily due to the large amounts of unstructured training data and the many potential combinations of human populations, use cases, and sensitive attributes. These inherent challenges would persist for general-purpose AI, including LLMs, even if empirical challenges, such as limited participatory input and limited measurement methods, were overcome."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "How does the robustness of encoder-decoder models like Flan-UL2 to changes in relevant information position compare to that of decoder-only models like GPT-3.5-Turbo within their respective training-time sequence lengths?",
+            "answer": "Encoder-decoder models like Flan-UL2 are relatively robust to changes in relevant information position within their 2048-token training window, showing a 1.9% absolute difference between best- and worst-case performance. Decoder-only models like GPT-3.5-Turbo show a much larger degradation, with multi-document QA performance dropping by more than 20% in the worst case.",
+            "ref": [
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Figure 8 compares the performance of decoder-only and encoder-decoder models. When Flan-UL2 is evaluated on sequences within its 2048-token training-time context window (Figure 8; left subplot), its performance is relatively robust to changes in the position of relevant information within the input context (1.9% absolute difference between best- and worst-case performance). When evaluated on settings with sequences longer than 2048 tokens (Figure 8; center and right), Flan-UL2 performance begins to degrade when relevant information is placed in the middle. Flan-T5-XXL shows a similar trend, where longer input contexts result in a greater performance degradation when placing relevant information in the middle of the input context. We hypothesize that encoder-decoder models may make better use of their context windows because their bidirectional encoder allows processing each document in the context of future documents, potentially improving relative importance estimation between documents."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "For example, GPT-3.5-Turbo’s multi-document QA performance can drop by more than 20%—in the worst case, performance in 20- and 30-document settings is lower than performance without *any* input documents (i.e., closed-book performance; 56.1%). These results indicate that current models cannot effectively reason over their entire context window when prompted for downstream tasks."
+                }
+            ]
+        }
+    ]
+}

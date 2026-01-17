@@ -1,0 +1,220 @@
+{
+    "qa_multi_document_information_integration": [
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "How do Quantized Side Tuning (QST) and the Fine-tuned Full Ranking Model with Importance-Aware Learning differ in their primary efficiency objectives and the metrics used to measure them?",
+            "answer": "Quantized Side Tuning (QST) primarily aims to reduce the total memory footprint (weights, optimizer states, intermediate activations) and speed up finetuning, measured by memory (GB), training time, and FLOPS per token. The Fine-tuned Full Ranking Model with Importance-Aware Learning focuses on improving inference efficiency by reducing latency and API costs, measured by Latency, API cost reduction, and Efficiency improvement.",
+            "ref": [
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Experiments show that QST can reduce the total memory footprint by up to 2.3 $\\times$  and speed up the finetuning process by up to 3 $\\times$  while achieving competent performance compared with the state-of-the-art. When it comes to full finetuning, QST can reduce the total memory footprint up to 7 $\\times$ ."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "In summary, QST leverages a 4-bit data type to store an LLM’s model weights, thus reducing the memory footprint of weights (MI). In addition, QST leverages a 16-bit computation data type for the forward pass and backpropagation computation and only computes the gradient of weights in  $g$  (M3). Finally, QST leverages several factorized projection and gradient-free downsample methods to reduce the trainable parameters (M2). These techniques together allow QST to reduce the memory requirement for all three factors, resulting in fast and memory-efficient finetuning with a nearly 1% performance drop."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Table 3 shows the training throughput of different methods, measured by FLOPS per token (the lower the better), on LLaMA-2-7B, LLaMA-2-13B, and LLaMA-2-70B. While the FLOPS per token of all methods increases as the model size grows, QST achieves the lowest FLOPS per token among all. Particularly, QST achieves around  $2.5\\times$  speed up compared with the baselines. LST suffers from the highest FLOPS per token. The FLOPS per token of QLoRA is slightly higher than LoRA and Adapter since QLoRA adds more LoRA components."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Table 7: Chatbot performance on QLoRA and QST.\n| Method      | Training Time | Memory | Score |\n|-------------|---------------|--------|-------|\n| LLaMA-2-70B | -             | -      | 6.86  |\n| QLoRA-70B   | ~80h          | 96.3   | 6.61  |\n| QST-70B     | ~25h          | 56.1   | 7.07  |"
+                },
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "The development of long-context LLMs enables the *full ranking* of all passages within a single inference, avoiding redundant API costs. In this paper, we conduct a comprehensive study of long-context LLMs for ranking tasks in terms of efficiency and effectiveness. Surprisingly, our experiments reveal that full ranking with long-context LLMs can deliver superior performance in the supervised fine-tuning setting with a huge efficiency improvement."
+                },
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "Figure 1: The sliding window strategy and full ranking strategy are shown in part (a) and part (b), respectively. The bar chart shows the comparison between our fine-tuned sliding window model and full ranking model in terms of NDCG@10 and latency (per query) on the TREC DL19 dataset."
+                },
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "Figure 3: Latency of ranking top-100 passages based on full ranking and sliding window strategy. “Output Top-10 ID” indicates that the LLM only generates the top-10 ranked passage IDs."
+                },
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "Figure 5: The comparison of API cost per query of the sliding windows strategy and the full ranking strategy when ranking top-100 retrieved passages."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "What are some of the base models and their parameter sizes that Quantized Side Tuning (QST) and the Fine-tuned Full Ranking Model with Importance-Aware Learning utilize or evaluate?",
+            "answer": "Quantized Side Tuning (QST) evaluates models such as OPT-1.3B, OPT-2.7B, OPT-6.7B, OPT-13B, OPT-30B, OPT-66B, LLaMA-2-7B, LLaMA-2-13B, and LLaMA-2-70B. The Fine-tuned Full Ranking Model with Importance-Aware Learning uses Mistral-7B-Instruct-v0.3 as its backbone (7B parameters) and compares against models like LLaMA3.1-8B-Instruct and Qwen2.5-7B-Instruct.",
+            "ref": [
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "To validate the effectiveness of our QST, we conduct extensive evaluations for different types of LLMs (e.g., OPT, LLaMA 2), with 1.3B to 70B parameters, on various benchmarks."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Models. We use decoder-only LLMs such as the OPT series (OPT-1.3B, OPT-2.7B, OPT-6.7B, OPT-13B, OPT-30B, and OPT-66B) and the LLaMA-2 series (LLaMA-2-7B, LLaMA-2-13B, and LLaMA-2-70B)."
+                },
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "Recently, with the development of long-context techniques (Chen et al., 2023; Ding et al., 2023), some LLMs, such as Mistral-7B-Instruct-v0.3 (32k) and LLaMA 3.1-8B-Instruct (128k), have supported longer input lengths."
+                },
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "For the zero-shot setting, we select both open-source and proprietary models to provide a comprehensive evaluation. The open-source models include Mistral-7B-Instruct-v0.3 (32k), LLaMA3.1-8B-Instruct (128k), and Qwen2.5-7B-Instruct (128k). These models have been chosen for their ability to handle long contexts and strong performance on a wide range of tasks. We also compare models of different sizes, and the results can be found in the appendix F. We also include two proprietary models, GPT-4o-mini and GPT-4o (both have 128k context)$^2$."
+                },
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "We choose Mistral-7B-Instruct-v0.3 as our backbone model and use two different teacher models: GPT-4o-mini and GPT-4o. The finetuned full ranking model and sliding window model are denoted as \\textbf{RankMistral100} and \\textbf{RankMistral20}, respectively. Both models are optimized with our proposed importance-aware loss for fair comparison. The detailed training configuration and API Cost for generating training labels can be found in appendix B and D, respectively."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "What training datasets are employed by Quantized Side Tuning (QST) and the Fine-tuned Full Ranking Model with Importance-Aware Learning, and how does the latter specifically generate its training labels?",
+            "answer": "Quantized Side Tuning (QST) uses the Alpaca dataset for MMLU finetuning and a variant of OASST1 for chatbot finetuning. The Fine-tuned Full Ranking Model with Importance-Aware Learning uses 1k queries from the MS MARCO training set, with teacher labels generated by GPT-4o-mini or GPT-4o using a Multi-pass Sliding Window Approach.",
+            "ref": [
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Datasets. We evaluate the performance of QST and several baselines on natural language understanding (NLU) and natural language generation tasks. For NLU experiments, we use the GLUE (Wang et al., 2018) (General Language Understanding Evaluation) and MMLU (Hendrycks et al., 2020) (Massively Multitask Language Understanding) benchmarks. The GLUE benchmark provides a comprehensive evaluation of models across a range of linguistic tasks. These tasks encompass linguistic acceptability as examined in CoLA (Warstadt et al., 2019), sentiment analysis as portrayed in SST2 (Socher et al., 2013), tasks probing similarity and paraphrase distinctions such as MRPC (Dolan and Brockett, 2005), QQP (Iyer, 2017), and STS-B (Cer et al., 2017), in addition to natural language inference tasks including\nMNLI (Williams et al., 2017), QNLI (Rajpurkar et al., 2016), and RTE (Bentivogli et al., 2009). We report accuracy on MNLI, QQP, QNLI, SST-2, MRPC, and RTE, Pearson correlation coefficients on SST-B, and Matthews correlation coefficients (Matthews, 1975) on CoLA. The MMLU benchmark consists of 57 tasks including elementary mathematics, US history, computer science, law, and more. We report the average 5-shot test accuracy on the 57 tasks."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "The experiment results of the MMLU benchmark are shown in Table 2. We set the batch size to 4 and the sequence length to 384. We use the Alpaca dataset (Taori et al., 2023) to finetune both QLoRA and QST. We compare QST with QLoRA on accuracy and memory requirement over OPT-1.3B, OPT-2.7B, OPT-6.7B, OPT-13B, OPT-30B, OPT-66B, LLaMA-2-7B, LLaMA-2-13B, and LLaMA-2-70B. QST improves the accuracy by 0.1% on average while reducing the memory footprint by 1.8 $\\times$  compared with QLoRA. Particularly, QST yields an enhancement of 2.1% in accuracy over QLoRA when finetuning LLaMA-2-13B. When finetuning the OPT-2.7B, OPT-6.7B, and OPT-13B models, QST achieves 0.3%, 0.6%, and 0.3% accuracy improvements, respectively."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "We conduct experiments on Chatbot performance using MT-benchmark (Zheng et al., 2023). MT-benchmark is a set of challenging multi-turn open-ended questions for evaluating the chat assistant’s performance in writing, roleplay, reasoning, math, coding, extraction, STEM, and humanities categories. In our experiments, we use GPT-4 to act as judges and assess the quality of the responses of the model finetuned by QLoRA and QST. We finetune LLaMA-2-70B using a variant of OASST1 (Dettmers et al., 2023). Table 7 shows the experiment results of QLoRA and QST on the total training time, memory footprint, and the average MT-Bench score over 8 categories. QST speeds up the training by  $3.2 \\times$  and reduces memory footprint by  $1.7 \\times$ , with even an improved score of 0.46 compared with QLoRA. Notably, QST’s chatbot performance outperforms the original LLaMA-2-70B, achieving an improvement of 0.21."
+                },
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "Evaluation Datasets For evaluation, we employed datasets from TREC DL 2019 (Craswell et al., 2020b) and TREC DL 2020 (Craswell et al., 2020a), as well as BEIR (Thakur et al., 2021) benchmark. BEIR includes 18 datasets from various domains, designed to assess the zero-shot ability of ranking models. Following previous studies (Sun et al., 2023), we choose 8 BEIR datasets for model evaluation. We rerank the top-100 passages retrieved by BM25 and use NDCG@10 as the evaluation metric."
+                },
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "To generate the full ranking list for model fine-tuning, we first employ BM25 to retrieve the top-100 candidate passages, which are then reranked using a teacher model. In theory, a single pass of the sliding window process (ranking from back to front with a window size of 20 and a stride of 10) can only ensure the retrieval of the top 10 most relevant passages. To overcome this limitation, we propose a multi-pass sliding window approach to obtain the full ranking list, as illustrated in Figure 2. In the first pass, the sliding window strategy is applied to rerank all 100 passages, yielding the top 10 most relevant passages. In the second pass, the same strategy is used to rerank the remaining 90 passages, producing the next 10 most relevant passages. This iterative process continues until the entire reranked list is constructed."
+                },
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "For the supervised fine-tuning setting, we fine-tune a sliding window model for comparison with the full ranking model. Following previous studies (Pradeep et al., 2023a,b), we use BM25 to retrieve top-20 passages and rerank them using a teacher model to obtain the training label. We also experiment with sampling 20 passages from the top-100 retrieved ones as training passages, but find the performance is inferior to directly using the top-20 passages. Detailed experimental results are presented in Table 8. We choose Mistral-7B-Instruct-v0.3 as our backbone model and use two different teacher models: GPT-4o-mini and GPT-4o. The finetuned full ranking model and sliding window model are denoted as \\textbf{RankMistral100} and \\textbf{RankMistral20}, respectively. Both models are optimized with our proposed importance-aware loss for fair comparison. The detailed training configuration and API Cost for generating training labels can be found in appendix B and D, respectively."
+                },
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "Our backbone model Mistral-7B-Instruct-v0.3 for supervised-fine-tuning is available at <https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3>. We apply the prompt shown in Figure A to construct the training input. We randomly sample 1k queries from MS MARCO training set to generate the teacher labels. During our experiments, we find that using more queries for training does not yield better results (see Figure 6). Both RankMistral$_{20}$ and RankMistral$_{100}$ are finetuned for 4 epochs with a learning rate of 5e-6 and batch size of 1. The hyper-parameter  $\\alpha$  used in Equation 2 is set as 1. Following RankZephyr [Pradeep et al. \\(2023b\\)](#), we apply noisy embeddings [Jain et al., 2024](#) and bfloat16 precision during model training. We conduct all the experiments on 4 A100-40G GPUs."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "How do Quantized Side Tuning (QST) and the Fine-tuned Full Ranking Model with Importance-Aware Learning specifically address the limitations of prior methods like QLoRA and the sliding window strategy, respectively, through their proposed techniques?",
+            "answer": "Quantized Side Tuning (QST) addresses QLoRA's limitation of not mitigating intermediate activation memory by introducing a separate Side Network and 4-bit Quantization. The Fine-tuned Full Ranking Model with Importance-Aware Learning addresses the sliding window strategy's inefficiency and incomplete label generation by proposing a Multi-pass Sliding Window Approach for complete label construction and an Importance-Aware Learning Objective to focus on higher-ranked passages.",
+            "ref": [
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Typically, the memory footprint during finetuning stems from three contributors: model weights, optimizer states, and intermediate activations. However, existing works still require considerable memory, and none can simultaneously mitigate the memory footprint of all three sources. In this paper, we present *quantized side tuning* (QST), which enables memory-efficient and fast finetuning of LLMs by operating through a dual-stage process. First, QST quantizes an LLM’s model weights into 4-bit to reduce the memory footprint of the LLM’s original weights. Second, QST introduces a *side network* separated from the LLM, which utilizes the hidden states of the LLM to make task-specific predictions. Using a separate side network avoids performing back-propagation through the LLM, thus reducing the memory requirement of the intermediate activations. Finally, QST leverages several low-rank adaptors and gradient-free downsample modules to significantly reduce the trainable parameters, so as to save the memory footprint of the optimizer states."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Recent work has also introduced approaches to combining PEFT and quantization. For example, LoRA (Dettmers et al., 2023) quantizes an LLM’s weights to 4-bit and leverages low-rank adaption (LoRA) (He et al., 2021) to finetune the quantized LLM. LoRA reduces the memory footprint of an LLM’s weights and optimizer states, and as a result, finetuning a 65B LLM requires less than 48 GB of memory. However, LoRA does not consider the memory footprint of intermediate activations, which can be particularly large when using a large batch size for finetuning. As a result, QLoRA only supports small-batch training (e.g., a batch size of 1), and finetuning a 65B LLM requires checkpointing gradients (Chen et al., 2016) to fit the LLM on a single 48GB GPU, resulting in long training time."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "QLoRA reduces the memory footprint of an LLM’s weights and optimizer states (M1 and M2) but fails to reduce intermediate activations (M3). When finetuning an LLM with a large batch size and/or long sequence length, the memory footprint of QLoRA increases significantly. However, using a small batch size results in long training time. Sung et al. (2022) only reduces the memory footprint of intermediate activations (M3), thus it struggles to finetune a model with more than 3 billion parameters."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "In this paper, we propose a fast, memory-efficient LLM finetuning framework, called Quantized Side-Tuning (QST), which operates through a dual-stage process as shown in Figure 2. First, QST quantizes an LLM into 4-bit to reduce the memory footprint of its model weights. Second, QST introduces a side network separating from the quantized LLM to avoid performing backward propagation for the quantized LLM, thus saving the memory footprint of intermediate activations."
+                },
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "Furthermore, we identify the limitations of applying existing listwise training methods (Pradeep et al., 2023a,b) to fine-tune a full ranking model: (1) Existing methods for ranking a passage list are primarily based on sliding windows, passing through the list from the back to the front. Theoretically, this approach can only guarantee the order of the top-ranked passages, rather than generating a full ranking list. (2) In terms of optimization objectives, existing methods use a standard language modeling loss that applies an equal penalty to all passage IDs in the training label. However, the training label for a full ranking model contains hundreds of passage IDs, with only a few of the top-ranked passage IDs being relevant. This leads to a significant imbalance between relevant and irrelevant passages. As a result, the penalty on relevant passage IDs is overshadowed by that on irrelevant ones, which conflicts with the evaluation of the ranking task that prioritizes top-ranked passages."
+                },
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "To address these limitations, we first design a multi-pass sliding window approach, which iteratively generates a full ranking list as a training label, overcoming the limitation of producing only the top-ranked passages in a single pass. Then, we propose an importance-aware loss that reweights the passage IDs in the label based on their rank position, ensuring that higher-ranked passage IDs receive more attention. Extensive experiments on TREC and BEIR benchmarks demonstrate that our fine-tuned full ranking model outperforms previous state-of-the-art models, as well as our fine-tuned sliding window model. Figure 1 shows the advantage of our fine-tuned full ranking model compared to the sliding window model: an absolute improvement of 2.2 in terms of NDCG@10 and a reduction in latency by 29.3% on the TREC DL19 dataset."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "What are the primary tasks and evaluation metrics used to assess the performance of Quantized Side Tuning (QST) and the Fine-tuned Full Ranking Model with Importance-Aware Learning?",
+            "answer": "Quantized Side Tuning (QST) is evaluated on Natural Language Understanding (NLU) tasks using datasets like GLUE and MMLU, and chatbot performance using MT-benchmark, with metrics such as Accuracy, Pearson correlation coefficients, Matthews correlation coefficients, and MT-Bench score. The Fine-tuned Full Ranking Model with Importance-Aware Learning is assessed on passage ranking tasks using datasets like TREC DL 2019, TREC DL 2020, and BEIR benchmark, primarily using NDCG@10 as its metric.",
+            "ref": [
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Datasets. We evaluate the performance of QST and several baselines on natural language understanding (NLU) and natural language generation tasks. For NLU experiments, we use the GLUE (Wang et al., 2018) (General Language Understanding Evaluation) and MMLU (Hendrycks et al., 2020) (Massively Multitask Language Understanding) benchmarks. The GLUE benchmark provides a comprehensive evaluation of models across a range of linguistic tasks. These tasks encompass linguistic acceptability as examined in CoLA (Warstadt et al., 2019), sentiment analysis as portrayed in SST2 (Socher et al., 2013), tasks probing similarity and paraphrase distinctions such as MRPC (Dolan and Brockett, 2005), QQP (Iyer, 2017), and STS-B (Cer et al., 2017), in addition to natural language inference tasks including\nMNLI (Williams et al., 2017), QNLI (Rajpurkar et al., 2016), and RTE (Bentivogli et al., 2009). We report accuracy on MNLI, QQP, QNLI, SST-2, MRPC, and RTE, Pearson correlation coefficients on SST-B, and Matthews correlation coefficients (Matthews, 1975) on CoLA. The MMLU benchmark consists of 57 tasks including elementary mathematics, US history, computer science, law, and more. We report the average 5-shot test accuracy on the 57 tasks."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "We conduct experiments on Chatbot performance using MT-benchmark (Zheng et al., 2023). MT-benchmark is a set of challenging multi-turn open-ended questions for evaluating the chat assistant’s performance in writing, roleplay, reasoning, math, coding, extraction, STEM, and humanities categories. In our experiments, we use GPT-4 to act as judges and assess the quality of the responses of the model finetuned by QLoRA and QST. We finetune LLaMA-2-70B using a variant of OASST1 (Dettmers et al., 2023). Table 7 shows the experiment results of QLoRA and QST on the total training time, memory footprint, and the average MT-Bench score over 8 categories. QST speeds up the training by  $3.2 \\times$  and reduces memory footprint by  $1.7 \\times$ , with even an improved score of 0.46 compared with QLoRA. Notably, QST’s chatbot performance outperforms the original LLaMA-2-70B, achieving an improvement of 0.21."
+                },
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "In recent years, large language models (LLMs) have demonstrated impressive zero-shot capabilities in passage ranking tasks (Sun et al., 2023; Zhu et al., 2023). The listwise ranking approach, which processes multiple passages simultaneously and directly outputs a reranked list of passage IDs, has been widely adopted and shown to outperform other methods."
+                },
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "Evaluation Datasets For evaluation, we employed datasets from TREC DL 2019 (Craswell et al., 2020b) and TREC DL 2020 (Craswell et al., 2020a), as well as BEIR (Thakur et al., 2021) benchmark. BEIR includes 18 datasets from various domains, designed to assess the zero-shot ability of ranking models. Following previous studies (Sun et al., 2023), we choose 8 BEIR datasets for model evaluation. We rerank the top-100 passages retrieved by BM25 and use NDCG@10 as the evaluation metric."
+                }
+            ]
+        }
+    ],
+    "qa_multi_document_compare": [
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "How does Quantized Side Tuning (QST) compare to QLoRA in terms of total memory footprint for OPT-6.7B on the GLUE dataset?",
+            "answer": "Quantized Side Tuning (QST) reduces the total memory footprint by up to 2.3 times compared to QLoRA for OPT-6.7B on the GLUE dataset.",
+            "ref": [
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "For larger models such as OPT-6.7B, we focus on comparing QST with QLoRA. This is because QLoRA has similar accuracy with the other baselines, but LoRA, Adapter, and LST all have excessively huge memory footprints of weights when it comes to finetuning OPT-6.7B<sup>2</sup>. Compared with QLoRA, QST reduces the memory footprint and trainable parameters by  $2.3\\times$  and  $5.5\\times$ , while only introducing a 1.3% accuracy drop."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "Which method offers faster finetuning for LLaMA-2-70B on the MT-benchmark: Quantized Side Tuning (QST) or QLoRA-70B?",
+            "answer": "Quantized Side Tuning (QST) speeds up finetuning by 3.2 times compared to QLoRA-70B for LLaMA-2-70B on the MT-benchmark.",
+            "ref": [
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Table 7: Chatbot performance on QLoRA and QST.\n\n| Method      | Training Time | Memory | Score |\n|-------------|---------------|--------|-------|\n| LLaMA-2-70B | -             | -      | 6.86  |\n| QLoRA-70B   | ~80h          | 96.3   | 6.61  |\n| QST-70B     | ~25h          | 56.1   | 7.07  |\n\na set of challenging multi-turn open-ended questions for evaluating the chat assistant’s performance in writing, roleplay, reasoning, math, coding, extraction, STEM, and humanities categories. In our experiments, we use GPT-4 to act as judges and assess the quality of the responses of the model finetuned by QLoRA and QST. We finetune LLaMA-2-70B using a variant of OASST1 (Dettmers et al., 2023). Table 7 shows the experiment results of QLoRA and QST on the total training time, memory footprint, and the average MT-Bench score over 8 categories. QST speeds up the training by  $3.2 \\times$  and reduces memory footprint by  $1.7 \\times$ , with even an improved score of 0.46 compared with QLoRA. Notably, QST’s chatbot performance outperforms the original LLaMA-2-70B, achieving an improvement of 0.21."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "What is the difference in average accuracy between Quantized Side Tuning (QST) and QLoRA on the MMLU dataset for LLaMA-2-13B?",
+            "answer": "Quantized Side Tuning (QST) enhances accuracy by 2.1% compared to QLoRA for LLaMA-2-13B on the MMLU dataset.",
+            "ref": [
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "The experiment results of the MMLU benchmark are shown in Table 2. We set the batch size to 4 and the sequence length to 384. We use the Alpaca dataset (Taori et al., 2023) to finetune both QLoRA and QST. We compare QST with QLoRA on accuracy and memory requirement over OPT-1.3B, OPT-2.7B, OPT-6.7B, OPT-13B, OPT-30B, OPT-66B, LLaMA-2-7B, LLaMA-2-13B, and LLaMA-2-70B. QST improves the accuracy by 0.1% on average while reducing the memory footprint by 1.8 $\\times$  compared with QLoRA. Particularly, QST yields an enhancement of 2.1% in accuracy over QLoRA when finetuning LLaMA-2-13B. When finetuning the OPT-2.7B, OPT-6.7B, and OPT-13B models, QST achieves 0.3%, 0.6%, and 0.3% accuracy improvements, respectively."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "How do the memory footprint reduction strategies of Quantized Side Tuning (QST) and QLoRA differ regarding intermediate activations?",
+            "answer": "Quantized Side Tuning (QST) reduces the memory footprint of intermediate activations by introducing a side network that avoids back-propagation through the LLM. In contrast, QLoRA primarily focuses on reducing the memory footprint of model weights and optimizer states through 4-bit quantization and low-rank adaptation, but it does not address the memory footprint of intermediate activations, which can be substantial, especially with large batch sizes.",
+            "ref": [
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "First, QST quantizes an LLM’s model weights into 4-bit to reduce the memory footprint of the LLM’s original weights. Second, QST introduces a *side network* separated from the LLM, which utilizes the hidden states of the LLM to make task-specific predictions. Using a separate side network avoids performing back-propagation through the LLM, thus reducing the memory requirement of the intermediate activations. Finally, QST leverages several low-rank adaptors and gradient-free downsample modules to significantly reduce the trainable parameters, so as to save the memory footprint of the optimizer states. Experiments show that QST can reduce the total memory footprint by up to 2.3 $\\times$  and speed up the finetuning process by up to 3 $\\times$  while achieving competent performance compared with the state-of-the-art. When it comes to full finetuning, QST can reduce the total memory footprint up to 7 $\\times$ ."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Recent work has also introduced approaches to combining PEFT and quantization. For example, LoRA (Dettmers et al., 2023) quantizes an LLM’s weights to 4-bit and leverages low-rank adaption (LoRA) (He et al., 2021) to finetune the quantized LLM. LoRA reduces the memory footprint of an LLM’s weights and optimizer states, and as a result, finetuning a 65B LLM requires less than 48 GB of memory. However, LoRA does not consider the memory footprint of intermediate\n\nFigure 1: (a) Memory requirement comparison and (b) Predictive performance comparison of different finetuning techniques.\n\nFigure 1(a) shows the memory footprint of different methods for finetuning LLaMA-2-70b. The chart compares Full Finetuning, QLoRA, LST, and QST (Ours). The memory components are: Weights (blue), Optimizer states (pink), and Intermediate activations (orange). Full Finetuning requires 140GB weights, 420GB optimizer states, and 197GB intermediate activations. QLoRA reduces weights and optimizer states to 13GB and 36GB respectively, while keeping 197GB intermediate activations.\nactivations, which can be particularly large when using a large batch size for finetuning. As a result, QLoRA only supports small-batch training (e.g., a batch size of 1), and finetuning a 65B LLM requires checkpointing gradients (Chen et al., 2016) to fit the LLM on a single 48GB GPU, resulting in long training time."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "Which strategy achieves greater API cost reduction for ranking top-100 retrieved passages: the full ranking strategy or the sliding window strategy?",
+            "answer": "The full ranking strategy reduces API costs by about 50% compared to the sliding window strategy when ranking top-100 retrieved passages, demonstrating its greater cost-efficiency.",
+            "ref": [
+                {
+                    "paper_title": "Sliding Windows Are Not the End: Exploring Full Ranking with Long-Context Large Language Models",
+                    "content": "As we mentioned in Section 1, full ranking avoids the inference of redundant passages between adjacent windows in the sliding window strategy, thereby reducing the API cost for LLMs. In this section, we investigate the API cost savings of the full ranking strategy compared to the sliding window strategy. We selected the Signal, DL19, and Covid datasets, and used GPT-4o-mini and GPT-4o as the inference models. We rerank the BM25-retrieved top-100 passages, and the API costs are calculated based on the number of input and output tokens, using OpenAI’s official price. As shown\n\nFigure 5: Comparison of API cost per query of the sliding windows strategy and the full ranking strategy when ranking top-100 retrieved passages. The figure contains two bar charts. Left: API Cost ($) for GPT-4o-mini across Signal, DL19, and Covid datasets. Right: API Cost ($) for GPT-4o across Signal, DL19, and Covid datasets. In both charts, the Sliding Window strategy (blue bars) is more expensive than the Full Ranking strategy (orange bars).\n\nFigure 5: The comparison of API cost per query of the sliding windows strategy and the full ranking strategy when ranking top-100 retrieved passages.\nin Figure 5, the full ranking strategy reduces API costs by about 50% compared to the sliding window strategy, which proves its cost-efficiency. The differences in API costs across datasets are mainly due to varying passage lengths (longer passages leading to higher costs)."
+                }
+            ]
+        }
+    ]
+}

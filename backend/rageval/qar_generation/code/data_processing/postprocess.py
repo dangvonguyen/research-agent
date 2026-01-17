@@ -18,6 +18,62 @@ logger = logging.getLogger(__name__)
 # Maximum number of retry attempts for postprocessing
 MAX_POSTPROCESS_RETRIES = 5
 
+# Valid JSON escape sequences
+VALID_JSON_ESCAPES = {
+    '\\"': '"',  # escaped quote
+    "\\\\": "\\",  # escaped backslash
+    "\\/": "/",  # escaped forward slash
+    "\\n": "\n",  # newline
+    "\\t": "\t",  # tab
+    "\\r": "\r",  # carriage return
+    "\\b": "\b",  # backspace
+    "\\f": "\f",  # form feed
+}
+
+
+def _fix_invalid_escapes(json_str: str) -> str:
+    """
+    Fix invalid escape sequences in JSON strings.
+    Escapes unescaped backslashes that are not part of valid escape sequences.
+    Only processes content inside JSON string literals (between quotes).
+    """
+    result = []
+    i = 0
+    in_string = False
+
+    while i < len(json_str):
+        char = json_str[i]
+        if char == '"':
+            backslash_count = 0
+            j = i - 1
+            while j >= 0 and json_str[j] == "\\":
+                backslash_count += 1
+                j -= 1
+            if backslash_count % 2 == 0:
+                in_string = not in_string
+                result.append(char)
+            else:
+                result.append(char)
+        elif char == "\\" and in_string:
+            if i + 1 < len(json_str):
+                next_char = json_str[i + 1]
+                escape_pair = f"\\{next_char}"
+
+                if escape_pair in VALID_JSON_ESCAPES or (
+                    next_char == "u" and i + 5 < len(json_str)
+                ):
+                    result.append(char)
+                else:
+                    result.append("\\\\")
+            else:
+                result.append("\\\\")
+        else:
+            result.append(char)
+
+        i += 1
+
+    return "".join(result)
+
 
 def _clean_json_response(response: str) -> str:
     """Remove common JSON markdown formatting and extra text."""
@@ -49,6 +105,38 @@ def _create_json_object(
     if extra_fields:
         json_obj.update(extra_fields)
     return json_obj
+
+
+# Mapping from config_key to expected question type
+CONFIG_KEY_TO_QUESTION_TYPE = {
+    "qa_fact_based": "Factual Question",
+    "qa_multi_hop": "Multi-hop Reasoning Question",
+    "qa_summary": "Summarization Question",
+    "qa_multi_document_information_integration": "Multi-document Information Integration Question",
+    "qa_multi_document_compare": "Multi-document Comparison Question",
+}
+
+
+def _fix_question_type(item: dict, expected_question_type: str | None) -> None:
+    """
+    Fix question type if it doesn't match the expected type.
+    If expected_question_type is None, skip validation.
+    """
+    if expected_question_type is None:
+        return
+
+    current_type = item.get("question type", "").strip()
+
+    # If already correct, return
+    if current_type == expected_question_type:
+        return
+
+    # Log warning and fix
+    logger.warning(
+        f"Question type mismatch: expected '{expected_question_type}', "
+        f"got '{current_type}'. Fixing automatically."
+    )
+    item["question type"] = expected_question_type
 
 
 def _normalize_question_type(item: dict, has_ref: bool = True) -> None:
@@ -96,19 +184,42 @@ def _retry_with_api(
 
 
 def postprocess(
-    client: Any, response: str, system_prompt: str, user_prompt: str
+    client: Any,
+    response: str,
+    system_prompt: str,
+    user_prompt: str,
+    expected_question_type: str | None = None,
 ) -> list:
     """
     Remove common extra characters in gpt-4o, check the question type and array format to avoid errors when saving as a JSON file.
+
+    Args:
+        client: API client
+        response: LLM response string
+        system_prompt: System prompt used
+        user_prompt: User prompt used
+        expected_question_type: Expected question type to validate against (e.g., "Factual Question")
     """
 
     def process_response(resp: str) -> list | None:
         resp = _clean_json_response(resp)
-        response_data = json.loads(resp)
+        try:
+            response_data = json.loads(resp)
+        except json.JSONDecodeError as e:
+            # If JSON decode fails, try fixing escape sequences
+            if "Invalid \\escape" in str(e) or "Invalid escape" in str(e):
+                logger.debug("Attempting to fix invalid escape sequences...")
+                resp = _fix_invalid_escapes(resp)
+                response_data = json.loads(resp)
+            else:
+                raise
+
         output = []
 
         for item in response_data:
             has_ref = "ref" in item
+            # Fix question type if it doesn't match expected
+            _fix_question_type(item, expected_question_type)
             _normalize_question_type(item, has_ref)
             json_obj = _create_json_object(item, has_ref)
             output.append(json_obj)
@@ -133,7 +244,18 @@ def postprocess_irrelevant(
 
     def process_response(resp: str) -> list | None:
         resp = _clean_json_response(resp)
-        response_data = json.loads(resp)
+        # Fix invalid escape sequences before parsing
+        try:
+            response_data = json.loads(resp)
+        except json.JSONDecodeError as e:
+            # If JSON decode fails, try fixing escape sequences
+            if "Invalid \\escape" in str(e) or "Invalid escape" in str(e):
+                logger.debug("Attempting to fix invalid escape sequences...")
+                resp = _fix_invalid_escapes(resp)
+                response_data = json.loads(resp)
+            else:
+                raise
+
         output = []
 
         for item in response_data:
