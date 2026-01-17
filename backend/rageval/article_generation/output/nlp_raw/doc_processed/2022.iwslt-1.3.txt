@@ -1,0 +1,269 @@
+
+
+# Simultaneous Neural Machine Translation with Prefix Alignment
+
+Yasumasa Kano and Katsuhito Sudoh and Satoshi Nakamura
+
+Nara Institute of Science and Technology, Japan
+
+kano.yasumasa.kw4@is.naist.jp
+
+## Abstract
+
+Simultaneous translation is a task that requires starting translation before the speaker has finished speaking, so we face a trade-off between latency and accuracy. In this work, we focus on prefix-to-prefix translation and propose a method to extract alignment between bilingual prefix pairs. We use the alignment to segment a streaming input and fine-tune a translation model. The proposed method demonstrated higher BLEU than those of baselines in low latency ranges in our experiments on the IWSLT simultaneous translation benchmark.
+
+## 1 Introduction
+
+Simultaneous machine translation (SimulMT) is a task to start outputting translation before observing the whole input sentence. SimulMT is more difficult than the translation with the whole input sentence because it cannot use the latter part of the sentence as context. SimulMT has to decide whether to wait for more input or to output partial translation using the input so far, in real-time. The translation quality should become better if we can use longer inputs and *vice versa*. We have to handle such a trade-off between the quality and latency of the translation by decision *policies* to choose the next action between *read* (waiting for the next input segment) and *write* (outputting a translation segment) for a given input-output history (Gu et al., 2017). Neural Machine Translation (NMT) models used for SimulMT can be roughly categorized into *policy-dependent* and *policy-independent*.
+
+A policy-dependent model is trained with the constraints given by the policy, in order to translate an input prefix into an output prefix. Ma et al. (2019) proposed a simple method with a fixed policy called *wait-k*, where the NMT first takes *k* read actions followed by alternating write and read actions until the end of the translation output. Arijazhagan et al. (2019) proposed a joint training
+
+framework for flexible policies and the corresponding NMT model using a latency-augmented loss function and Monotonic Infinite Lookback (MILk) attention.
+
+In contrast, a policy-independent model is a standard NMT model to translate the whole input into the whole output and used for SimulMT along with a given policy in the inference. We can share one NMT model for different policies, so the quality-latency trade-off can be controlled easily. Dalvi et al. (2018) achieved some latency reduction with a small loss in BLEU by the use of a fixed policy called *STATIC-RW*. Ma et al. (2019) also applied their *wait-k* policy using a sentence-based NMT model, called *test-time wait-k*. Zhang et al. (2020) proposed a flexible policy to predict segment boundaries in an input. Once a boundary is found, the segment is translated using a sentence-based NMT model. The model based on their segmentation demonstrated better results in quality-latency trade-off than those using *wait-k* and MILk in Chinese-to-English SimulMT. Kano et al. (2021) proposed another flexible policy using simple rules with syntactic constituent label prediction and showed better performance than MUBased SimulMT in English-to-Japanese.
+
+One problem in the use of a policy-independent model in SimulMT is the difference between training and inference conditions; the NMT model is trained in the sentence level but is used to translate the prefix of a sentence in inference. This causes unexpectedly long translation and hurts the quality of SimulMT (Kano et al., 2021). To mitigate the problem, we propose a method for data augmentation to fine-tune a policy-independent NMT model to the problem of prefix-to-prefix translation, called *Bilingual Prefix Alignment*. We use a pre-trained sentence-based NMT model to align source language prefix and target language prefix of sentences in the training corpus and collect prefix translation pairs. The proposed method demonstrated higher
+
+BLEU than baselines in low latency ranges, in our SimulMT experiments using IWSLT English-to-Japanese and English-to-German datasets.
+
+## 2 Related Work
+
+The problem of SimulMT has been tackled for a decade. In early attempts using statistical machine translation, decision policies were combined with the beam search decoding (Sankaran et al., 2010; Bangalore et al., 2012). Fujita et al. (2013) used phrase reordering probabilities used in phrase-based statistical machine translation for their decision policy. In later years, feature-based learned policies were proposed. Oda et al. (2014) proposed a feature-based policy optimization to maximize BLEU. Syntactic features also successfully used for the policies (Rangarajan Sridhar et al., 2013; Oda et al., 2015).
+
+Recently, most SimulMT studies are based on NMT, and such methods can output more fluent translation than before. Among NMT-based SimulMT studies, one major approach is to train an NMT model optimized for given or jointly-learned policies. Wait-k (Ma et al., 2019) is a very simple fixed policy that waits for  $k$  input tokens first. Zheng et al. (2020) proposed an ensemble of different wait- $k$ -based models for adaptive SimulMT. To make the policies more flexible, latency-augmented loss functions are used to jointly optimize accuracy and latency in the training of the SimulMT model (Raffel et al., 2017; Arivazhagan et al., 2019; Ma et al., 2020b).
+
+Another approach employs such policies only in inference, using a standard sentence-based NMT model. Fixed policies can be applied to this approach easily (Dalvi et al., 2018; Ma et al., 2019). Cho and Esipova (2016) proposed greedy decoding with policies conditioned by the decoder’s prediction, called *Wait-If-Worse* and *Wait-If-Diff*. Kano et al. (2021) proposed a rule-based policy using incremental prediction of the syntactic constituents. To learn segmentation policies from the bilingual corpus, reinforcement learning-based methods were proposed (Grissom II et al., 2014; Satija and Pineau, 2016; Gu et al., 2017; Alinejad et al., 2018). It is a straightforward way to optimize latency and accuracy jointly, but its training process is relatively complex and sometimes unstable. Instead of the joint learning of a segmentation policy and policy-dependent model, Zheng et al. (2019) proposed a method to find oracle read and write
+
+actions using a pre-trained NMT model. Zhang et al. (2020) also used a pre-trained NMT model to find segments called Meaningful Units (MUs).
+
+This work is motivated by Dalvi et al. (2018) and Zhang et al. (2020) and extends them with Bilingual Prefix Alignment using a pre-trained NMT model. Our method finds appropriate segment boundaries based on the similarity between reference and translation hypothesis for given prefix segments in a different way from Zhang et al. (2020). We also fine-tune the pre-trained NMT model using the bilingual prefix pairs, which is a more sophisticated way than Dalvi et al. (2018)<sup>1</sup> <sup>1</sup>Note that the authors reported they obtained no performance improvement by the fine-tuning..
+
+## 3 Simultaneous Machine Translation
+
+A sentence-level NMT is formulated as follows, letting  $\mathbf{x} = x_1, x_2, \dots, x_n$  be an input sentence and  $\mathbf{y} = y_1, y_2, \dots, y_m$  be its translation:
+
+$$p(\mathbf{y}|\mathbf{x})=\prod_{t=1}^mP(y_t|\mathbf{x},\mathbf{y}_{$$
+
+SimulMT takes a prefix of the input for its incremental decoding, formulated as follows:
+
+$$p(\mathbf{y}|\mathbf{x})=\prod_{t=1}^mP(y_t|\mathbf{x}_{\le g(t)},\mathbf{y}_{$$
+
+where  $g(t)$  is a monotonic non-decreasing function that represents the number of input tokens read by the  $t$ -th step so that  $\mathbf{x}_{\le g(t)}$  means an input prefix given so far, and  $\mathbf{y}_{ is a prefix translation by the previous step. This means that we can obtain a pair of an input prefix and the corresponding prefix translation ( $\mathbf{x}_{\le g(t)}, \mathbf{y}_{ at  $t$ -th step.$$
+
+In this work, we use chunk-based incremental decoding (Kano et al., 2021), in which we translate an input prefix from the beginning. It is similar to an approach called *re-translation* (Niehues et al., 2016; Arivazhagan et al., 2020), but we force the decoder to follow already translated output prefixes in the same way as the teacher forcing in NMT training.
+
+## 4 Proposed Method
+
+Figure 1 shows the whole translation process of the proposed method at the inference step. We propose Prefix Alignment for training a segmentation policy and fine-tuning a sentence-level NMT model for the policy-dependent SimulMT. Suppose we have a
+
+
+| Step 1 | I              | $\Rightarrow 0.9 > 0.5 \Leftrightarrow$ | 私は        | Read source words   |
+|--------|----------------|-----------------------------------------|-----------|---------------------|
+| Step 2 | I bought       | $\Rightarrow 0.2 < 0.5 \Leftrightarrow$ |           | Boundary Prediction |
+| Step 3 | I bought a     | $\Rightarrow 0.3 < 0.5 \Leftrightarrow$ |           | translation         |
+| Step 4 | I bought a pen | $\Rightarrow 0.7 > 0.5 \Leftrightarrow$ | 私はペンを買った  |                     |
+| Step 5 | I bought a pen | $\Rightarrow 0.7 > 0.5 \Leftrightarrow$ | 私はペンを買った。 |                     |
+
+Figure 1: The translation process of the proposed method from English to Japanese. The threshold of boundary probability is 0.5 in this case. The underlined part is the forced output prefix.
+
+pre-trained NMT model and a bilingual corpus for fine-tuning the model for SimuMT. The proposed method consists of the following steps:
+
+1. Collect prefix translation pairs using the pre-trained model
+2. Find reference prefixes corresponding to the prefix translation pairs
+3. Train a boundary prediction model
+4. Fine-tune the NMT model
+
+Their details are described in the following subsections.
+
+### 4.1 Collecting Prefix Translation Pairs
+
+In this step, we collect *prefix translation pairs* from the bilingual corpus using the pre-trained NMT model. For every source language sentence in the bilingual corpus, we extract prefix translation pairs using NMT results of the source language sentence, by the following procedure. First, we translate the source language sentence  $x$  into the target language sentence  $y$  using the NMT model. Then, we translate a prefix of  $x$  with one word<sup>2</sup> <sup>2</sup>Here, we use the word-based prefix length even though we use subwords. Thus,  $x_{|w| \le 1}$  may consists of one or more subwords.,  $x_{|w| \le 1}$ , into a target language prefix  $\bar{y}^{(1)}$ . Here, if the longest common prefix  $\bar{y}_{|cp|}^{(1)}$  between  $y$  and  $\bar{y}^{(1)}$  is not empty, we extract the pair  $(x_{|w| \le 1}, \bar{y}_{|cp|}^{(1)})$  as a prefix translation pair. We iterate this prefix translation pair extraction with enlarging the prefix length one by one; we translate the  $i$ -word prefix  $x_{|w| \le i}$  into  $\bar{y}^{(i)}$  and check  $\bar{y}_{|cp|}^{(i)}$ . In the iteration, we may obtain the same longest common prefix with different source
+
+
+language prefixes. We just extract the first appearance and ignore the rest with longer source language prefixes in such cases. Furthermore, once we extract a prefix translation pair  $(x_{|w| \le i}, \bar{y}_{|cp|}^{(i)})$ , we use the target language prefix  $\bar{y}_{|cp|}^{(i)}$  as a forced output prefix and applied it to update the sentence-level translation  $y$  and to generate prefix translation  $\bar{y}^{(j)}$  for  $j > i$ . This is because the translation for longer prefixes or the whole sentence may change by a beam search when a forced output prefix is given.
+
+Our prefix extraction strategy is different from that by Zhang et al. (2020), in which the whole prefix translation  $\bar{y}^{(i)}$  should be a prefix of the sentence-level translation  $y$ , not taking the longest common prefix as in this work.
+
+Figure 2 shows an example. The first prefix translation ends with a punctuation mark, so Meaningful Unit (Zhang et al., 2020) cannot extract the first prefix as the pair because the mark does not match with the end of prefix of full-sentence translation. In contrast, the proposed method can extract the matched target prefix by ignoring the latter part of the prefix translation. Therefore, the proposed method identifies more boundaries than Meaningful Unit.
+
+Another difference from Meaningful Unit relates to the extraction strategy above. Since the original pre-trained NMT model often generates unnecessary tokens like punctuation marks at prefix boundaries, we fine-tune the pre-trained model using the extracted prefix pairs to avoid such problems.
+
+### 4.3 Training a Boundary Predictor
+
+We train a boundary predictor for the chunk-based SimuMT using the extracted source language pre-
+
+| Source Prefix    | Source prefix Translation | Full-sentence translation | Extracted Target Prefix | Boundary |
+|------------------|---------------------------|---------------------------|-------------------------|----------|
+| I                | 私は。                       | 私はペン買った。                  | 私は                      | 1        |
+| I bought         | 私は買った。                    | 私はペンを買った。                 |                         | 0        |
+| I bought a       | 私は買った。                    | 私はペンを買った。                 |                         | 0        |
+| I bought a pen   | 私はペンを買った。                 | 私はペンを買った。                 | 私はペンを買った                | 1        |
+| I bought a pen . | 私はペンを買った。                 | 私はペンを買った。                 | 私はペンを買った。               | 1        |
+
+Figure 2: Extract Prefix Alignment
+
+fixes. It is a binary classifier, and its training data consist of pairs of a source language sentence prefix and the boundary label. The label is set to 1 for the prefixes in the extracted prefix translation pairs and 0 for the other possible prefixes of the corresponding source sentence, as shown in Figure 2.
+
+### 4.4 Fine-Tuning a SimulMT Model
+
+We fine-tune the pre-trained NMT model using the extracted bilingual prefix pairs for our SimulMT model. The model is used to translate an input incrementally in the chunk-based manner as presented in Section 3.
+
+## 5 Experimental Setup
+
+We conducted experiments on English-to-German (En-De) and English-to-Japanese (En-Ja) simultaneous translation to compare the proposed method with the baselines in the quality-latency trade-off.
+
+### 5.1 Dataset and Preprocessing
+
+In En-De translation, we used WMT 2014 training set (4.5 M sentence pairs) for pre-training and IWSLT 2017 training set (206 K sentence pairs) for fine-tuning. We used IWSLT dev2010, tst2010, tst2011 and tst2012 (5,589 sentence pairs in total) for the development dataset. We used 1,080 sentence pairs from IWSLT tst2015 for the evaluation.
+
+In En-Ja translation, we used WMT 2020 (17.9 M sentence pairs) for pre-training and IWSLT 2017 (223 K sentence pairs) for fine-tuning dataset. We used IWSLT dev2010, tst2011, tst2012, and tst2013 (5,312 sentence pairs in total) for development dataset. We used 1,442 sentence pairs from IWSLT dev2021 for the evaluation.
+
+Prefix translation pairs are collected only from the IWSLT dataset. We tokenized Japanese sentences using MeCab (Kudo, 2005). English and German sentences were tokenized using `tokenizer.perl` in Moses (Koehn et al., 2007). We prepared a shared subword vocabulary
+
+with 16 K entries based on Byte Pair Encoding (BPE) (Sennrich et al., 2016) for each language pair.
+
+### 5.2 Model Settings
+
+We mainly compared the following four methods in the experiments:
+
+**Prefix Alignment** The proposed method has a hyperparameter to adjust latency, the threshold of boundary probability output by the boundary predictor. We used 0.5 as the default value for the binary classification and tried the following values for further investigation: [0.1, 0.15, ..., 0.95], [0.99, 0.991, 0.992, ..., 0.999], and [0.9991, 0.9992, ..., 0.9999]. We also compared a one look-ahead boundary predictor that took one future word as the input at the cost of the delay in one word (PA-1), in addition to a standard (no look-ahead) boundary predictor (PA-0).
+
+**Meaningful Unit** We used the same boundary probability thresholds as in PA. We implemented the refined version of MU-based method to translate with low latency following (Zhang et al., 2020), but did not apply the removal of monotonic translation examples following Kano et al. (2021). We also compared one look-ahead (MU-1) and no look-ahead (MU-0) boundary predictors.
+
+**Incremental Constituent Label Prediction (ICLP)** Following Kano et al. (2021), we used a one look-ahead label predictor. We segmented the input sequence based on their rules with the predicted labels VP and S. The minimum segment length adjusts latency. The range is [1, 2, 3, ..., 29].
+
+**Wait-k** We tried [2, 4, 6, ..., 30] for the hyperparameter  $k$ .
+
+**NMT Settings** We trained a standard NMT model (full-sentence) using WMT and
+
+IWSLT training dataset. This model was used for MU, PA and ICLP as the pre-trained NMT model.
+
+All the NMT models were based on Transformer-base (Vaswani et al., 2017) implemented with fairseq (Ott et al., 2019). Their hyperparameter settings basically followed the official baseline for IWSLT 2021<sup>3</sup> <sup>3</sup>[https://github.com/pytorch/fairseq/blob/master/examples/simultaneous\\_translation/docs/enja-waitk.md](https://github.com/pytorch/fairseq/blob/master/examples/simultaneous_translation/docs/enja-waitk.md), <https://github.com/pytorch/fairseq/issues/346>, for both pre-training and fine-tuning. The models were saved on checkpoints in every 5,000 updates for pre-training and every 200 updates for fine-tuning. We applied early stopping with the patience for four checkpoints, based on the loss on the development set. We set the learning rate to 0.0007, minibatch size to 4,096 with the parameter update frequency of 4. We applied a chunk-based beam search for the methods other than wait-k, in which the low-scored hypotheses out of the specified beam size were eliminated at the end of the chunk. We used greedy-decoding for wait-k, due to the nature of its model.
+
+**Boundary Predictor** The boundary predictors for the chunk-based methods were implemented similarly using BERT (Devlin et al., 2019) with a pre-trained model bert-base-uncased and the corresponding subword tokenizer from Huggingface transformers (Wolf et al., 2020). We set the learning rate to 5e-5 and the batch size to 512 instances. The models were saved at every epoch, and we applied early stopping with patience for three epochs based on the loss on the development set.
+
+### 5.3 Evaluation Metrics
+
+We used BLEU (Papineni et al., 2002) and Average Lagging (AL) (Ma et al., 2019) for our quality and latency evaluation metrics. They were calculated using SimulEval (Ma et al., 2020a) and drawn in scatterplots to show the quality-latency trade-off.
+
+## 6 Results
+
+### 6.1 English-to-German
+
+Figure 3 shows the BLEU and AL results in English-to-German simultaneous translation. The proposed method (PA-0 and PA-1) showed best performance among the compared methods. On the other hand, the other chunk-based SimulMT (MU-0, MU-1, and ICLP) did not outperform
+
+
+![Figure 3: Scatter plot showing BLEU score versus Average Lagging (AL) for English-to-German translation. The x-axis (AL) ranges from 0.0 to 17.5, and the y-axis (BLEU) ranges from 10 to 30. The legend indicates methods: PA-0 (red circles), PA-1 (red squares), wait-k (red dots), MU-0 (green circles), MU-1 (green squares), ICLP (blue circles), and full-sentence (black star). The full-sentence method achieves the highest BLEU score (around 30) at the highest AL (around 17.5). PA-0 and PA-1 show high BLEU scores (around 25-27) at low AL (around 2.5-3.5). wait-k, MU-0, MU-1, and ICLP show lower BLEU scores (around 10-15) across the AL range.](bec3b1d6f15b643228b0da0a7d47bdbd_img.jpg)
+
+Figure 3: Scatter plot showing BLEU score versus Average Lagging (AL) for English-to-German translation. The x-axis (AL) ranges from 0.0 to 17.5, and the y-axis (BLEU) ranges from 10 to 30. The legend indicates methods: PA-0 (red circles), PA-1 (red squares), wait-k (red dots), MU-0 (green circles), MU-1 (green squares), ICLP (blue circles), and full-sentence (black star). The full-sentence method achieves the highest BLEU score (around 30) at the highest AL (around 17.5). PA-0 and PA-1 show high BLEU scores (around 25-27) at low AL (around 2.5-3.5). wait-k, MU-0, MU-1, and ICLP show lower BLEU scores (around 10-15) across the AL range.
+
+Figure 3: BLEU and Average Lagging (En-De)
+
+![Figure 4: Scatter plot showing Length ratio versus Average Lagging (AL) for English-to-German translation. The x-axis (AL) ranges from 0.0 to 17.5, and the y-axis (ratio) ranges from 1.0 to 1.7. The legend indicates methods: PA-0 (red circles), PA-1 (red squares), wait-k (red dots), MU-0 (green circles), MU-1 (green squares), ICLP (blue circles), and full-sentence (black star). The full-sentence method achieves the lowest ratio (around 1.0) at the highest AL (around 17.5). PA-0 and PA-1 show the highest ratios (around 1.6-1.7) at low AL (around 2.5-3.5). wait-k, MU-0, MU-1, and ICLP show intermediate ratios (around 1.1-1.3) across the AL range.](c82c7d8107cba121734a9cfba891216d_img.jpg)
+
+Figure 4: Scatter plot showing Length ratio versus Average Lagging (AL) for English-to-German translation. The x-axis (AL) ranges from 0.0 to 17.5, and the y-axis (ratio) ranges from 1.0 to 1.7. The legend indicates methods: PA-0 (red circles), PA-1 (red squares), wait-k (red dots), MU-0 (green circles), MU-1 (green squares), ICLP (blue circles), and full-sentence (black star). The full-sentence method achieves the lowest ratio (around 1.0) at the highest AL (around 17.5). PA-0 and PA-1 show the highest ratios (around 1.6-1.7) at low AL (around 2.5-3.5). wait-k, MU-0, MU-1, and ICLP show intermediate ratios (around 1.1-1.3) across the AL range.
+
+Figure 4: Length ratio and Average Lagging (En-De)
+
+Wait-k. We can also see the look-ahead boundary prediction did not improve BLEU both for PA and MU but increased AL.
+
+Figure 4 shows the results in the length ratio between a translation result and its reference. The proposed method demonstrated better results in the translation length than the other methods. The other chunk-based SimulMT methods generated much longer translation results than the references and resulted in a large drop in BLEU due to the brevity penalty.
+
+### 6.2 English-to-Japanese
+
+Figure 5 shows the BLEU and AL results in English-to-Japanese simultaneous translation. This shows a large difference from the results in English-to-German; the proposed method outperformed the baselines in very small latency ranges around AL of 2, but showed worse BLEU in the large latency ranges.
+
+Figure 6 shows the results in the length ratio. The proposed method generated shorter transla-
+
+![Figure 5: Scatter plot showing BLEU score (Y-axis, 8 to 18) versus Average Lagging (AL) (X-axis, 2 to 16) for En-Ja models. The full-sentence model (star) achieves the highest BLEU (around 17). The proposed method (ICLP, blue circles) performs well, reaching BLEU around 16.5 at AL=16. Other methods (PA-0, PA-1, wait-k, MU-0, MU-1) show lower BLEU scores, generally below 15.](431b8889a0e7f676f0eef40859590349_img.jpg)
+
+Figure 5: Scatter plot showing BLEU score (Y-axis, 8 to 18) versus Average Lagging (AL) (X-axis, 2 to 16) for En-Ja models. The full-sentence model (star) achieves the highest BLEU (around 17). The proposed method (ICLP, blue circles) performs well, reaching BLEU around 16.5 at AL=16. Other methods (PA-0, PA-1, wait-k, MU-0, MU-1) show lower BLEU scores, generally below 15.
+
+Figure 5: BLEU and Average Lagging (En-Ja)
+
+![Figure 6: Scatter plot showing Length ratio (Y-axis, 0.9 to 1.4) versus Average Lagging (AL) (X-axis, 2 to 16) for En-Ja models. The full-sentence model (star) achieves a length ratio around 1.0. The proposed method (ICLP, blue circles) shows a length ratio slightly above 1.0, decreasing towards 1.0 as AL increases. Other methods (PA-0, PA-1, wait-k, MU-0, MU-1) show length ratios generally below 1.0, with PA-0 and PA-1 remaining close to 1.0.](55d2bfe1c3d04e86df8d7a104d802172_img.jpg)
+
+Figure 6: Scatter plot showing Length ratio (Y-axis, 0.9 to 1.4) versus Average Lagging (AL) (X-axis, 2 to 16) for En-Ja models. The full-sentence model (star) achieves a length ratio around 1.0. The proposed method (ICLP, blue circles) shows a length ratio slightly above 1.0, decreasing towards 1.0 as AL increases. Other methods (PA-0, PA-1, wait-k, MU-0, MU-1) show length ratios generally below 1.0, with PA-0 and PA-1 remaining close to 1.0.
+
+Figure 6: Length ratio and Average Lagging (En-Ja)
+
+tion results especially with the large latency ranges, even though the other methods resulted in a better length ratio of around 1.0. The difference between the two language directions would come from the length issue; the full-sentence NMT resulted in the length ratio slightly larger than 1.0 in English-to-German and around 0.9 in English-to-Japanese. The proposed method encouraged to shorten the translation length in general so that it did not contribute to the BLEU improvement in English-to-Japanese.
+
+## 7 Analysis
+
+### 7.1 Effect of PA-based NMT fine-tuning
+
+For the detailed analyses, we investigated the performance of the chunk-based SimulMT without the fine-tuning using the bilingual prefix pairs. Here, only the boundary predictor was used to segment the input for the chunk-based SimulMT. Figures 7, 8, 9, and 10 show the results by the proposed method with the pre-trained NMT model (PA<sub>off</sub>-0 and PA<sub>off</sub>-1). They clearly show
+
+![Figure 7: Scatter plot showing BLEU score (Y-axis, 5 to 30) versus Average Lagging (AL) (X-axis, 0.0 to 17.5) for En-De models without PA-based NMT fine-tuning. The full-sentence model (star) achieves the highest BLEU (around 28). The proposed method (ICLP, blue circles) performs well, reaching BLEU around 27 at AL=17.5. Other methods (PA-off-0, PA-off-1, wait-k, MU-0, MU-1) show lower BLEU scores, generally below 25.](80530169c7b6298ce012a85b906caeb3_img.jpg)
+
+Figure 7: Scatter plot showing BLEU score (Y-axis, 5 to 30) versus Average Lagging (AL) (X-axis, 0.0 to 17.5) for En-De models without PA-based NMT fine-tuning. The full-sentence model (star) achieves the highest BLEU (around 28). The proposed method (ICLP, blue circles) performs well, reaching BLEU around 27 at AL=17.5. Other methods (PA-off-0, PA-off-1, wait-k, MU-0, MU-1) show lower BLEU scores, generally below 25.
+
+Figure 7: BLEU and Average Lagging (En-De) without PA-based NMT fine-tuning
+
+![Figure 8: Scatter plot showing Length ratio (Y-axis, 1.0 to 2.0) versus Average Lagging (AL) (X-axis, 0.0 to 17.5) for En-De models without PA-based NMT fine-tuning. The full-sentence model (star) achieves a length ratio around 1.0. The proposed method (ICLP, blue circles) shows a length ratio slightly above 1.0, decreasing towards 1.0 as AL increases. Other methods (PA-off-0, PA-off-1, wait-k, MU-0, MU-1) show length ratios generally above 1.0, with PA-off-0 and PA-off-1 remaining close to 1.0.](29ac39bfd74e57a92045649f83cad949_img.jpg)
+
+Figure 8: Scatter plot showing Length ratio (Y-axis, 1.0 to 2.0) versus Average Lagging (AL) (X-axis, 0.0 to 17.5) for En-De models without PA-based NMT fine-tuning. The full-sentence model (star) achieves a length ratio around 1.0. The proposed method (ICLP, blue circles) shows a length ratio slightly above 1.0, decreasing towards 1.0 as AL increases. Other methods (PA-off-0, PA-off-1, wait-k, MU-0, MU-1) show length ratios generally above 1.0, with PA-off-0 and PA-off-1 remaining close to 1.0.
+
+Figure 8: Length ratio and Average Lagging (En-De) without PA-based NMT fine-tuning
+
+the proposed method does not work well without fine-tuning the NMT model; it resulted in a longer translation length so BLEU decreased due to the brevity penalty. These results suggest the segmentation policy in the chunk-based SimulMT should match the prefix translation models because a full-sentence translation model often generates a too-long translation result for a short prefix input.
+
+### 7.2 Length Distribution in training dataset
+
+|                      | En-De     | En-Ja     |
+|----------------------|-----------|-----------|
+| # Source prefixes    | 1,874,909 | 1,059,865 |
+| # Words in sentences | 4,228,604 | 4,593,194 |
+
+Table 1: Statistics of the training data
+
+We investigated the length issue on the training data. Table 1 shows statistics of the IWSLT training set, in the number of source language prefixes extracted for the fine-tuning of the SimulMT models
+
+![Figure 9: A scatter plot showing BLEU score (Y-axis, 8 to 18) versus Average Lagging (AL) (X-axis, 2 to 16) for En-Ja without PA-based NMT fine-tuning. Data points are shown for PA-off-0, PA-off-1, wait-k, MU-0, MU-1, ICLP, and full-sentence. The full-sentence model achieves the highest BLEU score (around 17) and the lowest AL (around 2).](4086a572c080354982c11f1de4d6921d_img.jpg)
+
+Figure 9: A scatter plot showing BLEU score (Y-axis, 8 to 18) versus Average Lagging (AL) (X-axis, 2 to 16) for En-Ja without PA-based NMT fine-tuning. Data points are shown for PA-off-0, PA-off-1, wait-k, MU-0, MU-1, ICLP, and full-sentence. The full-sentence model achieves the highest BLEU score (around 17) and the lowest AL (around 2).
+
+Figure 9: BLEU and Average Lagging (En-Ja) without PA-based NMT fine-tuning
+
+![Figure 10: A scatter plot showing the Length ratio (Y-axis, 1.0 to 1.4) versus Average Lagging (AL) (X-axis, 2 to 16) for En-Ja without PA-based NMT fine-tuning. Data points are shown for PA-off-0, PA-off-1, wait-k, MU-0, MU-1, ICLP, and full-sentence. The full-sentence model achieves the lowest length ratio (around 1.0) and the lowest AL (around 2).](c0843c6d138705289960d9f53a6e72a1_img.jpg)
+
+Figure 10: A scatter plot showing the Length ratio (Y-axis, 1.0 to 1.4) versus Average Lagging (AL) (X-axis, 2 to 16) for En-Ja without PA-based NMT fine-tuning. Data points are shown for PA-off-0, PA-off-1, wait-k, MU-0, MU-1, ICLP, and full-sentence. The full-sentence model achieves the lowest length ratio (around 1.0) and the lowest AL (around 2).
+
+Figure 10: Length ratio and Average Lagging (En-Ja) without PA-based NMT fine-tuning
+
+and the number of words in the whole sentences.
+
+Even though the number of words is almost similar, the number of prefixes is largely different; that in En-De is almost two times larger than that in En-Ja. This is because of the large word order difference between English and Japanese, compared to that between English and German. The word order difference should cause poor prefix matches in the prefix translation pair extraction, so just a few short prefix pairs are found. Figure 11 shows the source prefix length distribution in the IWSLT training data. The peak of the En-Ja distribution is to the right of that of En-De distribution because of this word order difference. The number of the En-De shortest prefixes is more than three times larger than that of En-Ja ones. This large number of short prefixes contributed to the improvement of En-De SimulMT.
+
+Figures 12 and 13 show the change of length distribution of the training data; blue bars represent
+
+![Figure 11: A histogram showing the Source prefix length distribution in the IWSLT training data. The X-axis is Prefix length (0 to 60) and the Y-axis is Frequency (0 to 120,000). The En-De distribution (red) is significantly higher than the En-Ja distribution (blue), especially for shorter prefix lengths (0 to 20).](84e2ac543ffc4145dc85b05a48ec62e3_img.jpg)
+
+Figure 11: A histogram showing the Source prefix length distribution in the IWSLT training data. The X-axis is Prefix length (0 to 60) and the Y-axis is Frequency (0 to 120,000). The En-De distribution (red) is significantly higher than the En-Ja distribution (blue), especially for shorter prefix lengths (0 to 20).
+
+Figure 11: Source prefix length distribution in the IWSLT training data
+
+![Figure 12: A histogram showing the Source sentence length distribution in the training data (En-De). The X-axis is Length of prefix and sentence (0 to 100) and the Y-axis is Frequency (0 to 175,000). The distribution is shown for two conditions: w/ PA (red) and w/o PA (blue). The w/o PA distribution is significantly higher, peaking around 20-30.](797231cfee084ca299de599340240401_img.jpg)
+
+Figure 12: A histogram showing the Source sentence length distribution in the training data (En-De). The X-axis is Length of prefix and sentence (0 to 100) and the Y-axis is Frequency (0 to 175,000). The distribution is shown for two conditions: w/ PA (red) and w/o PA (blue). The w/o PA distribution is significantly higher, peaking around 20-30.
+
+Figure 12: Source sentence length distribution in the training data (En-De)
+
+![Figure 13: A histogram showing the Source sentence length distribution in the training data (En-Ja). The X-axis is Length of prefix and sentence (0 to 100) and the Y-axis is Frequency (0 to 50,000). The distribution is shown for two conditions: w/ PA (red) and w/o PA (blue). The w/o PA distribution is significantly higher, peaking around 20-30.](ab9eb65dcbc2696ec77b66f70f9e0e91_img.jpg)
+
+Figure 13: A histogram showing the Source sentence length distribution in the training data (En-Ja). The X-axis is Length of prefix and sentence (0 to 100) and the Y-axis is Frequency (0 to 50,000). The distribution is shown for two conditions: w/ PA (red) and w/o PA (blue). The w/o PA distribution is significantly higher, peaking around 20-30.
+
+Figure 13: Source sentence length distribution in the training data (En-Ja)
+
+the original distribution on the whole training data (WMT and IWSLT), and red bars represent that on the training data augmented by the additional prefix pairs. The change in English-to-German was much larger than that in English-to-Japanese, because of the large difference in the number of bilingual prefix pairs. These findings suggest the proposed method had a larger effect in English-to-German than English-to-Japanese.
+
+## 8 Conclusion
+
+We proposed a method to train the neural SimulMT model by extracting bilingual prefix pairs by Prefix Alignment. The proposed method outperformed the baselines in quality-latency trade-off in English-to-German simultaneous translation but showed mixed results in English-to-Japanese. We investigated the results in detail and found the difference in the translation length made a large effect on the results, caused by the performance of the sentence-level NMT model and the word order difference.
+
+In future work, we extend the method to work for language pairs with the large word order differences such as English-Japanese, in the wide range of AL. The proposed method to extract source prefixes can be adapted to speech input. We applied this method to Speech-to-text simultaneous machine translation system submitted to the IWSLT 2022 Evaluation Campaign (Anastasopoulos et al., 2022; Fukuda et al., 2022).
+
+## Acknowledgements
+
+Part of this work was supported by JSPS KAKENHI Grant Numbers JP21H05054 and JP21H03500.

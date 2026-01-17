@@ -1,0 +1,590 @@
+
+
+# Rethinking Skill Extraction in the Job Market Domain using Large Language Models
+
+**Khanh Cao Nguyen**<sup>▲</sup>
+
+**Syrielle Montariol**<sup>▲</sup>
+
+<sup>▲</sup>EPFL, Switzerland
+
+**Mike Zhang**<sup>○</sup>
+
+**Antoine Bosselut**<sup>▲</sup>
+
+<sup>○</sup>IT University of Copenhagen, Denmark
+
+syrielle.montariol@epfl.ch
+
+mikeyj.zhang@gmail.com
+
+## Abstract
+
+Skill Extraction involves identifying skills and qualifications mentioned in documents such as job postings and resumes. The task is commonly tackled by training supervised models using a sequence labeling approach with BIO tags. However, the reliance on manually annotated data limits the generalizability of such approaches. Moreover, the common BIO setting limits the ability of the models to capture complex skill patterns and handle ambiguous mentions. In this paper, we explore the use of in-context learning to overcome these challenges, on a benchmark of 6 uniformized skill extraction datasets. Our approach leverages the few-shot learning capabilities of large language models (LLMs) to identify and extract skills from sentences. We show that LLMs, despite not being on par with traditional supervised models in terms of performance, can better handle syntactically complex skill mentions in skill extraction tasks.<sup>1</sup> <sup>1</sup>Code is available at <https://github.com/epfl-nlp/SCESC-LLM-skill-extraction> and data at <https://huggingface.co/datasets/jjzha>
+
+## 1 Introduction
+
+Skill Extraction (SE) is a challenging task in the job market domain that involves identifying and extracting specific skills mentioned in job postings, resumes, and other job-related documents. SE plays a crucial role in various job market applications, such as matching job seekers with relevant job opportunities or analyzing trends in the job market. Prior approaches to SE rely on rule-based methods or keyword-matching techniques (Khaouja et al., 2021; Ternikov, 2022). More recent methods, which are considered state-of-the-art, propose to fine-tune language models to solve the task (Zhang et al., 2022a, 2023). However, they heavily rely on manually annotated data, which is prohibitively expensive to collect, especially in this application that requires human resource domain experts.
+
+
+In this paper, we investigate the use of large language models (LLMs) for SE in the job market domain. LLMs have been trained on massive amounts of text data and have shown great potential in capturing the underlying patterns and semantics of language. The SE task can be linked with the more generic entity recognition task in natural language processing (NLP). Named Entity Recognition (NER) is a widely studied task in NLP that involves identifying and classifying named entities in text. The typical approach to the NER problem is to formulate it as a sequence labeling task that assigns each token to a predefined entity-related label. Recent methods have attempted to tackle this task using LLMs, with limited success (e.g., Wang et al., 2023a; Ma et al., 2023).
+
+First, we propose a review of the datasets for SE. We uniformize them and release them as a benchmark for future research in the field. It includes six publicly available datasets covering 4 languages (English, French, German and Danish) and various domains and skills categories: SAYFULLINA (Sayfullina et al., 2018), SKILLSPAN (Zhang et al., 2022a), GREEN (Green et al., 2022), GNEHM (Gnehm et al., 2022a), KOMPETENCER (Zhang et al., 2022b) and FIJO (Beauchemin et al., 2022).
+
+We test the ability of LLMs to solve the tasks on these six datasets using various prompting techniques. We compare two types of task formulations, highlighting their impact on various aspects of the model’s behavior. Through diagnosing the performance of LLMs, we identify a taxonomy of errors, quantifying their frequency and supporting it with descriptive statistics on the datasets and the model’s predictions, comprising multiple skill mentions that are conjoined together. For example, a job posting might require “ability to develop reporting software and statistical softwares”. In this case, the phrase “develop reporting software and statistical softwares” represents a conjoined skill, where
+
+multiple skills are combined together. However, the current BIO annotation scheme does not capture such complex skill mentions effectively, leading to difficulties in accurately extracting each skill. Following this, in our error analysis, we highlight LLM behavior that is seen as detrimental using common NER evaluation and annotation schemes, but may be more adapted to real-world settings.
+
+## 2 Related Work
+
+### 2.1 Skill Extraction
+
+Recently, there has been an increase of interest in the task of SE. The general dynamic nature of labor markets has led to an increase in tasks related to job descriptions (JD), including SE (Kivimäki et al., 2013; Zhao et al., 2015; Sayfullina et al., 2018; Bhola et al., 2020; Gugnani and Misra, 2020; Fareri et al., 2021; Konstantinidis et al., 2022; Ao et al., 2023; Zhang et al., 2023). Some works define a more granular label space such as Zhang et al. (2022a). Here, they distinguish between skill and knowledge components. In Sayfullina et al. (2018), they only extract soft skills. Then, in Green et al. (2022), they tag for both hard and soft skills. For other languages, in Gnehm et al. (2022b), they classify for only ICT-based skills in German. Last, for Beauchemin et al. (2022), they tag for only soft skills in French.
+
+All these works employ methods such as sequence labeling (Sayfullina et al., 2018; Smith et al., 2019; Chernova, 2020; Zhang et al., 2022a,c), multi-label classification on the document-level (Bhola et al., 2020), and graph-based methods (Shi et al., 2020; Goyal et al., 2023). Recent methodologies include domain-specific models where LMs are continuously pre-trained on unlabeled JD (Zhang et al., 2022a; Gnehm et al., 2022b). However, to the best of our knowledge, no work has applied LLMs to the task of SE in the job market domain. We use several datasets from previous work in Section 3.
+
+### 2.2 Entity Recognition using LLMs
+
+With the recent advances in large-scale pre-training, LLMs were able to capture rich contextual information and achieve impressive performance in various downstream tasks (OpenAI, 2023; Touvron et al., 2023). However, their performance in NER is still significantly below supervised baselines (Ma et al., 2023; Wang et al., 2023a). This is partly because, as a sequence labeling benchmark, NER requires
+
+a structured output from models. Meanwhile, the autoregressive nature of LLMs does not guarantee a uniform output representation. Jimenez Gutierrez et al. (2022) conducted a comprehensive study on entities and relation extraction using LLMs in the biomedical domain and concluded that contemporary techniques could not enable GPT-3 with in-context learning to surpass BERT-sized fine-tuned LMs. Ma et al. (2023) and Wang et al. (2023a) reach similar conclusions in the general domain. Wang et al. (2023b) proposed a method to surround entities with special tokens, bridging the gap between sequence labeling and generative tasks and achieving comparable results compared to state-of-the-art pre-trained models. In more recent works, PromptNER (Ashok and Lipton, 2023) provides the entity definition to the model, asking it to output a list of potential entities along with the reasoning on the compatibility of each entity with the provided definition. Meanwhile, UniversalNER (Zhou et al., 2023) instruction-tunes smaller scale open-source models for entity extraction tasks.
+
+## 3 Datasets for Skill Extraction
+
+We gather and uniformize six datasets with the B-I-O annotation scheme, where each word in a sentence is associated with one tag. The “B” tag indicates that the associated word marks the *Beginning* of a span; “I” indicates a word *Inside* a span, and “O” marks words *Outside* a span. Each dataset is extracted from job ads from various domains and languages, and some are augmented with fine-grained annotations. Despite the disparity of the train-dev-test split proportion, we kept the original splits from the authors of each dataset to ensure comparability with previously published results.
+
+For each dataset, we describe how they were created, and their content. Table 1 provides information on their size, language, domain and labels. Table 2 presents descriptive statistics of the six datasets, such as average sentence length and number of skills.
+
+**FIJO (Beauchemin et al., 2022)**<sup>2</sup> <sup>2</sup><https://huggingface.co/datasets/jjzha/fijo> A French job ad dataset annotating skill types using a sequence labeling approach. The skill groups are based on the AQESSS public skills repositories and proprietary skill sets provided by their collaborators. These skill types are divided into four categories: “Thoughts”, “Results”, “Relational”, and “Personal”.
+
+
+| Name        | Train  | Dev   | Test  | Language | Domain    | Labels                                      |
+|-------------|--------|-------|-------|----------|-----------|---------------------------------------------|
+| GREEN       | 8,669  | 964   | 335   | English  | Multiple  | Qualific., Domain, Occupation, Exp., Skills |
+| SKILLSPAN   | 4,800  | 3,174 | 3,569 | English  | Multiple  | Skills, Knowledge                           |
+| SAYFULLINA  | 3,705  | 1,855 | 1,851 | English  | Multiple  | Soft Skills                                 |
+| GNEHM       | 19,889 | 2,332 | 2,557 | German   | ICT       | ICT                                         |
+| FJIO        | 399    | 49    | 49    | French   | Insurance | Thoughts, Results, Relational, Personal     |
+| KOMPETENCER | 778    | 346   | 262   | Danish   | Multiple  | Skills, Knowledge                           |
+
+**Table 1: Datasets Overview:** number of sentences in each split, language, the domain of the job ads, and which type of labels are originally present in the dataset.
+
+| Name        | Avg. Sentence Length | Avg. # of Skills | % Sentence w/o Skills | Avg. Skills Span Length | Tot. Unique Skills |
+|-------------|----------------------|------------------|-----------------------|-------------------------|--------------------|
+| GREEN       | 22.94                | 2.0              | 30.45                 | 2.68                    | 610                |
+| SKILLSPAN   | 11.99                | 0.3              | 83.64                 | 3.56                    | 986                |
+| SAYFULLINA  | 14.35                | 1.0              | 0.1                   | 1.75                    | 581                |
+| GNEHM       | 10.77                | 0.3              | 82.82                 | 1.32                    | 675                |
+| FJIO        | 31.70                | 2.4              | 16.0                  | 9.7                     | 123                |
+| KOMPETENCER | 13.16                | 0.4              | 83.2                  | 3.79                    | 103                |
+
+**Table 2: Test Split Datasets Statistics:** Average sentence length (number of words), average number of labeled skills per sentence, percentage of sentences in the dataset without any skill, average number of words in a skill span, and total number of unique skills in the test set.
+
+**GNEHM (Gnehm et al., 2022a)** <sup>3</sup> <sup>3</sup><https://huggingface.co/datasets/jjzha/gnehm> This is a Swiss-German job ad dataset focusing on Information and Communications Technology (ICT)-related sequence labeling. It includes ICT tasks, technology stack, responsibilities, and so forth. This dataset is a combination of two other Swiss datasets, the Swiss Job Market Monitor and an online job ad dataset (Gnehm and Clematide, 2020; Buchmann et al., 2022).
+
+**GREEN (Green et al., 2022)** <sup>4</sup> <sup>4</sup><https://huggingface.co/datasets/jjzha/green> This English dataset is a token-level sequence labeling task containing five types of tags: Skills, Qualifications, Domain, Experience, and Occupation labels. The JDs present in the dataset are from the United Kingdom. The industries represented in the data are from various fields, such as IT, finance, healthcare, and sales.
+
+**SAYFULLINA (Sayfullina et al., 2018)** <sup>5</sup> <sup>5</sup><https://huggingface.co/datasets/jjzha/sayfullina> This dataset, in English, focuses on soft skill prediction. Soft skills are personal qualities such as “team working”, “being dynamic”, and “independent”.
+
+**SKILLSPAN (Zhang et al., 2022a)** <sup>6</sup> <sup>6</sup><https://huggingface.co/datasets/jjzha/skillspan> This job posting dataset includes annotations for skills and knowledge, derived from the ESCO taxonomy. In
+
+a nutshell, *knowledge* are things that you can learn, and *skills* show how you apply this knowledge. The skills can be relatively long. The data is in English and contains JDs from Stackoverflow and a source that contains various other positions.
+
+**KOMPETENCER (Zhang et al., 2022b)** <sup>7</sup> <sup>7</sup><https://huggingface.co/datasets/jjzha/kompetencer> This dataset includes JDs in Danish. The annotation scheme is the same as SKILLSPAN.
+
+## 4 Method
+
+In this work, we formulate the task of skills extraction as a LLMs generation task, leveraging LLMs’ emergent in-context learning ability. The LLM is provided instructions, a set of demonstrations, and a sample to annotate. The instructions define the expected output format precisely. This format is crucial for NER tasks, as the rigid structure of the annotations and metrics poses a challenge in evaluating the generative output. In the following section, we describe our approaches and strategies to design prompt formats.
+
+### 4.1 Prompting Strategies
+
+We investigate two prompting strategies: EXTRACTION-STYLE and NER-STYLE, illustrated in Figure 1.
+
+**EXTRACTION-STYLE** The spans extracted from the sentences are directly generated as a list, as
+
+
+
+
+
+
+shown in Figure 1. The output format is generated from the BIO-tag annotations by extracting the skills and concatenating them with a separator (in this case, a “*vr*” token).
+
+**NER-STYLE** Following (Wang et al., 2023a), we formulate the output format by rewriting the original sentence and adding special tokens around each entity. This leads to a more constrained output format, leaving less space for hallucination. In practice, we wrap every skill from the original sentence with special token “@” and “##”, as shown in Figure 1.
+
+**Dataset-Specific Prompt** In the absence of supervision from a large train set, the model has no way of knowing what exactly are the entities it is asked to extract. We create dataset-specific prompts to guide it, highlighting key information about the input sentence (domain, language) and the targeted entities (type of skills). We follow a specific template:
+
+You are given a sentence from a job description in `<LANGUAGE>`, in the `<DOMAIN>` domain. Extract all the `<SKILL TYPE>` that are required from the candidate, `<PROMPT-SPECIFIC OUTPUT>`.
+
+For example, for the GNEHM dataset with EXTRACTION-STYLE prompt, we have:
+
+You are given a sentence from a job advertisement in German. Extract all the IT/Technology skills and competencies that are required from the candidate as a list.
+
+### 4.2 Demonstration Selections
+
+LLMs are sensitive to the different combinations of in-context examples (Liu et al., 2022; Wang et al., 2023c). We experiment with two strategies to select demonstrations.
+
+**Semi-random Demonstrations** We randomly select  $k$  examples from the train set. Due to the noisiness of the data, we manually inspect the examples, excluding low-quality ones. This process is time-consuming for high values of  $k$ ; however, in our setting, having a high number of demonstrations ( $k > 5$ ) doesn’t improve the extraction
+
+**Instruction**  
+You are given a sentence from a job description. Extract all the skills and competencies that are required from the candidate as a list, with one skill per line. If no skill is found in the sentence, return “None”.
+
+**Sentence**  
+A suitable candidate will be willing to learn and an excellent team player.  
+**Answer**  
+team player/willing to learn
+
+— k demonstrations —
+
+**Sentence**  
+you will become part of an energetic and dynamic company, determine to further develop and grow the drive.  
+**Answer**  
+(LLMs generation)
+
+**Instruction**  
+You are given a sentence from a job description. Replicate the sentence and highlight all the skills and competencies that are required from the candidate, by surrounding them with tags: “@” and “##”. If there are no such element in the sentence, replicate the sentence identically.
+
+**Sentence**  
+A suitable candidate will be willing to learn and an excellent team player.  
+**Answer**  
+A suitable candidate will be @ willing to learn and an excellent @ team player.
+
+— k demonstrations —
+
+**Sentence**  
+you will become part of an energetic and dynamic company, determine to further develop and grow the drive.  
+**Answer**  
+(LLMs generation)
+
+Figure 1: **Prompting Approaches.** EXTRACTION-STYLE (left): The model extracts skills and presents them as a list, joined by a separator token; NER-STYLE (right): The LLM rewrites the original sentence, with all skill mentions wrapped by special tokens “@” and “##”.
+
+performance (see Figure 3 in Appendix).
+
+**$k$ NN-retrieval demonstrations** To leverage demonstrations that are closely related to each sample, we use a  $k$ NN-retrieval approach. We embed each sentence using in-domain, monolingual masked language models (MLM), and retrieve the top  $k$  closest sentences in the train set using cosine similarity.
+
+**Mix of Positives and Negatives** We define a *negative* demonstration as a sample from the training subset that does not contain any skill, and a *positive* one otherwise.
+
+We create a mix of positive and negative demonstrations with a 1:1 ratio. When performing  $k$ NN-retrieval, we retrieve the nearest neighbors separately in the pools of positive and negative examples. Throughout our experiments, we denote  $k$ -shot a prompt with  $k$  positives and  $k$  negatives demonstrations.
+
+### 4.3 Post-processing
+
+Depending on the prompting strategies, we implement post-processing pipelines to extract the entities from the LLM’s outputs. Indeed, since LLMs are trained for text generation instead of sequence labeling, they struggle with replicating spans of the input sequence as required for NER.
+
+Even with in-context examples, LLMs fail to generate the required output correctly. In particular, on top of failing to respect the format (e.g., adding the right tags around entities for the NER-STYLE
+
+PROMPTING), it often fails to correctly replicate the spans of the input sentence. Indeed, since the model generates the most probable sequence, it usually attempts to correct the errors found in the input sentence, such as spacing around punctuation or typos. Thus, in the process, it modifies the initial spans and prevents them from being accurately matched with the original input sentence, hindering the evaluation.
+
+To address this issue, we propose a rule-based post-processing step that handles mismatched punctuation and minor edits made to the span by the model. We manually look at a sample of mismatches between LLM generations and original sentences and identify a set of common mismatches (see examples in Appendix C for categories and examples). We automatically detect if the model generation fails in one of these cases, and correct it using heuristics (e.g. added/removed spaces, punctuation insertion or deletion). Otherwise, we implement a feedback loop to prompt it to correct its answer. We feedback on the original prompt as well as the model's answer, describe the mistake it makes, and request another generation with the instructions below.
+
+EXTRACTION-STYLE:
+
+You have correctly extracted these skills: <CORRECTLY EXTRACTED SKILL>. The following skills you extracted are either absent or not written the same way as in the original sentence: <INCORRECTLY EXTRACTED SKILL>. Modify these skills to make sure to exactly replicate these skills from the input sentence with their original spellings and grammars, discard any of them if needed. Remember to keep the skills that you correctly extracted. Provide them with one skill per line.
+
+NER-STYLE:
+
+You didn't correctly replicate the given sentence. Make sure the sentence stays the same, even if there are no skills to highlight, including punctuation, spacing, and grammar mistakes. Don't add any extra words or punctuation to the sentence except for the ## and @@ tags. Don't add nor remove any space. Remember to keep the valid highlighted skills with tags '@@' and '#': <CORRECTLY EXTRACTED SKILL>
+
+If one feedback loop is not enough, we repeat the process of providing feedback and requesting another generation up to 3 times. If the desired format is not achieved after 3 retries, we consider that the model failed to extract any entity. We perform an extensive analysis of failure cases in Section 5.3.
+
+## 5 Experiments
+
+### 5.1 Experimental Framework
+
+**Models** We use GPT-3.5-turbo<sup>8</sup> <sup>8</sup>gpt-3.5-turbo-instruct for all of our experiments, which has an input context of 4096 tokens. We set the temperature to 0 to enforce deterministic generation from the model. We also experiment with GPT-4 to set an upper-bound expectation for the performance. Due to budget constraints, we evaluate GPT-4 on a subset of samples.
+
+To retrieve demonstrations, we use monolingual pre-trained models adapted to each dataset language. If possible, we use models fine-tuned on domain-specific datasets: JobBERT<sup>9</sup> <sup>9</sup><https://huggingface.co/jjzha/jobbert-base-cased> for English, DaJobBERT<sup>10</sup> <sup>10</sup><https://huggingface.co/jjzha/dajobbert-base-uncased> for Danish, jobBERT-de<sup>11</sup> <sup>11</sup><https://huggingface.co/agne/jobbert-de> for German, and CamemBERT<sup>12</sup> <sup>12</sup><https://huggingface.co/camembert-base> for French. The latter is the only one which is not specifically fine-tuned on jobs postings.
+
+**Baselines** As baselines, we use the supervised results from Zhang et al. (2023) which are currently state-of-the-art. The model is ESCOXL-M-R, an XL-M-R<sub>large</sub>-based encoder model (Conneau et al.,
+
+
+
+
+
+
+(2020), further pre-trained using the ESCO taxonomy (le Vrang et al., 2014) by employing a combination two training objectives: Masked language modeling and a three-way classification of whether concepts in ESCO are in connection with each other, to adapt the model to the job market domain. The supervised results are from fine-tuning the model on the training set of each dataset separately.
+
+**Evaluation Metrics** The metrics are Precision (P), Recall (R) and span-F1 (F1). We compute STRICT metrics using seqeval.<sup>13</sup> <sup>13</sup><https://github.com/chakki-works/seqeval> We implement a RELAX skill-level metric, in which we considered an extracted entity as correct even if it only *partially overlaps* with the gold span from the annotation. The RELAX metric aims to evaluate the ability of LLMs to localize the skills within the given sentence.
+
+### 5.2 Experimental Results
+
+Table 3 compare the two prompting styles with various demonstration retrieval settings: zero-shot, 5-shots (a mix of 5 randomly retrieved negative demonstrations<sup>14</sup> <sup>14</sup>Except for SAYFULLINA, where there are only 4 negative training samples. and 5 random positive demonstrations), and 5-shots+kNN (top 5 nearest neighbors retrieved from the set of negative examples, and top 5 positive examples). All examples are retrieved from the train set of the datasets. The choice of 10 demonstrations stems from an ablation study reported in Figure 3 in Appendix. In the zero-shot setting, we always use the dataset-specific prompts to guide the model toward the desired type of entities to extract. The full table with precision and recall can be found in appendix (Table 7).
+
+There is a large drop in performance across most datasets compared to fine-tuning models, for both the EXTRACT and NER-STYLE approaches. Aside from FIJO, in which GPT-3.5 with in-context learning achieves a comparable performance, in all other datasets the decrease margin is significant, with up to 50% decreases in F1 metrics.
+
+The datasets with the largest performance drop are GNEHM and SAYFULLINA. We hypothesize that pre-trained models achieve better performances when the length of span entities is rather short (Table 2). The RELAX metric shows much higher performance (up to 20% higher average F1 score). In particular the recall is considerably
+
+higher, showing that LLMs are able to localize the skills within a sentence, but fail to capture the exact sequence. Concisely, we have the following findings:
+
+**Few-shot demonstrations are critical to model performance**, with an average improvement of 20.0% for EXTRACT-STYLE and 28% for NER-STYLE in F1 when providing 5-shot demonstrations. Indeed, given the strict structure required by NER, it is essential to show the model examples of the specific output format, especially for NER-STYLE format.
+
+**EXTRACT-STYLE outperforms NER-STYLE prompting on average**, especially with the RELAX evaluation scheme, in contrast to the findings of Wang et al. (2023b).
+
+**kNN-retrieval outperforms random selection of demonstrations** across all benchmarks except SKILLSPAN. On average, switching from random to kNN demonstrations slightly improves the precision but greatly improves the recall (4% increases for both EXTRACT-STYLE and NER-STYLE). **Dataset-specific prompts improve the performance** on average, particularly on datasets highly specialized toward a specific domain (insurance for FIJO, IT for GNEHM) or skill type (soft skills only for SAYFULLINA).
+
+### 5.3 Error analysis
+
+**Failure cases related to instruction-following errors** Despite our post-processing pipeline, the LLM output often drifts from the desired format. Table 4 shows the number of failure cases from different prompting strategies; a failure case happens when the LLM fails to output the desired format after 3 feedback loops. *Zero-shot* inference exhibits the largest number of failures across almost all experiments by a large margin, as the instructions are not detailed enough to cover all potential output format divergences by the LLM. Providing demonstrations drastically reduces the number of failure cases. However, using kNN-retrieval does not necessarily reduce it further, even increasing the failure rate for NER-STYLE.
+
+**Impact of various dataset features** Figure 2 shows how several sample features affect the extraction performances of the LLM, for both prompting strategies. **The number of skills per sentence** does not greatly affect extraction capabilities, for both EXTRACT-STYLE and NER-STYLE. **The Skill span length** (from 1 to 10 words) affects the
+
+
+
+| STRICT             | FIJO        | GNEMH       | KOMPE-TENCER | GREEN       | SKILL-SPAN  | SAYFUL-LINA | AVG         |             |             |
+|--------------------|-------------|-------------|--------------|-------------|-------------|-------------|-------------|-------------|-------------|
+|                    | F1          | F1          | F1           | F1          | F1          | F1          | P           | R           | F1          |
+| SUPERVISED         | 42.0        | 88.4        | 49.8         | 51.2        | 62.6        | 92.2        | -           | -           | 64.4        |
+| EXTRACT-STYLE      |             |             |              |             |             |             |             |             |             |
+| zero-shot+specific | 0.0         | 21.0        | 15.9         | 4.4         | 6.5         | 11.6        | 19.8        | 7.15        | 9.9         |
+| 5-shot             | 28.7        | 27.5        | 21.6         | 24.2        | <b>25.0</b> | 29.3        | 23.3        | 35.5        | 26.1        |
+| +kNN               | 34.3        | 29.0        | <b>22.4</b>  | 29.0        | 20.9        | 33.3        | 24.4        | 39.4        | 28.1        |
+| +kNN+specific      | 35.7        | 40.5        | 20.9         | 28.4        | 20.3        | <b>39.0</b> | <b>26.6</b> | <b>41.1</b> | <b>30.8</b> |
+| NER-STYLE          |             |             |              |             |             |             |             |             |             |
+| zero-shot+specific | 3.0         | 7.4         | 1.6          | 0.7         | 2.3         | 0.4         | 6.53        | 1.8         | 2.57        |
+| 5-shot             | 33.3        | 33.1        | 20.4         | 28.7        | 17.8        | 27.0        | 23.8        | 35.5        | 26.7        |
+| +kNN               | 36.7        | 32.3        | 15.3         | <b>32.0</b> | 15.5        | 32.3        | 23.3        | 39.3        | 27.4        |
+| +kNN+specific      | <b>44.2</b> | <b>40.9</b> | 16.1         | 31.8        | 13.7        | 36.6        | 26.4        | 40.9        | 30.5        |
+| GPT-4*             |             |             |              |             |             |             |             |             |             |
+| EXTRACT-STYLE      | 38.0        | 58.7        | <b>25.3</b>  | <b>30.6</b> | <b>27.8</b> | <b>40.5</b> | 33.3        | <b>44.1</b> | 36.8        |
+| NER-STYLE          | <b>48.0</b> | <b>67.8</b> | 24.6         | 21.9        | 25.7        | 38.4        | <b>35.8</b> | 42.7        | <b>37.7</b> |
+| RELAX              |             |             |              |             |             |             |             |             |             |
+| EXTRACT-STYLE      |             |             |              |             |             |             |             |             |             |
+| 5-shot             | 70.0        | 35.0        | <b>46.3</b>  | 70.1        | 45.7        | 48.9        | 48.5        | 67.9        | 52.7        |
+| +kNN               | 80.3        | 35.6        | 45.9         | <b>74.0</b> | <b>46.2</b> | 50.6        | 49.1        | 73.7        | 55.4        |
+| +kNN+specific      | 78.8        | 47.8        | 44.8         | 73.6        | 45.4        | <b>57.7</b> | <b>51.1</b> | <b>75.1</b> | <b>58.0</b> |
+| NER-STYLE          |             |             |              |             |             |             |             |             |             |
+| 5-shot             | 57.4        | 28.9        | 37.0         | 64.1        | 32.6        | 47.6        | 41.8        | 59.9        | 44.6        |
+| +kNN               | <b>82.0</b> | 37.9        | 33.2         | 64.7        | 29.9        | 48.2        | 42.8        | 68.5        | 49.3        |
+| +kNN+specific      | 80.3        | <b>48.2</b> | 44.8         | 66.0        | 27.6        | 51.4        | 46.5        | 69.3        | 53.1        |
+
+Table 3: **Results of Experiments**, measured using Precision (**P**), Recall (**R**) and span-F1 (**F1**) metrics. \*GPT-4 results are based on a subset of  $\le 350$  samples for each dataset.
+
+| Strategies         | EXTRACT-STYLE | NER-STYLE |
+|--------------------|---------------|-----------|
+| zero-shot+specific | 26.5162       | 12.8629   |
+| 5-shot             | 3.4623        | 2.2982    |
+| +kNN               | 1.8105        | 3.1458    |
+| +kNN+specific      | 1.6867        | 1.9816    |
+
+Table 4: Average percentage of samples for which the LLM failed to extract entities after 3 re-tries. Results are averaged across all datasets. The zero-shot setting gave the highest number of failures.
+
+performance: entities with short span length, typically 1-2 words, are more likely to be correctly extracted. F1 performance degrades as the span gets longer. Finally, the **sentence length** heavily affects NER-STYLE performance, which is considerably lower for short sentences (1-2 words) and gradually improves with longer ones. Meanwhile, EXTRACT-STYLE keeps a relatively stable performance across different sentence lengths.
+
+**General Behavior** Table 5 showcases the flaws in the skills extraction task performed by GPT-
+
+| Prompt  | Span Length | # Skills |
+|---------|-------------|----------|
+| NER     | -2.10       | +0.33    |
+| EXTRACT | -1.46       | +0.31    |
+
+Table 5: Difference between skills extracted by GPT-3.5 and gold annotations, for each prompting strategy. *Interpretation: GPT-3.5 extracts on average 0.3 more skills than the gold annotation. We use kNN-5-shots with dataset-specific prompts. Full results per dataset can be found in Table 11 in Appendix.*
+
+3.5. Compared to the ground truth annotations, the LLM extracts shorter spans (on average over all datasets, 2.1 fewer words for NER prompting) and more skills (on average over all datasets, 0.33 more skills per sample for both prompting strategies). To diagnose the reasons for this discrepancy, we analyze a sample of errors.
+
+### 5.4 Error taxonomy
+
+We manually analyze 60 examples where LLMs made the wrong predictions, both with EXTRACT-
+
+![Figure 2: Analysis Statistics. Three radar charts showing performance metrics for Extract-style and NER-style across different criteria. (a) Number of skills: 10, 20, 40, 60, 100. (b) Skills span length: 10, 20, 30, 40, 50, 60. (c) Sentence length: 1-2, 10-29, 30-99, 100-999. Data points are labeled with dataset counts: (172), (344), (2489), (24), (172), (962), (884), (397), (2078), (214), (4194), (2430), (1454), (514), (25).](c3c305cefbac2e7b13be34ab87054d1e_img.jpg)
+
+Figure 2: Analysis Statistics. Three radar charts showing performance metrics for Extract-style and NER-style across different criteria. (a) Number of skills: 10, 20, 40, 60, 100. (b) Skills span length: 10, 20, 30, 40, 50, 60. (c) Sentence length: 1-2, 10-29, 30-99, 100-999. Data points are labeled with dataset counts: (172), (344), (2489), (24), (172), (962), (884), (397), (2078), (214), (4194), (2430), (1454), (514), (25).
+
+**Figure 2: Analysis Statistics.** The F1 scores vary across different criteria. **(left)** Extraction performances across different numbers of skills in the sentence (excluding negative samples). **(middle)** Extraction performances for each bucket of lengths of skills span. **(right)** Extraction performances for different ranges of the sentences’ length. We used the number of tokens as the measure of length. For simplicity, this error analysis was performed on the set of all datasets.
+
+**STYLE or NER-STYLE.** The examples are randomly extracted with 10 from each dataset. Based on the analysis, we clustered the types of errors/misalignments between predictions and ground truths into different categories, listed below. Note that one sample can belong to several categories. We provide examples of each category in Appendix D (Table 10):
+
+- Skill definition mis-alignment.** Misalignments between the definition of skills used by human annotators in the ground truth data, and what is considered a skill by the LLM. The errors are often career-related terminologies that are not exactly skills or competencies, but are still extracted by the LLM. This category accounted for up to  $\sim 36\%$  of the examined examples. We hypothesize that this category requires more demonstrations and more detailed instructions, potentially including definitions of skill types. The supervised model suffers much less from this flaw.
+- Wrong extraction.** At times, the LLM also extracts spans that are completely unrelated to skills, competencies, or other career-related terminologies. 20% of samples fall into this category.
+- Conjoined skills.** Here, we describe cases where a common span encompasses two skills. As an example, a job posting might require the “ability to develop reporting software and statistical software”. The phrase “develop reporting software and statistical software” is a conjoined skill, where two skills (develop reporting software, and develop statistical software) are combined into a unique verb phrase.  $\sim 14\%$  of errors are attributed to this category. We approximate the true number of conjoined skills in the annotations for each dataset, using syntactic parsing. According to our measure, 16 to 22% of spans in 4 out of 6 datasets are conjoined skills. This observed behavior is in line with the metrics computed in Table 5 on differences between the LLM predictions and the ground truth annotations. Interestingly, we note that the prevailing BIO annotation scheme can not distinguish such skill mentions by construction, merging them into a unique span and yielding errors as well.
+- Extended span.**  $\sim 12\%$  of the errors were instances where the LLM extracted longer spans than the ground truth, either by concatenating distinct skill mentions, or, more frequently, taking additional words around the gold skill mention.
+- Incorrect annotations.** 8% of the errors were due to poor gold annotations. The annotated entity, while perhaps related to job markets, is irrelevant to skills, given the context.
+- Other.** Other unidentified minor cases, such as LLM generations that do not conform to the expected format ( $\sim 10\%$ ). A common cause is
+
+| Dataset     | % Conjoined skill |
+|-------------|-------------------|
+| GREEN       | 21.87             |
+| SKILLSPAN   | 22.39             |
+| FIJO        | 17.79             |
+| SAYFULLINA  | 4.27              |
+| KOMPETENCER | 16.67             |
+| GNEHM       | 0.02              |
+
+Table 6: Proportion of entities that are conjoined skills in each dataset, obtained by performing syntactic parsing on the sentence.
+
+the grammatical correctness of the input sentence, to which LLMs are extremely sensitive. In cases where the original sentence has an error, the LLM is attempting to correct it while solving the task. Consequently, when performing the evaluation, the generation from the model cannot be exactly matched with the original sentence.
+
+## 6 Conclusion
+
+In this paper, we benchmark and uniformize existing datasets for SE in job postings. We conduct in-depth experiments and error analysis to evaluate the ability of LLMs to solve the task, notably implementing two prompting strategies to adapt LLMs for the task and a dedicated feedback loop. In line with concurrent work (Han et al., 2023), LLMs achieve limited performance for skill extraction relative to supervised methods. Moreover, we highlight the limitations of the current SE task formulation and evaluation, focusing on the adaptation of the NER sequence labeling task, to the token generation task with which LLMs are pre-trained.
+
+In particular, we list the causes of the most frequent errors in SE with GPT-3.5. In the absence of training data, LLMs struggle to understand what skills are and often extract irrelevant information. Additionally, GPT-3.5 tends to split conjoined skills into two, leading to less accurate but more granular skill extractions. In a real-world setting, in particular when SE is used as a preliminary step for skill classification in a taxonomy (e.g. ESCO, le Vrang et al., 2014), this behavior would be highly beneficial.
+
+## 7 Limitations
+
+Several limitations to this study should be considered.
+
+**Language.** Despite our attempt to include as many datasets as possible, we are still limited in terms of language, as we include only four relatively high-resource languages: English, German, French, and Danish. This limits the generalizability of our findings to other languages, both in terms of the performance of LLMs and broader conclusions on the SE task.
+
+**Closed-source Models.** Our analysis is done exclusively using closed-source models, gpt-3.5-turbo and gpt-4. We have little information on the data, architecture, and training processes of these models, which heavily limits our ability to interpret and justify their performance. Similarly, these models are updated regularly, limiting the reproducibility of these results.
+
+**Bias.** Pre-trained language models suffer from the bias present in their training data and reflect it in their predictions. While state-of-the-art supervised models for SE are also pre-trained models (e.g. ESCOXML-R (Zhang et al., 2023), fine-tuned from XLM-R), fine-tuning them on a high-quality, bias-controlled dataset for SE can mitigate the inherent bias present in the pre-training data (Wang and Russakovsky, 2023). Controlling the bias this way in LLMs such as GPT-3.5, when used in an in-context learning setting, is not an option and remains a challenging problem (Gallegos et al., 2023). Biased models, when implemented in the job market domain, can have serious downstream consequences on the hiring process of candidates, particularly with respect to under-represented communities.
+
+## Acknowledgements
+
+We thank Jibril Frej (EPFL) for fruitful discussions and feedback on the first version of the paper. MZ is supported by the Independent Research Fund Denmark (DFF) grant 9131-00019B and in parts by ERC Consolidator Grant DIALECT 101043235. We also gratefully acknowledge the support of the Swiss National Science Foundation (No. 215390), Innosuisse (PFFS-21-29), the EPFL Science Seed Fund, the EPFL Center for Imaging, Sony Group Corporation, and the Allen Institute for AI.
+
+## References
+
+Ziqiao Ao, Gergely Horváth, Chunyuan Sheng, Yifan Song, and Yutong Sun. 2023. [Skill requirements in job advertisements: A comparison of skill-categorization methods based on wage regressions](#).
+
+sions. *Information Processing & Management*, 60(2):103185.
+
+Dhananjay Ashok and Zachary C. Lipton. 2023. [Promptner: Prompting for named entity recognition](#). *CoRR*, abs/2305.15444.
+
+David Beauchemin, Julien Laumonier, Yvan Le Ster, and Marouane Yassine. 2022. “FIJO”: a French Insurance Soft Skill Detection Dataset. *Proceedings of the Canadian Conference on Artificial Intelligence*. <https://caiac.pubpub.org/pub/72bhum6>.
+
+Akshay Bhola, Kishaloy Halder, Animesh Prasad, and Min-Yen Kan. 2020. [Retrieving skills from job descriptions: A language model based extreme multi-label classification framework](#). In *Proceedings of the 28th International Conference on Computational Linguistics*, pages 5832–5842, Barcelona, Spain (Online). International Committee on Computational Linguistics.
+
+Marlis Buchmann, Helen Buchs, Felix Busch, Simon Clematide, Ann-Sophie Gnehm, and Jan Müller. 2022. Swiss job market monitor: A rich source of demand-side micro data of the labour market. *European Sociological Review*.
+
+Mariia Chernova. 2020. [Occupational skills extraction with FinBERT](#). *Master’s Thesis*.
+
+Alexis Conneau, Kartikay Khandelwal, Naman Goyal, Vishrav Chaudhary, Guillaume Wenzek, Francisco Guzmán, Edouard Grave, Myle Ott, Luke Zettlemoyer, and Veselin Stoyanov. 2020. [Unsupervised cross-lingual representation learning at scale](#). In *Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics*, pages 8440–8451, Online. Association for Computational Linguistics.
+
+Silvia Fareri, Nicola Melluso, Filippo Chiarello, and Gualtiero Fantoni. 2021. [Skillner: Mining and mapping soft skills from any text](#). *Expert Systems with Applications*, 184:115544.
+
+Isabel O Gallegos, Ryan A Rossi, Joe Barrow, Md Mehrab Tanjim, Sungchul Kim, Franck Dernoncourt, Tong Yu, Ruiyi Zhang, and Nesreen K Ahmed. 2023. Bias and fairness in large language models: A survey. *arXiv preprint arXiv:2309.00770*.
+
+Ann-sophie Gnehm, Eva Bühlmann, Helen Buchs, and Simon Clematide. 2022a. [Fine-grained extraction and classification of skill requirements in German-speaking job ads](#). In *Proceedings of the Fifth Workshop on Natural Language Processing and Computational Social Science (NLP+CSS)*, pages 14–24, Abu Dhabi, UAE. Association for Computational Linguistics.
+
+Ann-Sophie Gnehm, Eva Bühlmann, and Simon Clematide. 2022b. [Evaluation of transfer learning and domain adaptation for analyzing german-speaking job advertisements](#). In *Proceedings of the Language Resources and Evaluation Conference*, pages 3892–3901, Marseille, France. European Language Resources Association.
+
+Ann-Sophie Gnehm and Simon Clematide. 2020. [Text zoning and classification for job advertisements in German, French and English](#). In *Proceedings of the Fourth Workshop on Natural Language Processing and Computational Social Science*, pages 83–93, Online. Association for Computational Linguistics.
+
+Nidhi Goyal, Jushaana Kalra, Charu Sharma, Raghava Mutharaju, Niharika Sachdeva, and Ponnuarangam Kumaraguru. 2023. [JobXMLC: EXTreme multi-label classification of job skills with graph neural networks](#). In *Findings of the Association for Computational Linguistics: EACL 2023*, pages 2181–2191, Dubrovnik, Croatia. Association for Computational Linguistics.
+
+Thomas Green, Diana Maynard, and Chenghua Lin. 2022. [Development of a benchmark corpus to support entity recognition in job descriptions](#). In *Proceedings of the Thirteenth Language Resources and Evaluation Conference*, pages 1201–1208, Marseille, France. European Language Resources Association.
+
+Akshay Gugnani and Hemant Misra. 2020. [Implicit skills extraction using document embedding and its use in job recommendation](#). In *The Thirty-Fourth AAAI Conference on Artificial Intelligence, AAAI 2020, The Thirty-Second Innovative Applications of Artificial Intelligence Conference, IAAI 2020, The Tenth AAAI Symposium on Educational Advances in Artificial Intelligence, EAAI 2020, New York, NY, USA, February 7-12, 2020*, pages 13286–13293. AAAI Press.
+
+Ridong Han, Tao Peng, Chaohao Yang, Benyou Wang, Lu Liu, and Xiang Wan. 2023. Is information extraction solved by chatgpt? an analysis of performance, evaluation criteria, robustness and errors. *arXiv preprint arXiv:2305.14450*.
+
+Bernal Jimenez Gutierrez, Nikolas McNeal, Clayton Washington, You Chen, Lang Li, Huan Sun, and Yu Su. 2022. [Thinking about GPT-3 in-context learning for biomedical IE? think again](#). In *Findings of the Association for Computational Linguistics: EMNLP 2022*, pages 4497–4512, Abu Dhabi, United Arab Emirates. Association for Computational Linguistics.
+
+Imane Khaouja, Ghita Mezzour, and Ismail Kassou. 2021. [Unsupervised skill identification from job ads](#). In *2021 IEEE 22nd International Conference on Information Reuse and Integration for Data Science (IRI)*, pages 147–151. IEEE.
+
+Ilkka Kivimäki, Alexander Panchenko, Adrien Dessy, Dries Verdegem, Pascal Francq, Hugues Bersini, and Marco Saerens. 2013. [A graph-based approach to skill extraction from text](#). In *Proceedings of TextGraphs-8 Graph-based Methods for Natural Language Processing*, pages 79–87, Seattle, Washington, USA. Association for Computational Linguistics.
+
+Ioannis Konstantinidis, Manolis Maragoudakis, Ioannis Magnisalis, Christos Berberidis, and Vassilios Peristeras. 2022. [Knowledge-driven unsupervised skills extraction for graph-based talent matching](#). In *Proceedings of the 12th Hellenic Conference on Artificial Intelligence*, pages 1–7.
+
+Martin le Vrang, Agis Papantoniu, Erika Pauwels, Pieter Fannes, Dominique Vandesteene, and Johan De Smedt. 2014. Esco: Boosting job matching in europe with semantic interoperability. *Computer*, 47(10):57–64.
+
+Jiachang Liu, Dinghan Shen, Yizhe Zhang, Bill Dolan, Lawrence Carin, and Weizhu Chen. 2022. [What makes good in-context examples for GPT-3?](#) In *Proceedings of Deep Learning Inside Out (DeeLIO 2022): The 3rd Workshop on Knowledge Extraction and Integration for Deep Learning Architectures*, pages 100–114, Dublin, Ireland and Online. Association for Computational Linguistics.
+
+Yubo Ma, Yixin Cao, YongChing Hong, and Aixin Sun. 2023. Large language model is not a good few-shot information extractor, but a good reranker for hard samples! *arXiv preprint arXiv:2303.08559*.
+
+OpenAI. 2023. [GPT-4 technical report](#). *CoRR*, abs/2303.08774.
+
+Luiza Sayfullina, Eric Malmi, and Juho Kannala. 2018. [Learning representations for soft skill matching](#). In *International Conference on Analysis of Images, Social Networks and Texts*, pages 141–152.
+
+Baohu Shi, Jaewon Yang, Feng Guo, and Qi He. 2020. [Salience and market-aware skill extraction for job targeting](#). In *KDD '20: The 26th ACM SIGKDD Conference on Knowledge Discovery and Data Mining, Virtual Event, CA, USA, August 23-27, 2020*, pages 2871–2879, ACM.
+
+Ellery Smith, Martin Braschler, Andreas Weiler, and Thomas Haberthuer. 2019. [Syntax-based skill extractor for job advertisements](#). In *2019 6th Swiss Conference on Data Science (SDS)*, pages 80–81. IEEE.
+
+Andrei Ternikov. 2022. Soft and hard skills identification: insights from it job advertisements in the cis region. *PeerJ Computer Science*, 8:e946.
+
+Hugo Touvron, Louis Martin, Kevin Stone, Peter Albert, Amjad Almahairi, Yasmine Babaei, Nikolay Bashlykov, Soumya Batra, Prajwal Bhargava, Shruti Bhosale, Dan Bikel, Lukas Blecher, Cristian Canton-Ferrer, Moya Chen, Guillel Cucurull, David Esioib, Jude Fernandes, Jeremy Fu, Wenyin Fu, Brian Fuller, Cynthia Gao, Vedanuj Goswami, Naman Goyal, Anthony Hartshorn, Saghar Hosseini, Rui Hou, Hakan Inan, Marcin Kardas, Viktor Kerkez, Madian Khabsa, Isabel Kloumann, Artem Korenev, Punit Singh Koura, Marie-Anne Lachaux, Thibaut Lavril, Jenya Lee, Diana Liskovich, Yinghai Lu, Yuning Mao, Xavier Martinet, Todor Mihaylov, Pushkar Mishra, Igor Molybog, Yixin Nie, Andrew Poulton, Jeremy Reizenstein, Rashi Runge, Kalyan Saladi, Alan Schelten, Ruan Silva, Eric Michael Smith, Ranjan Subramanian, Xiaoging Ellen Tan, Binh Tang, Ross Taylor, Adina Williams, Jian Xiang Kuan, Puxin Xu, Zheng Yan, Iliyan Zarov, Yuchen Zhang, Angela Fan, Melanie Kambadur, Sharan Narang, Aurélien Rodríguez, Robert Stojnic, Sergey Edunov, and Thomas Scialom. 2023. [Llama 2: Open foundation and fine-tuned chat models](#). *CoRR*, abs/2307.09288.
+
+Angelina Wang and Olga Russakovsky. 2023. Overcoming bias in pretrained models by manipulating the finetuning dataset. *arXiv preprint arXiv:2303.06167*.
+
+Shuhe Wang, Xiaofei Sun, Xiaoya Li, Rongbin Ouyang, Fei Wu, Tianwei Zhang, Jiwei Li, and Guoyin Wang. 2023a. Gpt-ner: Named entity recognition via large language models. *arXiv preprint arXiv:2304.10428*.
+
+Shuhe Wang, Xiaofei Sun, Xiaoya Li, Rongbin Ouyang, Fei Wu, Tianwei Zhang, Jiwei Li, and Guoyin Wang. 2023b. [GPT-NER: named entity recognition via large language models](#). *CoRR*, abs/2304.10428.
+
+Xinyi Wang, Wanrong Zhu, and William Yang Wang. 2023c. Large language models are implicitly topic models: Explaining and finding good demonstrations for in-context learning. *arXiv preprint arXiv:2301.11916*.
+
+Mike Zhang, Kristian Jensen, Sif Sonniks, and Barbara Plank. 2022a. [SkillSpan: Hard and soft skill extraction from English job postings](#). In *Proceedings of the 2022 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies*, pages 4962–4984, Seattle, United States. Association for Computational Linguistics.
+
+Mike Zhang, Kristian Nørgaard Jensen, and Barbara Plank. 2022b. [Kompetencer: Fine-grained skill classification in Danish job postings via distant supervision and transfer learning](#). In *Proceedings of the Thirteenth Language Resources and Evaluation Conference*, pages 436–447, Marseille, France. European Language Resources Association.
+
+Mike Zhang, Kristian Nørgaard Jensen, Rob van der Goot, and Barbara Plank. 2022c. [Skill extraction from job postings using weak supervision](#). In *Proceedings of RecSys in HR'22: The 2nd Workshop on Recommender Systems for Human Resources, in conjunction with the 16th ACM Conference on Recommender Systems*.
+
+Mike Zhang, Rob van der Goot, and Barbara Plank. 2023. [ESCOXLM-R: Multilingual taxonomy-driven pre-training for the job market domain](#). In *Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)*, pages 11871–11890, Toronto, Canada. Association for Computational Linguistics.
+
+Meng Zhao, Faizan Javed, Ferosh Jacob, and Matt McNair. 2015. [SKILL: A system for skill identification](#)
+
+and normalization. In *Proceedings of the Twenty-Ninth AAAI Conference on Artificial Intelligence*, January 25-30, 2015, Austin, Texas, USA, pages 4012–4018. AAAI Press.
+
+Wenxuan Zhou, Sheng Zhang, Yu Gu, Muhao Chen, and Hoifung Poon. 2023. Universalner: Targeted distillation from large language models for open named entity recognition. *arXiv preprint arXiv:2308.03279*.
+
+## A Additional Analysis
+
+**Main Results** In addition to the F1 score, we also provide detailed results including the precision and recall for each prompting strategy, for both STRICT and RELAX metrics. Results are in Table 7.
+
+![Figure 3: Two line graphs showing F1 Score vs Number of Shots (0, 1, 2, 3, 5, 10, 15) for datasets Fijo, kompetencer, gnehm, green, skillspan, and sayfullina. The top graph shows 'extract' results, and the bottom graph shows 'ner' results. Generally, F1 scores increase with the number of shots, with some datasets like gnehm and green showing higher performance at 1 shot.](252ea48d02dce93965b91746fb376f35_img.jpg)
+
+Figure 3: Two line graphs showing F1 Score vs Number of Shots (0, 1, 2, 3, 5, 10, 15) for datasets Fijo, kompetencer, gnehm, green, skillspan, and sayfullina. The top graph shows 'extract' results, and the bottom graph shows 'ner' results. Generally, F1 scores increase with the number of shots, with some datasets like gnehm and green showing higher performance at 1 shot.
+
+Figure 3: F1 performances of EXTRACT-STYLE and NER-STYLE on the full dataset of Fijo, KOMPETENCER, GREEN, and subset of 350 samples from GNEHM, SKILLSPAN, and SAYFULLINA. We recorded the experiments using  $k = \{0, 1, 2, 3, 5, 10, 15\}$  shots. Demonstrations are retrieved randomly.
+
+**Impact of the number of demonstrations** We conducted experiments to examine the impacts of the number of demonstrations  $k$  on the extraction results. Experiments are done on the full test set of Fijo, KOMPETENCER, GREEN, and a subset of 350 test samples for the other datasets to avoid an overhead in experimental cost. The result are recorded in Figure 4. Surprisingly, unlike the regarded knowledge that more demonstrations lead to better predictive capabilities, we only observed
+
+![Figure 4: Two bar charts showing the percentage of samples in which LLM failed to extract entities after 3 re-tries. The top chart is for 'Extraction' and the bottom for 'NER'. The x-axis lists datasets: fijo, kompetencer, gnehm, green, skillspan, and sayfullina. The y-axis is 'Failed extraction (%)'. The legend indicates four categories: zero-shot+specific (blue), >shots (orange), +knn (green), and +knn+specific (red). Zero-shot+specific consistently shows the highest failure rate, especially for fijo and green.](6279fafb3a874e174648eb907385c954_img.jpg)
+
+Figure 4: Two bar charts showing the percentage of samples in which LLM failed to extract entities after 3 re-tries. The top chart is for 'Extraction' and the bottom for 'NER'. The x-axis lists datasets: fijo, kompetencer, gnehm, green, skillspan, and sayfullina. The y-axis is 'Failed extraction (%)'. The legend indicates four categories: zero-shot+specific (blue), >shots (orange), +knn (green), and +knn+specific (red). Zero-shot+specific consistently shows the highest failure rate, especially for fijo and green.
+
+Figure 4: Percentage of samples in which LLM failed to extract entities after 3 re-tries. The zero-shot setting gave the most number of failures.
+
+incremental performances for the first few demonstrations. After  $k = 3$ , we found that adding demonstrations did not guarantee better extraction results. Even for smaller  $k$ , certain datasets such as GNEHM also exhibited irregular performance patterns. We also found that increases are more stable for NER-STYLE approach, partially due to the highly structured and specific output format it requires.
+
+Note that in our experiments,  $k = i$  means that there are  $i$  positive and  $i$  negative examples in the demonstrations.
+
+**Failure cases** Further breakdown of failure cases for each dataset can be found in Figure 4. In general, we found that the failure rates highly vary between datasets.
+
+**Impact of negative demonstrations** Table 8 compares providing 10 positive examples as demonstrations with mixing 5 positive and 5 negative demonstrations. Experiments are done in a subset of  $\le 350$  test samples with 5 shots.
+
+For EXTRACT-STYLE prompting, providing positive-only demonstrations improves the F1 score for all datasets. Besides, positive-only context does not affect the frequency to which LLM predicts an example as negative (have **None** entities). On the other hand, the results vary for NER-STYLE. Notably, for this strategy, using positive-only demonstrations significantly abstains LLM from making negative predictions, with an average decrease of **None** samples of 44.9% and 29.1% for 3-shot and 5-shot, respectively. By allowing **None** predictions, a mixture of positives and negatives increases
+
+|                    | F1JO |      | GNEHM |      | KOMPETENCER |      | GREEN |      | SKILLSPAN |      | SAYFULLINA |      | AVG  |      |      |
+|--------------------|------|------|-------|------|-------------|------|-------|------|-----------|------|------------|------|------|------|------|
+| STRICT             | P    | R    | P     | R    | P           | R    | P     | R    | P         | R    | P          | R    | P    | R    | F1   |
+| SUPERVISED         | —    | —    | 42.0  | —    | 88.4        | —    | 49.8  | —    | 51.2      | —    | 62.6       | —    | 92.2 | 64.4 |      |
+| EXTRACT-STYLE      |      |      |       |      |             |      |       |      |           |      |            |      |      |      |      |
+| zero-shot-specific | 0.0  | 0.0  | 0.0   | 60.8 | 12.7        | 21.0 | 16.7  | 15.2 | 15.9      | 17.9 | 2.5        | 4.4  | 9.4  | 4.9  | 6.5  |
+| 5-shot             | 29.8 | 27.6 | 28.7  | 18.3 | 55.1        | 27.5 | 14.8  | 40.0 | 21.6      | 26.3 | 22.5       | 24.2 | 18.6 | 38.2 | 25.0 |
+| +EN                | 35.3 | 33.3 | 34.3  | 19.0 | 61.8        | 29.0 | 16.2  | 36.2 | 22.4      | 29.0 | 29.0       | 29.0 | 15.0 | 34.6 | 20.9 |
+| +EN+W-specific     | 36.4 | 35.0 | 35.7  | 29.6 | 64.3        | 40.5 | 15.4  | 32.4 | 20.9      | 28.0 | 28.7       | 28.4 | 14.4 | 34.6 | 20.3 |
+| +EN+W-specific     | 36.4 | 35.0 | 35.7  | 29.6 | 64.3        | 40.5 | 15.4  | 32.4 | 20.9      | 28.0 | 28.7       | 28.4 | 14.4 | 34.6 | 20.3 |
+| NER-STYLE          |      |      |       |      |             |      |       |      |           |      |            |      |      |      |      |
+| zero-shot-specific | 22.2 | 1.6  | 3.0   | 12.7 | 5.2         | 5.4  | 2.2   | 1.2  | 1.6       | 2.9  | 0.4        | 0.7  | 2.5  | 2.1  | 2.3  |
+| 5-shot             | 35.6 | 31.3 | 33.3  | 23.8 | 54.3        | 33.1 | 14.8  | 32.5 | 20.4      | 30.6 | 27.0       | 28.7 | 11.8 | 36.3 | 17.8 |
+| +EN                | 36.0 | 37.4 | 36.7  | 21.6 | 63.8        | 32.3 | 10.3  | 30.0 | 15.3      | 31.0 | 33.0       | 32.0 | 10.4 | 30.2 | 15.5 |
+| +EN+W-specific     | 43.7 | 44.7 | 44.2  | 29.9 | 64.8        | 40.9 | 11.2  | 29.2 | 16.1      | 30.8 | 32.8       | 31.8 | 9.1  | 26.6 | 13.7 |
+| +EN+W-specific     | 43.7 | 44.7 | 44.2  | 29.9 | 64.8        | 40.9 | 11.2  | 29.2 | 16.1      | 30.8 | 32.8       | 31.8 | 9.1  | 26.6 | 13.7 |
+| GPT-4              |      |      |       |      |             |      |       |      |           |      |            |      |      |      |      |
+| EXTRACT-STYLE      | 40.7 | 35.8 | 38.0  | 52.4 | 66.7        | 58.7 | 19.7  | 35.2 | 25.3      | 31.1 | 30.0       | 30.6 | 20.8 | 41.8 | 27.8 |
+| NER-STYLE          | 50.9 | 45.5 | 48.0  | 69.0 | 66.7        | 67.8 | 19.4  | 33.3 | 24.6      | 34.2 | 20.0       | 21.9 | 20.4 | 34.5 | 25.7 |
+| NER-STYLE          | 50.9 | 45.5 | 48.0  | 69.0 | 66.7        | 67.8 | 19.4  | 33.3 | 24.6      | 34.2 | 20.0       | 21.9 | 20.4 | 34.5 | 25.7 |
+| RELAX              |      |      |       |      |             |      |       |      |           |      |            |      |      |      |      |
+| EXTRACT-STYLE      |      |      |       |      |             |      |       |      |           |      |            |      |      |      |      |
+| 5-shot             | 72.8 | 67.5 | 70.0  | 23.4 | 70.1        | 35.0 | 31.7  | 85.7 | 46.3      | 76.1 | 65.0       | 70.1 | 34.0 | 69.8 | 45.7 |
+| +EN                | 82.8 | 78.0 | 80.3  | 23.2 | 75.7        | 35.6 | 33.2  | 74.3 | 45.9      | 74.0 | 74.0       | 74.0 | 33.1 | 76.8 | 46.2 |
+| +EN+W-specific     | 80.5 | 77.2 | 78.8  | 34.9 | 75.9        | 47.8 | 33.0  | 69.5 | 44.8      | 72.8 | 74.4       | 73.6 | 32.1 | 77.4 | 45.4 |
+| +EN+W-specific     | 80.5 | 77.2 | 78.8  | 34.9 | 75.9        | 47.8 | 33.0  | 69.5 | 44.8      | 72.8 | 74.4       | 73.6 | 32.1 | 77.4 | 45.4 |
+| NER-STYLE          |      |      |       |      |             |      |       |      |           |      |            |      |      |      |      |
+| 5-shot             | 61.4 | 53.9 | 57.4  | 28.0 | 63.9        | 28.9 | 26.9  | 59.0 | 37.0      | 68.4 | 60.3       | 64.1 | 21.6 | 66.6 | 32.6 |
+| +EN                | 80.5 | 83.7 | 82.0  | 25.4 | 74.8        | 37.9 | 22.3  | 65.0 | 33.2      | 62.7 | 66.8       | 64.7 | 20.1 | 58.5 | 29.9 |
+| +EN+W-specific     | 79.4 | 81.3 | 80.3  | 35.2 | 76.3        | 48.2 | 33.0  | 69.6 | 44.8      | 64.0 | 68.1       | 66.0 | 18.6 | 53.9 | 27.6 |
+| +EN+W-specific     | 79.4 | 81.3 | 80.3  | 35.2 | 76.3        | 48.2 | 33.0  | 69.6 | 44.8      | 64.0 | 68.1       | 66.0 | 18.6 | 53.9 | 27.6 |
+
+Table 7: Results of Experiments. The metrics are Precision (P), Recall (R) and span-F1 (F1). \*For GPT-4, the results are based on a subset of  $\le 350$  samples for each dataset.
+
+| DATASET     | EXTRACT-STYLE                           | NER-STYLE                  |
+|-------------|-----------------------------------------|----------------------------|
+| F1JO        | Positive 28.2/6/72<br>Mix 31.2/6/14     | 28.0/3/78<br>29.1/15/77    |
+| KOMPETENCER | Positive 22.9/129/12<br>Mix 20.1/131/11 | 18.2/105/14<br>17.8/133/12 |
+| GNEHM       | Positive 43.4/219/11<br>Mix 42.2/210/6  | 44.8/174/11<br>54.4/215/17 |
+| GREEN       | Positive 34.3/69/21<br>Mix 26.0/62/17   | 35.0/17/10<br>28.9/47/17   |
+| SKILLSPAN   | Positive 31.0/212/3<br>Mix 29.8/245/7   | 17.9/125/5<br>20.3/183/10  |
+| SAYFULLINA  | Positive 52.2/11/72<br>Mix 38.5/11/87   | 38.8/0/36<br>30.3/0/51     |
+| AVG         | Positive 35.3<br>Mix 31.3               | 30.5<br>30.3               |
+
+Table 8: Experiments using positive-only demonstrations vs. a mixture of positive-negative. We report F1 / TN / FN, with TN / FN being the number of true and false negative predictions LLM made (cases where LLM predicted there were no entities).
+
+the TN performances for NER-STYLE, while only slightly increasing the number of FN. This phenomenon, perhaps, is due to the fact the instruction from EXTRACT-STYLE is obvious and straightforward, from which the LLM can infer the ability to label **None** directly. Therefore, providing LLM with more positive examples solidifies the semantic understanding of the skills extraction task the LLM is solving. Meanwhile, NER-STYLE is very specific in its output and therefore the LLM tends
+
+to over-generalize the positive-only NER-format sentences it learns from the in-context demonstrations. Besides, mix demonstrations also results in comparable number of **None** predictions for both EXTRACT-STYLE and NER-STYLE, thus we utilized this approach for our experiments.
+
+## B Specific Prompts used for each dataset
+
+The instructions we use for prompting LLMs for each dataset are in Table 9.
+
+## C Mismatches types and examples
+
+We provide some examples of common mismatches from skipping/extra spaces and punctuation insertion, as well as examples where the mismatches are based on the pre-trained knowledge of LLMs that can not be modified even with explicit feedback prompt guidance.
+
+**Successful sample with minor edits.** Minor sentence construction (with regards to punctuations, spaces, and simple grammar errors) that was addressed and fixed by LLMs. Here are a few examples.
+
+### Spaces and punctuations:
+
+*Original:* Test Consultant / Automation Test Analyst will ideally be confident with Selenium and good experience of web based testing , HTML and JavaScript .
+
+| Dataset            |               | Prompt                                                                                                                                                                                                                                                                                                                    |
+|--------------------|---------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| <b>FIJO</b>        | SYSTEM        | You are an expert human resource manager in the insurance industry in France. You need to analyse skills required in job offers.                                                                                                                                                                                          |
+|                    | EXTRACT-STYLE | You are given a sentence from an insurance job description in French. Extract all the skills and competencies that are required from the candidate as list, with one skill per line. If no skill is found in the sentence, return "None".                                                                                 |
+|                    | NER-STYLE     | You are given a sentence from an insurance job description in French. Highlight all the skills and competencies that are required from the candidate, by surrounding them with tags '@@' and '##'. If there are no such element in the sentence, replicate the sentence identically.                                      |
+| <b>KOMPETENCER</b> | SYSTEM        | You are an expert human resource manager. You need to analyse skills required in job offers.                                                                                                                                                                                                                              |
+|                    | EXTRACT-STYLE | You are given a sentence from a job description in Danish. Extract all the skills, knowledges, and competencies that are required from the candidate as list, with one skill per line. If no skill is found in the sentence, return "None".                                                                               |
+|                    | NER-STYLE     | You are given a sentence from a job description in Danish. Highlight all the skills, knowledges, and competencies that are required from the candidate, by surrounding them with tags '@@' and '##'. If there are no such element in the sentence, replicate the sentence identically.                                    |
+| <b>GNEHM</b>       | SYSTEM        | You are an expert human resource manager in information and communication technology (ICT) from Germany. You need to analyse skills required in German job offers.                                                                                                                                                        |
+|                    | EXTRACT-STYLE | You are given a sentence from a job advertisement in German. Extract all the IT/Technology skills and competencies that are required from the candidate as list, with one skill per line. If no skill is found in the sentence, return "None".                                                                            |
+|                    | NER-STYLE     | You are given an extract from a job advertisement in German. Highlight all the IT/Technology skills and competencies that are required from the candidate, by surrounding them with tags '@@' and '##'. If there are no such element in the sentence, replicate the sentence identically.                                 |
+| <b>GREEN</b>       | SYSTEM        | You are an expert human resource manager. You need to analyse skills required in job offers.                                                                                                                                                                                                                              |
+|                    | EXTRACT-STYLE | You are given a sentence from a job description in various fields like IT, finance, healthcare, and sales. Extract all the skills and competencies that are required from the candidate as list, with one skill per line. If no skill is found in the sentence, return "None".                                            |
+|                    | NER-STYLE     | You are given a sentence from a job description in various fields like IT, finance, healthcare, and sales. Highlight all the skills and competencies that are required from the candidate, by surrounding them with tags '@@' and '##'. If there are no such element in the sentence, replicate the sentence identically. |
+| <b>SKILLSPAN</b>   | SYSTEM        | You are an expert human resource manager. You need to analyse skills required in job offers.                                                                                                                                                                                                                              |
+|                    | EXTRACT-STYLE | You are given a sentence from a job posting. Extract all the skills, knowledges, and competencies that are required from the candidate as list, with one skill per line. If no skill is found in the sentence, return "None".                                                                                             |
+|                    | NER-STYLE     | You are given a sentence from a job posting. Highlight all the skills, knowledges, and competencies that are required from the candidate, by surrounding them with tags '@@' and '##'. If there are no such element in the sentence, replicate the sentence identically.                                                  |
+| <b>SAYFULLINA</b>  | SYSTEM        | You are an expert human resource manager. You need to detect and analyse soft skills required in job offers.                                                                                                                                                                                                              |
+|                    | EXTRACT-STYLE | You are given a sentence from a job advertisement. Extract all the soft skills and competencies that are required from the candidate as list, with one skill per line. If no skill is found in the sentence, return "None".                                                                                               |
+|                    | NER-STYLE     | You are given a sentence from a job advertisement. Highlight all the soft skills and competencies that are required from the candidate, by surrounding them with tags '@@' and '##'. If there are no such element in the sentence, replicate the sentence identically.                                                    |
+
+Table 9: Full *data-specific* prompts for each dataset.
+
+**Generation:** @@Test Consultant/Automation Test Analyst## will ideally be confident with @@Selenium## and good experience of @@web based testing##, @@HTML## and @@JavaScript##.
+
+### **Fixable grammar and vocabulary mistakes:**
+
+**Original:** Sevenoaks , Kent Support Engineer with strong knowledge of Windows and Linux architecture is required by an expanding company based in Sevenoaks to support clients throughout London and Kent .
+
+**Generation:** @@Support Engineer@@ with @@strong knowledge## of @@Windows## and
+
+@@Linux architecture## is required by an expanding company based in Sevenoaks to support clients throughout London and Kent .
+
+**Fixed:** Sevenoaks , Kent Support Engineer with strong knowledge of @@Windows## and @@Linux architecture## is required by an expanding company based in Sevenoaks to support clients throughout London and Kent .
+
+**Failed sample due to common grammar knowledge.** LLMs failed to output the exact original sentence because they tend to "over fix" commonly known grammar mistakes. For example, LLMs cannot adhere to the original sentence in the following
+
+input, which lacks "To" in "To be considered", even after 3 rounds of feedback loops.
+
+*Original:* be considered for the General Manager post you will have at least 2years management experience within the health and fitness industry ideally as a General Manager .
+
+*Generation:* To be considered for the @@General Manager## post you will have at least 2years management experience within the @@health and fitness industry## ideally as a @@General Manager## .
+
+## D Qualitative Analysis
+
+We provide examples from datasets GREEN, SKILLSPAN, SAYFULLINA, and FIJO that we believe are more representative of the 60 examples we examined for qualitative analysis in Table 10. We note that this study is highly subjective and does not conform to any specific definition of error categories.
+
+| Error Type                     | Dataset Name | Sentence                                                                                                                                                                                                                                                                                                    | Labels                                                                                                                               | EXTRACT-STYLE                                                                                                                            | NER-STYLE                                                                                                                                                                                                                                                                                                                     |
+|--------------------------------|--------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Skill definition mis-alignment | SAYFULLINA   | creative and confident when it come to meeting deadlines this could be the                                                                                                                                                                                                                                  | meeting deadlines                                                                                                                    | creative, confident                                                                                                                      | creative and confident when it come to meeting deadlines this could be the                                                                                                                                                                                                                                                    |
+| Skill definition mis-alignment | SKILLSPAN    | Design and build front-end / BI layer of our data and analytics solutions - Power BI reports DAX queries Azure Analysis Services models                                                                                                                                                                     | Design and build front-end / BI layer                                                                                                | Design and build front-end / BI layer of our data and analytics solutions, Power BI reports, DAX queries, Azure Analysis Services models | Design and build front-end / BI layer of our data and analytics solutions - Power BI reports DAX queries Azure Analysis Services models                                                                                                                                                                                       |
+| Skill definition mis-alignment | SAYFULLINA   | focus , well organize with excellent communication and organizational skills                                                                                                                                                                                                                                | organizational skills                                                                                                                | focus, organizational skills                                                                                                             | focus , well organize with excellent @communication@ and @organizational@ skills                                                                                                                                                                                                                                              |
+| Conjoined skill                | SKILLSPAN    | Optimize and manage existing reward and benefits programmes and processes to support the business priorities and ensure local compliance.                                                                                                                                                                   | Optimize and manage existing reward and benefits programmes and processes, support the business priorities, ensure local compliance. | optimize reward and benefits programmes, manage reward and benefits processes, support business priorities, ensure local compliance.     | @Optimize and manage existing reward and benefits programmes and processes@# to @support the business priorities@# and @ensure local compliance@#.                                                                                                                                                                            |
+| Conjoined skill                | GREEN        | leading manufacturing business who supply luxury products to the Retail and Leisure industries are looking to recruit a talented Supply Chain Manager to manage operations , production , warehousing , delivery , reporting and to develop best practice Supply Chain procedures within the organisation . | delivery, develop best practice Supply Chain procedures, warehousing, manage operations, reporting, production                       | Supply Chain Manager, operations, production, warehousing, delivery, reporting, develop best practice Supply Chain procedures            | leading manufacturing business who supply luxury products to the Retail and Leisure industries are looking to recruit a talented Supply Chain Manager to @manage operations@# , @production@# , @warehousing@# , @delivery@# , @reporting@# and to @develop best practice Supply Chain procedures@# within the organisation . |
+| Extended Span                  | GREEN        | Frank International is the leading Microsoft Dynamics recruitment firm in the UK , advertising more Dynamics CRM jobs than any other agency .                                                                                                                                                               | Microsoft Dynamics, Dynamics CRM                                                                                                     | Microsoft Dynamics, CRM jobs                                                                                                             | Frank International is the leading @Microsoft Dynamics recruitment firm@# in the UK , advertising more @Dynamics CRM jobs@# than any other agency .                                                                                                                                                                           |
+| Extended Span                  | GREEN        | to degree level ideally in business strong relationship builder organise and analytical polish                                                                                                                                                                                                              | relationship builder                                                                                                                 | strong relationship builder, organise, analytical                                                                                        | to degree level ideally in business @strong relationship builder@# organise and analytical polish                                                                                                                                                                                                                             |
+| Wrong annotations              | GREEN        | will still be part of an office team with all the community and collective achievement that goes with that . This                                                                                                                                                                                           | be part of an office team                                                                                                            | None                                                                                                                                     | will still be part of an office team with all the @community@# and @collective achievement@# that goes with that . This                                                                                                                                                                                                       |
+| Wrong annotations              | SAYFULLINA   | any offer be subject to rigorous reference , criminal and credit check                                                                                                                                                                                                                                      | rigorous                                                                                                                             | rigorous reference, credit check                                                                                                         | any offer be subject to rigorous @reference@# , @criminal@# and @credit check@#                                                                                                                                                                                                                                               |
+| Wrong extraction               | SKILLSPAN    | You will be a part of a small team of 4 people in the division who closely cooperate with our <LOCATION> <LOCATION> office in the development process .                                                                                                                                                     |                                                                                                                                      | cooperate with our <LOCATION> <LOCATION> office                                                                                          | You will be a part of a small team of 4 people in the division who closely cooperate with our @<LOCATION> <LOCATION> office@# in the development process .                                                                                                                                                                    |
+| Wrong extraction               | SAYFULLINA   | be willing to travel solo internationally infrequently have                                                                                                                                                                                                                                                 | willing to travel                                                                                                                    | None                                                                                                                                     | be willing to travel solo internationally infrequently @have@#                                                                                                                                                                                                                                                                |
+
+Table 10: Qualitative examples failed extractions for each category. LLM sometimes cannot conform to the strict NER-output requirements, even though its extraction makes sense.
+
+| Prompt  | Dataset     | Span Length Difference | Number of Skills Difference |
+|---------|-------------|------------------------|-----------------------------|
+| NER     | GREEN       | 2.15                   | -0.03                       |
+|         | SKILLSPAN   | 2.32                   | -0.49                       |
+|         | FIJO        | -2.25                  | -0.06                       |
+|         | SAYFULLINA  | 3.54                   | -0.56                       |
+|         | KOMPETENCER | 3.12                   | -0.49                       |
+|         | GNEHM       | 3.72                   | -0.36                       |
+| NER     | avg         | 2.10                   | -0.33                       |
+| EXTRACT | green       | 1.28                   | -0.04                       |
+|         | SKILLSPAN   | 1.31                   | -0.43                       |
+|         | FIJO        | -2.81                  | 0.10                        |
+|         | SAYFULLINA  | 3.32                   | -0.64                       |
+|         | KOMPETENCER | 2.03                   | -0.44                       |
+|         | GNEHM       | 3.64                   | -0.41                       |
+| EXTRACT | avg         | 1.46                   | -0.31                       |
+
+Table 11: Difference between skills extracted by GPT-3.5 and gold annotations, for each dataset and prompting strategy. We use kNN-5-shots with dataset-specific prompts.

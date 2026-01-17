@@ -1,0 +1,365 @@
+
+
+# A Decade of Knowledge Graphs in Natural Language Processing: A Survey
+
+Phillip Schneider<sup>1</sup>, Tim Schopf<sup>1</sup>, Juraj Vladika<sup>1</sup>, Mikhail Galkin<sup>2</sup> <sup>2</sup>Mila Quebec AI Institute & McGill University, School of Computer Science, Canada,  
+Elena Simperl<sup>3</sup> <sup>3</sup>King's College London, Department of Informatics, United Kingdom and Florian Matthes<sup>1</sup> <sup>1</sup>Technical University of Munich, Department of Computer Science, Germany
+
+
+
+
+{phillip.schneider, tim.schopf, juraj.vladika, matthes}@tum.de  
+mikhail.galkin@mila.quebec  
+elena.simperl@kcl.ac.uk
+
+## Abstract
+
+In pace with developments in the research field of artificial intelligence, knowledge graphs (KGs) have attracted a surge of interest from both academia and industry. As a representation of semantic relations between entities, KGs have proven to be particularly relevant for natural language processing (NLP), experiencing a rapid spread and wide adoption within recent years. Given the increasing amount of research work in this area, several KG-related approaches have been surveyed in the NLP research community. However, a comprehensive study that categorizes established topics and reviews the maturity of individual research streams remains absent to this day. Contributing to closing this gap, we systematically analyzed 507 papers from the literature on KGs in NLP. Our survey encompasses a multifaceted review of tasks, research types, and contributions. As a result, we present a structured overview of the research landscape, provide a taxonomy of tasks, summarize our findings, and highlight directions for future work.
+
+## 1 Introduction
+
+Knowledge acquisition and application are inherent to natural language. Humans use language as a means of communicating facts, arguing about decisions, or questioning beliefs. Therefore, it is not surprising that computational linguists started already in the 1950s and 60s to work out ideas on how to represent knowledge as relations between concepts in semantic networks (Richens, 1956; Quillian, 1963; Collins and Quillian, 1969).
+
+More recently, knowledge graphs (KGs) have emerged as an approach for semantically representing knowledge about real-world entities in a machine-readable format. They originated from research on semantic networks, domain-specific ontologies, as well as linked data, and are thus not an entirely new concept (Hitzler, 2021). Despite
+
+their growing popularity, there is still no general understanding of what exactly a KG is or for what tasks it is applicable. Although prior work has already attempted to define KGs (Pujaar et al., 2013; Ehrlinger and Wöß, 2016; Paulheim, 2017; Färber et al., 2018), the term is not yet used uniformly by researchers. Most studies implicitly adopt a broad definition of KGs, where they are understood as "a graph of data intended to accumulate and convey knowledge of the real world, whose nodes represent entities of interest and whose edges represent relations between these entities" (Hogan et al., 2022).
+
+KGs have attracted a lot of research attention in both academia and industry since the introduction of Google's KG in 2012 (Singhal, 2012). Particularly in natural language processing (NLP) research, the adoption of KGs has become increasingly popular over the past 5 years, and this trend seems to be accelerating. The underlying paradigm is that the combination of structured and unstructured knowledge can benefit all kinds of NLP tasks. For instance, structured knowledge from KGs can be injected into that of the contextual knowledge found in language models, which improves the performance in downstream tasks (Colon-Hernandez et al., 2021). Furthermore, with the growing importance of KGs, there are also expanding efforts to construct new KGs from unstructured texts.
+
+Ten years after Google coined the term knowledge graph in 2012, a plethora of novel approaches has been proposed by scholars. Therefore, it is important to assemble insights, consolidate existing results, and provide a structured overview. However, to our knowledge, there are no studies that offer an overview of the whole research landscape of KGs in the NLP field. Contributing to closing this gap, we performed a comprehensive survey to analyze all research performed in this area by classifying established topics, identifying trends, and outlining areas for future research. Our three main contributions are as follows:
+
+![](81bf7a5187d196cc72844283e3aeec49_img.jpg)
+
+Figure 1 is a flowchart illustrating the Taxonomy of Knowledge Graphs (KGs) in Natural Language Processing (NLP). The overall process is divided into two main categories: Knowledge Acquisition and Knowledge Application.
+
+**Knowledge Acquisition** is further divided into Knowledge Graph Construction and Knowledge Graph Reasoning.
+
+- **Knowledge Graph Construction** includes:
+  - Knowledge Extraction (sub-tasks: Attribute Extraction, Entity Extraction, Relation Extraction)
+  - Knowledge Integration (sub-tasks: Entity Alignment, Entity Linking, Ontology Construction, Relation Linking)
+- **Knowledge Graph Reasoning** includes:
+  - Entity Classification
+  - Error Detection
+  - Knowledge Graph Embedding
+  - Link Prediction
+  - Relation Classification
+  - Triple Classification
+
+**Knowledge Application** includes:
+
+- Natural Language Understanding (sub-tasks: Natural Language Inference, Semantic Parsing, Semantic Search, Semantic Similarity, Text Analysis, Text Classification, Augmented Language Models, Conversational Interfaces, Question Answering)
+- Natural Language Generation (sub-tasks: Data-to-Text Generation, Machine Translation, Question Generation, Text Generation, Text Summarization)
+
+Figure 1: Taxonomy of tasks in the literature on KGs in NLP.
+
+1. We systematically extract information from 507 included papers and report insights about tasks, research types, and contributions.
+2. We provide a taxonomy of tasks in the literature on KGs in NLP shown in Figure 1.
+3. We assess the maturity of individual research streams, identify trends, and highlight directions for future work.
+
+Our survey sheds light on the evolution and current research progress regarding KGs in NLP. Although we cannot achieve complete coverage of all relevant papers on this topic, we aim at providing a representative overview that can help both NLP scholars and practitioners by offering a starting point in the literature. Moreover, our multifaceted analysis can guide the research community in closing existing gaps and finding novel ways how to combine KGs with NLP.
+
+## 2 Related Work
+
+Related literature that includes both KGs and NLP seems to be relatively scarce. Most survey papers focus either only on KGs or only on NLP. In their broad introduction to KGs, [Hogan et al. \(2022\)](#) point out that existing surveys on KGs tend to revolve around specific aspects of KGs, most commonly their construction and embedding.
+
+Such surveys with a KG focus usually bring up NLP only in the context of employed NLP methods, like information extraction, being used to populate and refine graphs ([Nickel et al., 2016](#)). Other surveys on KGs mention some downstream applications of KGs for NLP tasks, such as for con
+
+structing augmented language models, question answering over knowledge bases (KBQA), or recommender systems ([Ji et al., 2021](#)).
+
+As noted previously, related work that includes both KGs and NLP strictly focus on a specific application or task. For example, [Safavi and Koutra \(2021\)](#) provide an overview on applying relational world knowledge from KGs to augment large contextual language models. Other surveys on specific applications include KG reasoning ([Chen et al., 2019](#)), biomedical KGs ([Nicholson and Greene, 2020](#)), and the task of KBQA ([Fu et al., 2020](#)).
+
+The survey on graphs in NLP by [Nastase et al. \(2015\)](#) covers only smaller graphs such as dependency graphs and dialogue trees. Even though it does not include KGs, the survey concludes that graphs are a powerful representation formalism and how NLP tasks can benefit from harnessing the potential of data presented in graph structures.
+
+To the best of our knowledge, this is the first survey covering a wide spectrum of techniques, methods as well as applications of KGs within the NLP research field.
+
+## 3 Method
+
+To achieve our objective of providing a thorough overview of the research landscape, we conducted a systematic mapping study following the process defined by [Petersen et al. \(2008\)](#). Its three main steps are explained in the next subsections.
+
+### 3.1 Research Questions
+
+The goal of our study is a multifaceted analysis of KGs in the field of NLP, such as identifying and quantifying research topics, domains, and out
+
+comes. These objectives are reflected in the research questions (RQs) stated below.
+
+**RQ1:** What are the characteristics and trends of the research literature on KGs in NLP?
+
+**RQ2:** What are the different tasks mentioned in the existing research studies?
+
+**RQ3:** What are the research types and main contributions of the studies?
+
+### 3.2 Search and Screening Procedure
+
+After specifying the RQs, we defined a set of related keywords for KGs and NLP to be used for the database search of relevant studies. From initial test searches, we observed that including terms associated with KGs (e.g., “semantic network” or “ontology”) yielded too many irrelevant results. To restrict the research scope to the concept of KGs, we decided to use the following search string:
+
+(“knowledge graph”) AND (“NLP” OR “natural language processing” OR “computational linguistics”). The search string was applied to title, abstract, and keywords. If a given paper had no keywords, we used index keywords from the database if they were available.
+
+For our search of relevant publications, we queried six academic databases, as listed in Table 1. The ACL Anthology is a digital archive of prestigious conferences and journals in NLP. ACM and IEEE provide access to publications of additional reputable venues in the broader computer science field. The remaining databases are commonly chosen in other related surveys to further increase the coverage of the respective field of interest.
+
+In the first week of 2022, we applied our search string to the databases and restricted the time window to ten years from 2012 until 2021. Then, the exported files were merged, ensuring that each publication record was either a conference or a journal paper. We automatically identified and removed duplicate records as well. Through this, we obtained a dataset of 746 unique papers. Given this initial dataset, we further filtered down the truly relevant studies by screening for the following inclusion criteria: (1) peer-reviewed studies from conferences or journals, (2) studies with a clear focus on KGs in NLP, (3) studies are written in English and full texts are electronically accessible. In reverse, this implies the publications that did not satisfy all three inclusion criteria were excluded from the dataset.
+
+As part of the screening procedure, two of the authors read title, abstract, and keywords to deter
+
+| Academic Database   | No. of Papers |
+|---------------------|---------------|
+| ACL Anthology       | 164           |
+| ACM Digital Library | 26            |
+| IEEE Xplore         | 76            |
+| ScienceDirect       | 34            |
+| Scopus              | 200           |
+| Web of Science      | 7             |
+| <b>Total</b>        | <b>507</b>    |
+
+Table 1: Overview of academic databases and number of included papers.
+
+mine if a paper matched the inclusion criteria. In ambiguous cases, the full text of the paper was examined. The two authors screened all papers and decided together on keeping or dropping records from the dataset. The final dataset included a total of 507 papers, as listed in Table 1. We make our annotated dataset available through a public GitHub repository.<sup>1</sup> <sup>1</sup><https://github.com/sebischair/KG-in-NLP-survey>
+
+### 3.3 Classification Scheme and Data Extraction
+
+According to our RQs, the included papers had to be categorized with respect to three facets: task, research type, and contribution. Established classification schemes from [Wieringa et al. \(2006\)](#) and [Shaw \(2003\)](#) were adapted for the research and contribution type as presented in Appendix A. For classifying tasks, we constructed a task taxonomy, following the iterative procedure suggested by [Petersen et al. \(2008\)](#), in which an initial classification scheme derived from keywords continuously evolves through adding, merging, or splitting categories during the classification process. Our task taxonomy is based on existing schemes from [Paulheim \(2017\)](#), [Liu et al. \(2020a\)](#), and [Ji et al. \(2021\)](#). Once the initial schemes were set up, all papers were sorted into the classes as part of the data extraction process. The 507 included studies were divided between two of the authors. In regular sessions, they discussed changes to the classification schemes or clarified uncertain labels. While each paper got assigned one label for the research type assigned, multiple labels were possible with regard to tasks and contributions. To assess the reliability of the inter-annotator agreement, the two authors independently classified a random sample of 50 papers. We calculated Cohen’s Kappa coefficient of these annotations for each facet ([Cohen, 1960](#)).
+
+
+The annotations of the task, research, and contribution facets had coefficients of 0.73, 0.87, and 0.76, respectively. Cohen suggested interpreting Kappa values from 0.61 to 0.80 as substantial and from 0.81 to 1.00 as almost perfect agreement.
+
+## 4 Results
+
+In this chapter, we report the results of the data extraction process. It is arranged into subsections according to the formulated RQs.
+
+### 4.1 Characteristics of the Research Landscape (RQ1)
+
+In regard to the literature on KGs in NLP, we started our analysis by looking at the number of studies as an indicator of research interest. The distribution of publications over the ten-year observation period is illustrated in Figure 2. While the first publications appear in 2013, the annual publications grew slowly between 2013 and 2016. From 2017 onwards, the number of publications doubled almost every year. Because of the significant rise in research interest within these years, more than 90% of all included publications originate from these five years. Even though the growth trend seems to stop in 2021, this is likely due to the data export which happened in the first week of 2022, leaving out many studies from 2021 that were enlisted in the databases later in 2022. Nonetheless, the trend in Figure 2 clearly indicates that KGs are receiving increasing attention from the NLP research community. Considering the 507 included papers, the number of conference papers (402) was nearly four times as high as that of journal papers (105).
+
+![Bar chart showing the distribution of number of papers from 2012 to 2021. The Y-axis is 'Number of Papers' (0 to 160) and the X-axis is 'Year' (2012 to 2021). The number of papers per year is: 2012: 0, 2013: 3, 2014: 7, 2015: 12, 2016: 13, 2017: 21, 2018: 42, 2019: 95, 2020: 159, 2021: 155.](09af5b86cf9391543d22db5f2129b3ca_img.jpg)
+
+Bar chart showing the distribution of number of papers from 2012 to 2021. The Y-axis is 'Number of Papers' (0 to 160) and the X-axis is 'Year' (2012 to 2021). The number of papers per year is: 2012: 0, 2013: 3, 2014: 7, 2015: 12, 2016: 13, 2017: 21, 2018: 42, 2019: 95, 2020: 159, 2021: 155.
+
+Figure 2: Distribution of number of papers from 2012 to 2021 (database export was performed in the first week of the year 2022).
+
+We also investigated institutional affiliations by country to determine what countries are most active in the field of KGs in NLP. In total, we identified 44 countries contributing to the research literature. As part of the Appendix, we provide a world map with all countries in Figure 7 and a list of the top 20 countries by the number of affiliated papers in Table 7. China ranks first and holds a major proportion with 199 papers, accounting for 39% of all publications. The United States and India come in second and third with 119 and 49 papers, respectively. Germany, the United Kingdom, and Italy follow in the ranking. All European countries had a combined total of 141 affiliated publications.
+
+Another finding of the data extraction process concerns the diverse application areas of KGs in NLP. We observed that the number of domains explored in the research literature grew rapidly in parallel with the annual count of papers. To reveal the great variety of areas, we list all 20 discovered domains and their subdomains in Table 6 in the Appendix. In Figure 3, the ten most frequent domains are displayed. It is striking that health is by far the most prominent domain. The latter appears more than twice as often as the scholarly domain, which ranks second. Other popular areas are engineering, business, social media, or law. In view of the domain diversity, it becomes evident that KGs are naturally applicable to many different contexts, as has been stated in prior work (Abu-Salah, 2021; Ji et al., 2021; Zou, 2020).
+
+![Horizontal bar chart showing the number of papers by most popular application domains. The domains and their corresponding number of papers are: Health (67), Scholarly domain (28), Engineering (20), Business (15), Social media (13), Law (13), Education (10), Energy (9), Information technology (8), and Entertainment media (8).](846242b2850d88b17a6d47cd9dd0ccbf_img.jpg)
+
+Horizontal bar chart showing the number of papers by most popular application domains. The domains and their corresponding number of papers are: Health (67), Scholarly domain (28), Engineering (20), Business (15), Social media (13), Law (13), Education (10), Energy (9), Information technology (8), and Entertainment media (8).
+
+Figure 3: Number of papers by most popular application domains.
+
+### 4.2 Tasks in the Research Literature (RQ2)
+
+Based on the tasks identified in the literature on KGs in NLP, we developed the empirical taxon-
+
+| Task                      | No. of Papers | Representative Papers                                            |
+|---------------------------|---------------|------------------------------------------------------------------|
+| Relation extraction       | 144           | Peng et al. (2017), Wang et al. (2018b), Zhang et al. (2019a)    |
+| Entity extraction         | 143           | Rospocher et al. (2016), Luan et al. (2018), Wang et al. (2018a) |
+| Question answering        | 103           | Bao et al. (2016), Zhang et al. (2018), Feng et al. (2020)       |
+| Semantic search           | 91            | Speer et al. (2017), Wang et al. (2020), Gaur et al. (2021)      |
+| Augmented language models | 84            | Zhang et al. (2019b), Bosselut et al. (2019), Liu et al. (2020b) |
+| Knowledge graph embedding | 61            | Shi and Weninger (2018), Ali et al. (2021), Wang et al. (2021b)  |
+| Entity linking            | 38            | Kartsaklis et al. (2018), Moon et al. (2018), Chen et al. (2018) |
+| Ontology construction     | 32            | Gangemi et al. (2016), Haussmann et al. (2019), Li et al. (2020) |
+| Conversational interfaces | 29            | Zhou et al. (2018) Moon et al. (2019), Wu et al. (2019)          |
+| Link prediction           | 26            | Lv et al. (2019), Sun et al. (2020), Wang et al. (2021a)         |
+
+Table 2: Overview of most popular tasks in the literature on KGs in NLP.
+
+omy shown in Figure 1. The two top-level categories consist of knowledge acquisition and knowledge application. Knowledge acquisition contains NLP tasks to construct KGs from unstructured text (knowledge graph construction) or to conduct reasoning over already constructed KGs (knowledge graph reasoning). KG construction tasks are further split into two subcategories: knowledge extraction, which is used to populate KGs with entities, relations, or attributes, and knowledge integration, which is used to update KGs. Knowledge application, being the second top-level concept, encompasses common NLP tasks, which are enhanced through structured knowledge from KGs.
+
+As might be expected, the frequency of occurrence in the literature for the tasks from our taxonomy varies greatly. While Table 2 gives an overview of the most popular tasks, Figure 4 compares their popularity over time. Figure 4 displays the number of detected domains for the most prominent tasks. It shows that certain tasks are adopted to more domain-specific contexts than others.
+
+![Horizontal bar chart showing the number of detected application domains for various knowledge graph tasks. The tasks and their corresponding number of domains are: Entity extraction (19), Relation extraction (18), Semantic search (16), Question answering (14), Ontology construction (12), Conversational interfaces (10), Entity linking (10), Link prediction (6), Knowledge graph embedding (4), and Augmented language models (4).](b15e3860e0c96ed16ce77f032da6f107_img.jpg)
+
+Horizontal bar chart showing the number of detected application domains for various knowledge graph tasks. The tasks and their corresponding number of domains are: Entity extraction (19), Relation extraction (18), Semantic search (16), Question answering (14), Ontology construction (12), Conversational interfaces (10), Entity linking (10), Link prediction (6), Knowledge graph embedding (4), and Augmented language models (4).
+
+Figure 4: Overview of most popular tasks by number of application domains.
+
+#### 4.2.1 Knowledge Graph Construction
+
+The task of **entity extraction** is a starting point in constructing KGs and is used to derive real-world entities from unstructured text (Al-Moslimi et al., 2020). Once the relevant entities are singled out, relationships and interactions between them are found with the task of **relation extraction** (Zhang et al., 2019a). A lot of papers use both entity extraction and relation extraction to construct new KGs, e.g., for news events (Rospocher et al., 2016) or scholarly research (Luan et al., 2018).
+
+**Entity linking** is a task of linking entities recognized in some text to already existing entities in KGs (Moon et al., 2018; Wu et al., 2020). Since synonymous or similar entities often exist in different KGs or in different languages, **entity alignment** can be performed to reduce redundancy and repetition in future tasks (Gangemi et al., 2016; Chen et al., 2018). Coming up with the rules and schemes of KGs, i.e., their structure and format of knowledge presented in it, is done with the task of **ontology construction** (Haussmann et al., 2019).
+
+#### 4.2.2 Knowledge Graph Reasoning
+
+Once constructed, KGs contain structured world knowledge and can be used to infer new knowledge by reasoning over them. Thereby, the task of classifying entities is called **entity classification**, while **link prediction** is the task of inferring missing links between entities in existing KGs often performed via ranking entities as possible answers to queries (Shi and Weninger, 2018; Bosselut et al., 2019; Wang et al., 2019; Ali et al., 2021).
+
+**Knowledge graph embedding** techniques are used to create dense vector representations of a graph so that they can then be used for downstream machine learning tasks. While this problem can be
+
+![Figure 5: A scatter plot showing the distribution of the number of papers by the most popular tasks from 2013 to 2021. The Y-axis lists tasks: Knowledge graph embedding, Augmented language models, Semantic search, Question answering, Entity extraction, and Relation extraction. The X-axis shows the Year (2013 to 2021). Each task has a series of data points (circles) representing the count of papers for that task in each year. For example, Knowledge graph embedding shows counts of 2, 1, 8, 41, 20, 37 across the years 2013 to 2021.](431b8889a0e7f676f0eef40859590349_img.jpg)
+
+Figure 5: A scatter plot showing the distribution of the number of papers by the most popular tasks from 2013 to 2021. The Y-axis lists tasks: Knowledge graph embedding, Augmented language models, Semantic search, Question answering, Entity extraction, and Relation extraction. The X-axis shows the Year (2013 to 2021). Each task has a series of data points (circles) representing the count of papers for that task in each year. For example, Knowledge graph embedding shows counts of 2, 1, 8, 41, 20, 37 across the years 2013 to 2021.
+
+Figure 5: Distribution of number of papers by most popular tasks from 2013 to 2021.
+
+related solely to KGs, in our survey this label refers to approaches that jointly learn text and graph embeddings (Chen et al., 2018; Wang et al., 2021b).
+
+#### 4.2.3 Knowledge Application
+
+Existing KGs can be used in a multitude of popular NLP tasks. Here we outline the most popular ones.
+
+**Question answering (QA)** was found to be the most common NLP task using KGs. This task is typically divided into textual QA and question answering over knowledge bases (KBQA). Textual QA derives answers from unstructured documents while KBQA does so from predefined knowledge bases (Fu et al., 2020). KBQA is naturally tied to KGs while textual QA can also be approached by using KGs as a source of common-sense knowledge when answering questions. As Zhu et al. (2021) conclude, this approach is desired not only because it is helpful for generating answers, but also because it makes answers more interpretable.
+
+**Semantic search** refers to "search with meaning", where the goal is not just to search for literal matches, but to understand the search intent and query context as well (Bast et al., 2016). This label denoted studies that use KGs for search, recommendations, and analytics. Examples are a big semantic network of everyday concepts called ConceptNet (Speer et al., 2017) and a KG of scholarly communications and the relationships, among them the Microsoft Academic Graph (Wang et al., 2020).
+
+**Conversational interfaces** constitute another NLP field that can benefit from world knowledge contained in KGs. Zhou et al. (2018) utilize the knowledge from KGs to generate responses of con-
+
+versational agents that are more informative and appropriate in a given context. Knowledge-aware dialogue generation was also explored by Moon et al. (2019), Wu et al. (2019), Liu et al. (2019).
+
+**Natural language generation (NLP)** is a subfield of NLP and computational linguistics that is concerned with models which generate natural language output from scratch. KGs are used in this subfield for producing natural language text from KGs (Konceł-Kedziorski et al., 2019), generating question-answer pairs (Reddy et al., 2017), the multi-modal task of image captioning (Lu et al., 2018), or data augmentation in low-resource settings (Sharifrad et al., 2018).
+
+**Text analysis** combines various analytical NLP techniques and methods that are applied to process and understand textual data. Exemplary tasks are sentiment detection (Kumar et al., 2018), topic modeling (Li et al., 2019), or word sense disambiguation (Kumar et al., 2019).
+
+**Augmented language models** are a combination of large pretrained language models (PLMs) such as BERT (Devlin et al., 2019) and GPT (Radford et al., 2018) with knowledge contained in KGs. Since PLMs derive their knowledge from huge amounts of unstructured training data, a rising research trend is in combining them with structured knowledge. Knowledge from KGs can be infused into language models in their input, architecture, output, or some combination thereof (Colon-Hernandez et al., 2021). Some notable examples we outline are ERNIE (Zhang et al., 2019b), COMET (Bosslut et al., 2019), K-BERT (Liu et al., 2020b), and KEPLER (Wang et al., 2021b).
+
+### 4.3 Research Types and Contributions (RQ3)
+
+Table 3 shows the distribution of papers according to the different research and contribution types as defined in Table 4 and 5 in the Appendix. It shows that most papers conduct validation research, investigating new techniques or methods that have not yet been implemented in practice. A considerable number of papers, although significantly less, focus on solution proposals of approaches by demonstrating their advantages and applicability by a small example or argumentation. However, these papers usually lack a profound empirical evaluation. Secondary research accounts for only a small number of papers and is severely underrepresented in the research field of KGs in NLP. As already mentioned in Section 1 and Section 2, there is a notable lack of studies that summarize, compile, or synthesize existing research regarding KGs in NLP. Moreover, evaluation research papers that implement and evaluate approaches in an industry context are equally scarce. Opinion papers are almost non-existent.
+
+In terms of contribution types, techniques, methods, and tools are predominant. Resources and guidelines, as opposed to this, are rather underrepresented. This is in accordance with the distribution of research types, which indicates that mainly new methods and techniques are researched, but hardly any secondary research is conducted. Additionally, the research area of KGs in NLP is lacking new resources such as text corpora, benchmarks, or constructed graphs.
+
+| Research Type       | No. of Papers |
+|---------------------|---------------|
+| Validation research | 338           |
+| Solution proposal   | 149           |
+| Secondary research  | 10            |
+| Evaluation research | 7             |
+| Opinion paper       | 3             |
+
+| Contribution Type | No. of Papers |
+|-------------------|---------------|
+| Technique         | 186           |
+| Method            | 154           |
+| Tool              | 139           |
+| Resource          | 50            |
+| Guidelines        | 24            |
+
+Table 3: Number of papers by research type and contribution type.
+
+Figure 6 depicts the different tasks of the analyzed studies and their relative share of contribution types. We can notice that entity extraction and relation extraction, which encompass the most works
+
+![Figure 6: Percentage of contribution type by tasks. A horizontal bar chart showing the percentage distribution of various tasks (Link prediction, Conversational interfaces, Ontology construction, Entity linking, Knowledge graph embedding, Augmented language models, Semantic search, Question answering, Relation extraction, Entity extraction) across five categories: Technique, Method, Tool, Resource, and Guidelines. Entity extraction and Relation extraction show the highest percentages, reaching nearly 100% for Entity extraction.](01da0d212fb571933f10f96556157745_img.jpg)
+
+Figure 6: Percentage of contribution type by tasks. A horizontal bar chart showing the percentage distribution of various tasks (Link prediction, Conversational interfaces, Ontology construction, Entity linking, Knowledge graph embedding, Augmented language models, Semantic search, Question answering, Relation extraction, Entity extraction) across five categories: Technique, Method, Tool, Resource, and Guidelines. Entity extraction and Relation extraction show the highest percentages, reaching nearly 100% for Entity extraction.
+
+Figure 6: Percentage of contribution type by tasks.
+
+in line with Table 2, have a very balanced distribution of contribution types. These tasks, which build the foundation for KG construction, have been researched for a long time and the number of studies in these areas is continually increasing, as can be seen in Figure 5. Furthermore, a comparison of Figure 5 with Figure 6 shows that tasks, such as relation extraction or semantic search, which have existed for some time and continue to grow steadily have a rather balanced ratio of contribution types, too. This is an indication that these tasks are already reasonably mature, as some extensive preliminary work is required, for example, to use multiple techniques in a new method.
+
+Additionally, mature research areas already focus on industrialization, investigating how to use techniques in different domains and developing tools. Figure 4 strengthens the impression that tasks such as relation extraction or semantic search are already reasonably mature, as they are used in many different domains. In contrast, immature research areas still primarily focus on investigating new techniques and are used in a few domains only. For instance, the augmented language models and knowledge graph embedding tasks have mainly techniques as the contribution type and are not used in many different domains. Therefore, they can still be considered relatively immature. This may be a result of the fact that these tasks are still relatively young and less investigated. Figure 5 shows that the two tasks have only seen a sharp increase in studies from 2018 onwards and attracted a lot of interest since then.
+
+## 5 Discussion
+
+The observations of our comprehensive survey reveal several insights. It is important to situate these findings with respect to related work and industry reports in the artificial intelligence (AI) field.
+
+Since the first publications in 2013, researchers worldwide have paid increasing attention to study KGs from a NLP perspective, especially in the past five years. This observed growth in research interest is in line with the KG survey of Chen et al. (2021). We identified China and the United States as the most active countries shaping the research landscape, which is to be expected considering both countries regularly claim the top ranks in the popular “AI Index Report” from Stanford University (Zhang et al., 2021). The report further highlights a soaring AI investment in the health domain. The latter was also the most dominant domain in our results (see Figure 3). However, research in the health domain has to be considered critically, since these works compare poorly to other domains regarding reproducibility metrics, such as dataset and code accessibility (McDermott et al., 2021).
+
+Table 3 shows evidently that the research field of KGs in NLP is lacking new resources such as text corpora, benchmarks, or KGs. This leads to the assumption that most works train and evaluate using the same limited available datasets and benchmarks. As a result, novel approaches are often optimized only for certain available benchmarks which may not hold up in practice. Furthermore, the lack of secondary research visible in Table 3 reveals the need for more works that present an overview of the research field.
+
+The frequency of tasks in our survey greatly varies, as reflected in Table 2. Studies concerning KG construction account for the majority of all papers. Applied NLP tasks such as QA and semantic search also have a strong research community. The most emergent topics in recent years have been augmented language models, QA, and KG embedding. Some of the outlined tasks are still confined to the research community, while others have found practical application in many real-life contexts. From Figure 4 it is evident that the KG construction tasks and semantic search over KGs are the most widely applied ones. Of the NLP tasks, QA and conversational interfaces have been adopted to many real-life domains, usually in the form of digital assistants. Tasks like KG embedding and augmented language models are still only being researched and lack a widespread practical adoption in real-world scenarios. We anticipate that as the research areas of augmented language models and KG embedding mature, more methods and tools will be investigated for these tasks.
+
+## 6 Limitations
+
+Although we employed a rigorous study design and paid careful attention to executing each search and analysis step, our study is subject to limitations.
+
+Given the restriction to one search string and six databases, there should be some relevant publications that we did not retrieve. This is the case for studies that did not mention our search terms in title, abstract, or keywords. To mitigate the risk of incompleteness, we chose common databases with a large number of publications in the examined research area. Further, we performed a preliminary search to optimize the completeness of results. Whenever possible, we replaced missing keywords with index keywords from the source database.
+
+Moreover, the screening for relevant studies depends on the personal assessment of the researchers, which can bias the study selection. As a countermeasure, we defined selection criteria for the inclusion and exclusion of studies. During the study selection, two researchers assessed the selection criteria in parallel and discussed contradicting decisions until they reached a consensus to mitigate subjective bias.
+
+The accuracy of the classification results constitutes another threat to the validity of our study. Data extraction bias may negatively affect the accuracy of the classification results. To mitigate this risk, the authors regularly discussed the used classification schemes and assigned labels to establish a common understanding of each class. In addition, we calculated Cohen’s Kappa coefficient to quantify the reliability of the inter-annotator agreement.
+
+## 7 Conclusion
+
+Recent years have witnessed a rising prominence of KGs in NLP research. Despite the rapidly growing body of literature, until now, no study has been published that summarizes the progress so far. To provide an overview of this maturing research area, we performed a multifaceted survey of tasks, research types, and contributions.
+
+Our findings show that a large number of tasks concerning KGs in NLP have been studied across various domains, including emerging topics like knowledge graph embedding or augmented language models. However, we observed a lack of secondary research and evaluations in practice, both of which are crucial to reflect the major scientific progress of the field as a whole. Our study lays the grounds for further research in this direction.
+
+## Acknowledgements
+
+This work has been supported by the German Federal Ministry of Education and Research (BMBF) Software Campus grant 01IS17049. The fourth author is partially supported by the Canada CIFAR AI Chair Program and Samsung AI grant (held at Mila).
+
+## A Supplementary Material
+
+Table 4 shows the classification scheme for research types. Wieringa et al. (2006) introduced this scheme in order to categorize different types of research papers with differing approaches to what is being studied. Although the categories of evaluation research and validation research seem to be similar, there is a key difference. A paper is considered to be evaluation research only if the investigated problem is implemented and evaluated in practice. Papers labeled as validation research investigate properties of proposed solutions that have not been implemented in practice, while solution proposal papers introduce new solutions without a rigorous empirical validation.
+
+Table 5 shows the classification scheme of contribution types employed in this study. It is based on the classification scheme of Shaw (2003) and adapted to the field of KGs in NLP. Here, special attention needs to be paid to the distinction between method and technique. While a technique concentrates on solving a single specific task, a method involves a set of different techniques as well as procedures that must be executed in a systematic way to achieve a concrete objective.
+
+Table 6 contains an overview of the 20 domains we discovered in the literature on KGs in NLP. For each domain, we identified a set of subdomains, which is listed as well.
+
+Table 7 and the world map in Figure 7 give information about the number of papers by affiliated countries. While the table only shows the top 20 most active countries, the world map presents a global overview of all 44 countries contributing to the research literature.
+
+| Research Type       | Description                                                                                                                                                |
+|---------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Evaluation research | The implementation of an existing technique or method is evaluated in practice within an industry context.                                                 |
+| Opinion paper       | Report of the personal opinion of somebody on the suitability of a certain technique or method without relying on related work and research methods.       |
+| Secondary research  | Analysis and synthesis of findings from multiple studies to systematically review a research field or gather evidence on a topic.                          |
+| Solution proposal   | Proposal of novel solution or extension for a technique or method by demonstrating their advantages and applicability by a small example or argumentation. |
+| Validation research | Empirical investigation of characteristics from proposed techniques or methods that have not been implemented in practice yet.                             |
+
+Table 4: Classification scheme for research types adapted from Wieringa et al. (2006).
+
+| Contribution Type | Description                                                                                                                                        |
+|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
+| Guidelines        | List of advices or recommendations derived from the obtained research results.                                                                     |
+| Method            | A method contains a set of techniques and procedures that need to be systematically executed to achieve a concrete goal.                           |
+| Resource          | A resource is a published data set that supports techniques, methods, or tools, e.g., text corpora, benchmarks, or knowledge graphs.               |
+| Technique         | A technique is the manner in which a concrete task within our task taxonomy is performed, often in the form of an algorithm or mathematical model. |
+| Tool              | A tool is a documented implementation of a technique or method in the form of a software library, prototype, or full application system.           |
+
+Table 5: Classification scheme for contribution types adapted from Shaw (2003).
+
+| Domain                 | Identified Subdomains                                                      |
+|------------------------|----------------------------------------------------------------------------|
+| Agriculture            | Agricultural production, agricultural plant species                        |
+| Business               | E-commerce, finance, human resources, product design, real estate          |
+| Culture                | Cultural heritage, ethnic minorities, film culture, museums, poetry        |
+| Education              | Curriculum design, digital library, e-learning, moral education            |
+| Energy                 | Oil and gas industry, power grid fault disposal, smart grid                |
+| Engineering            | Mechanical engineering, software engineering, electrical engineering       |
+| Entertainment media    | Computer games, media recommendation, movies, music, television            |
+| Food                   | Dietary choices, recipe search                                             |
+| Health                 | Biomedicine, traditional Chinese medicine, pharmacology, mental health     |
+| History                | Genealogy, historical events, retrieval of historical documents            |
+| Information technology | App ecosystems, Internet of Things, technical support, cybersecurity       |
+| Law                    | Law enforcement, patents, privacy policies, identity fraud detection       |
+| Natural science        | Mineralogy, oceanography, petroleum geology                                |
+| Scholarly domain       | Bibliometrics, grant datasets, research collaborations, scientific corpora |
+| News                   | Fake news detection, journalism, news exploration                          |
+| Public sector          | Government, military, poverty reduction, public safety organizations       |
+| Social media           | Insight extraction from posts, misinformation detection, opinion mining    |
+| Social science         | Open-source social science, social network analysis                        |
+| Sports                 | Basketball, football                                                       |
+| Tourism                | Tourism question answering system, travel guide                            |
+
+Table 6: Overview of identified application domains and subdomains.
+
+| Rank | Country        | No. of Affiliated Papers |
+|------|----------------|--------------------------|
+| 1    | China          | 199                      |
+| 2    | United States  | 119                      |
+| 3    | India          | 49                       |
+| 4    | Germany        | 47                       |
+| 5    | United Kingdom | 34                       |
+| 6    | Italy          | 21                       |
+| 7    | Canada         | 19                       |
+| 8    | Spain          | 16                       |
+| 9    | France         | 15                       |
+| 10   | Singapore      | 14                       |
+| 11   | Australia      | 13                       |
+| 12   | Hong Kong      | 10                       |
+| 13   | Ireland        | 9                        |
+| 14   | Netherlands    | 8                        |
+| 15   | Japan          | 8                        |
+| 16   | South Korea    | 6                        |
+| 17   | Switzerland    | 6                        |
+| 18   | Greece         | 5                        |
+| 19   | Brazil         | 5                        |
+| 20   | Portugal       | 4                        |
+
+Table 7: Overview of top 20 countries by number of affiliated papers.
+
+![World map showing the global overview of the number of papers by affiliated country. The map uses a color scale ranging from light blue (low number of papers, around 25) to dark blue (high number of papers, up to 175). Countries with high affiliations, such as China, the United States, India, and the United Kingdom, are shown in dark blue. Countries with low affiliations are shown in light blue.](c2b98986bdf45e15707f6b2bd7ade2bd_img.jpg)
+
+World map showing the global overview of the number of papers by affiliated country. The map uses a color scale ranging from light blue (low number of papers, around 25) to dark blue (high number of papers, up to 175). Countries with high affiliations, such as China, the United States, India, and the United Kingdom, are shown in dark blue. Countries with low affiliations are shown in light blue.
+
+Figure 7: Global overview of number of papers by affiliated country.
