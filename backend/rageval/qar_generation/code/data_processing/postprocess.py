@@ -2,10 +2,10 @@ import json
 import logging
 import os
 from collections.abc import Callable
+from typing import Any
 
 from dotenv import load_dotenv
 
-from ..client import OpenAIClient as Client
 from ..exceptions import InvalidResponseError
 
 # Load environment variables
@@ -20,10 +20,19 @@ MAX_POSTPROCESS_RETRIES = 5
 
 
 def _clean_json_response(response: str) -> str:
-    """Remove common JSON markdown formatting."""
-    if "```json\n" in response:
-        return response.replace("```json\n", "", 1).replace("```", "", 1)
-    return response
+    """Remove common JSON markdown formatting and extra text."""
+    response = response.strip()
+    # Remove markdown code blocks if present
+    if response.startswith("```"):
+        # Find the first newline to skip "json" or other language identifiers
+        first_newline = response.find("\n")
+        if first_newline != -1:
+            response = response[first_newline + 1 :]
+        # Remove trailing ``` if present
+        if response.endswith("```"):
+            response = response[:-3]
+
+    return response.strip()
 
 
 def _create_json_object(
@@ -55,7 +64,7 @@ def _normalize_question_type(item: dict, has_ref: bool = True) -> None:
 
 def _retry_with_api(
     initial_response: str,
-    client: Client,
+    client: Any,
     system_prompt: str,
     user_prompt: str,
     processor: Callable[[str], list | None],
@@ -87,12 +96,11 @@ def _retry_with_api(
 
 
 def postprocess(
-    response: str, system_prompt: str, user_prompt: str, model_name: str
+    client: Any, response: str, system_prompt: str, user_prompt: str
 ) -> list:
     """
     Remove common extra characters in gpt-4o, check the question type and array format to avoid errors when saving as a JSON file.
     """
-    client = Client(openai_api_key=openai_api_key, model_name=model_name)
 
     def process_response(resp: str) -> list | None:
         resp = _clean_json_response(resp)
@@ -113,16 +121,15 @@ def postprocess(
 
 
 def postprocess_irrelevant(
+    client: Any,
     response: str,
     system_prompt: str,
     user_prompt: str,
-    model_name: str,
     name: str,
 ) -> list:
     """
     Remove common extra characters in gpt-4o, check the question type and array format to avoid errors when saving as a JSON file.
     """
-    gpt_client = Client(openai_api_key=openai_api_key, model_name=model_name)
 
     def process_response(resp: str) -> list | None:
         resp = _clean_json_response(resp)
@@ -138,7 +145,7 @@ def postprocess_irrelevant(
 
     return _retry_with_api(
         response,
-        gpt_client,
+        client,
         system_prompt,
         user_prompt,
         process_response,
