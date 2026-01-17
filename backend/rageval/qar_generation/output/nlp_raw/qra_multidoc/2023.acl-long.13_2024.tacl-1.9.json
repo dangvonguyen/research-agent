@@ -1,0 +1,308 @@
+{
+    "qa_multi_document_information_integration": [
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "How do different language model architectures, such as encoder-decoder models and masked language models, handle long input contexts or long text generation, and what are their respective challenges?",
+            "answer": "Encoder-decoder models like Flan-UL2 are relatively robust to changes in relevant information position within their training-time sequence length, showing only a 1.9% absolute difference between best- and worst-case performance. However, decoder-only models like GPT-3.5-Turbo can experience significant performance degradation (over 20%) when relevant information is in the middle of long contexts. Masked language models (MLMs) like RoBERTa, when adapted for open-ended long text generation, face a 'collapse problem' where they generate uninformative and repetitive content for texts around 140 tokens, requiring specific techniques like Dynamic Sliding Window Attention (DSWA) and Linear Temperature Decay (LTD) to alleviate long-distance collapse and improve sampling.",
+            "ref": [
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "Our preliminary study shows that pre-trained MLMs can merely generate short text and will collapse for long text modeling. To enhance the long text generation capability of MLMs, we introduce two simple yet effective strategies for the iterative NAR model: dynamic sliding window attention (DSWA) and linear temperature decay (LTD). It can alleviate long-distance collapse problems and achieve longer text generation with a flexible trade-off between performance and inference speedup."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "Through experiments, we found that: (1) pre-trained MLMs can achieve competitive performance in the iterative NAR fashion for open-ended short text generation (e.g., a paragraph with around 40 tokens), (2) pre-trained MLMs fail to model Open-LTG (with about 140 tokens on average), which will generate uninformative content with high-frequency and repeated tokens (e.g., “,” and “.”)."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "The **possible explanation** is that the self-attention layer needs the context token as key-value pairs to calculate the token representation. Unfortunately, the massive uninformative mask tokens (“*<mask>*”) in context lead to model collapse steadily worsening in the following iteration steps."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Encoder-decoder models are relatively robust to changes in the position of relevant information within their input context, but only when evaluated on sequences within its training-time sequence length. When evaluated on sequences longer than those seen during training, we observe a U-shaped performance curve (§4.1)."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "When Flan-UL2 is evaluated on sequences within its 2048-token training-time context window (Figure 8; left subplot), its performance is relatively robust to changes in the position of relevant information within the input context (1.9% absolute difference between best- and worst-case performance). When evaluated on settings with sequences longer than 2048 tokens (Figure 8; center and right), Flan-UL2 performance begins to degrade when relevant information is placed in the middle. Flan-T5-XXL shows a similar trend, where longer input contexts result in a greater performance degradation when placing relevant information in the middle of the input context."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "For example, GPT-3.5-Turbo’s multi-document QA performance can drop by more than 20%—in the worst case, performance in 20- and 30-document settings is lower than performance without *any* input documents (i.e., closed-book performance; 56.1%)."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "What metrics are used to evaluate the quality of long text generation and how well language models use long contexts?",
+            "answer": "For evaluating long text generation, metrics include BLEU, ROUGE, Lexical Repetition (LR), Semantic Repetition (SR), Distinct (D-n), BERTScore, Perplexity (PPL), METEOR, and human evaluations for Fluency, Coherence, and Relevance. For evaluating how well language models use long contexts, Accuracy is a primary metric, especially in multi-document question answering and key-value retrieval tasks, often analyzed in relation to the position of relevant information within the context.",
+            "ref": [
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "We choose RoBERTa base [\\(Liu](#page-10-0) [et al.,](#page-10-0) [2019\\)](#page-10-0) as our backbone model and use BLEU, ROUGE, Distinct, and Lexical Repetition metrics for evaluation."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "We utilize BLEU (B-n) (Papineni et al., 2002), ROUGE (R-n) (Lin, 2004), Lexical Repetition (LR-n, 4-gram repetition for n-times) (Shao et al., 2019), Semantic Repetition (SR-n, average top-n semantic similarity between any two sentences) (Guan et al., 2021b)<sup>¶</sup>, average semantic overlap (S-m, average semantic similarity of all the sentences), Distinct (D-n) (Li et al., 2016) and BERTScore (Zhang et al., 2019) for the storytelling task. As for the multi-paragraph opinionated articles writing, we utilize B-n, R-n, and METEOR (Banerjee and Lavie, 2005) to evaluate the results."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "We calculate the perplexity (PPL) using GPT2 (Radford et al.) for each model, which is the most common fluency metric."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "We hire three annotators to give their preferences (*win, loss and tie*) for three evaluation criteria: fluency, coherence, and relevance, which reflect the intra-sentence linguistic quality (Xu et al., 2020), inter-sentence relatedness & causal dependency and consistency of the generation results, respectively."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Following Kandpal et al. (2022) and Mallen et al. (2023), we use accuracy as our primary evaluation metric, judging whether any of the correct answers (as taken from the NaturalQuestions annotations) appear in the predicted output."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We again measure accuracy by evaluating whether the correct value appears in the predicted output."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We evaluate retriever recall and reader accuracy (whether any of the annotated answers appear in the predicted output) as a function of the number of retrieved documents  $k$ ."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "How does increasing the input context length affect the performance of language models in tasks like question answering and text generation?",
+            "answer": "In multi-document question answering, increasing context length by providing more documents (e.g., from 20 to 50) only marginally improves performance (around 1-1.5% for GPT-3.5-Turbo and Claude-1.3), indicating that models struggle to effectively use additional retrieved information. For long text generation, autoregressive models like BART suffer from decreased inference efficiency with increased generation length, while non-autoregressive models enhanced with techniques like Dynamic Sliding Window Attention aim to maintain performance and efficiency for longer outputs.",
+            "ref": [
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "However, the AR nature will decrease the inference efficiency along with the increase of generation length, which hinder their application in Open-LTG."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "Table 1 presents the inference speed of a few typical AR language models. We can see that BART (Lewis et al., 2020) requires at least 1.3 seconds to generate a story with 200 tokens on the powerful NVIDIA A100 GPU, and extra planning (Hua and Wang, 2020) can make the inference process even slower (more than 30 seconds to create a 200-tokens story)."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "Experiments on the storytelling and multi-paragraph opinionated article writing tasks show that pre-trained MLMs can achieve more than  $3 \\times \\to 13 \\times$  speedup with better performance than strong AR models."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "The RoBERTa base achieves more than  $3 \\times \\rightarrow 13 \\times$  with better performance to the competitive BART."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Our results indicate that prompting language models with longer input contexts is a trade-off—providing the language model with more information may help it perform the downstream task, but it also increases the amount of content that the model must reason over, potentially decreasing accuracy."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "For example, GPT-3.5-Turbo’s multi-document QA performance can drop by more than 20%—in the worst case, performance in 20- and 30-document settings is lower than performance without *any* input documents (i.e., closed-book performance; 56.1%)."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Using more than 20 retrieved documents only marginally improves reader performance ( $\\sim 1.5\\%$  for GPT-3.5-Turbo and  $\\sim 1\\%$  for Claude-1.3), while significantly increasing the input context length (and thus latency and cost)."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We see that reader model performance saturates long before retriever performance saturates, indicating that readers are not effectively using the extra context."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "Do language models exhibit positional biases when processing long input sequences, and how do these biases manifest?",
+            "answer": "Yes, language models exhibit positional biases, often manifesting as a U-shaped performance curve where performance is lowest when relevant information is in the middle of long input contexts, and better when it's at the beginning (primacy bias) or end (recency bias). This U-shaped curve is observed in larger models (e.g., Llama-2 13B and 70B), while smaller models (e.g., Llama-2 7B) tend to be solely recency-biased. Instruction fine-tuning can slightly mitigate this bias, reducing worst-case performance disparity.",
+            "ref": [
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "In particular, we observe that performance is often highest when relevant information occurs at the beginning or end of the input context, and significantly degrades when models must access relevant information in the middle of long contexts, even for explicitly long-context models."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We find that changing the position of relevant information in the input context can substantially affect model performance, indicating that current language models do not robustly access and use information in long input contexts. Furthermore, we observe a distinctive U-shaped performance curve (Figure 1); language model performance is highest when relevant information occurs at the very beginning (primacy bias) or end of its input context (recency bias), and performance significantly degrades when models must access and use information in the middle of their input context (§2.3)."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Comparing Llama-2 models of varying sizes, we find that only the larger models (13B and 70B) exhibit the U-shaped performance curve (i.e., both primacy and recency bias)—the smallest Llama-2 models (7B) are solely recency-biased."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Although the absolute performance of MPT-30B-Instruct is uniformly higher than that of MPT-30B, their overall performance trends are similar. We also observe that instruction fine-tuning slightly reduces the worst-case performance disparity from nearly 10% between the base model best- and worst-case performance to around 4%."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "The 13B base model has a dramatic primacy and recency bias—there is a 20-point accuracy disparity between the best- and worst-case performance. Applying additional fine-tuning to the 13B seems to slightly reduce this bias (10-point worst-case degradation), but the bias remains significant."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "What techniques are proposed to improve how language models handle or generate long texts and contexts?",
+            "answer": "To improve long text generation, techniques like Dynamic Sliding Window Attention (DSWA) are used to alleviate long-distance collapse by restricting attention to neighbor tokens, and Linear Temperature Decay (LTD) is applied to improve sampling effectiveness by adjusting confidence scores during iterative refinement. For improving context utilization in long inputs, query-aware contextualization can dramatically improve performance on retrieval tasks, and instruction fine-tuning can help mitigate positional biases, although it minimally affects multi-document QA trends.",
+            "ref": [
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "Inspired by the above observations, we introduce two improvement strategies: Dynamic Sliding Window Attention (DSWA) and linear temperature decay strategy (LTD) to maintain more informative context content in the iterative NAR generation."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "We first introduced the sliding window mechanism (Beltagy et al., 2020) for the self-attention layer to adjust each token’s attention pattern, which also ensures that the top layer’s token representations can have a large receptive field, similar to CNN (Wu et al., 2018)."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "With this strategy, we can alleviate the multi-modality problem by restricting the model to attend to the tokens in the window instead of the whole sequence, thus degenerating the multi-modal distribution into a uni-modal distribution."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "To further improve the effectiveness of sampling, we use the confidence-based iterative refinement by adjusting the temperature with linear schedule:\n$$\\begin{aligned} \\mathcal{P}(y_i | \\mathcal{X}, \\text{Win}(\\mathcal{Y}_M)) &= \\frac{\\exp(u_i/T)}{\\sum_{i'} \\exp(u_{i'}/T)}, \\\\ T &= \\beta * (1 - \\frac{t}{T}), \\end{aligned} \\quad (8)$$\nwhere  $\\beta$  is hyper-parameter,  $t \\in \\{0, \\dots, T\\}$  is the current iteration step, and  $T$  is the maximum iteration step. Actually, the output distributions will be flattened when  $T > 1$ , and become sharp when  $T < 1$ . Therefore, by applying this strategy, we can penalize the distribution from peaked to flat in the former iteration steps and encourage it from flat to peaked in the later steps."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "Besides, the model uses the ground truth tokens as context to predict the masked tokens during the training stage and applies the randomly sampled tokens as context during the inference stage. This discrepancy makes the model only refine a fraction of the low confidence tokens, which causes the degeneration in practice. Thus, we update all target tokens according to model predictions at each iteration step by utilizing the SMART mechanism (Ghazvininejad et al., 2020)."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Query-aware contextualization (placing the query before and after the documents or key-value pairs) enables near-perfect performance on the synthetic key-value task, but minimally changes trends in multi-document QA (§4.2)."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Although the absolute performance of MPT-30B-Instruct is uniformly higher than that of MPT-30B, their overall performance trends are similar. We also observe that instruction fine-tuning slightly reduces the worst-case performance disparity from nearly 10% between the base model best- and worst-case performance to around 4%."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "These results, coupled with the observation that models are often better at retrieving and using information at the start or end of the input contexts, suggest that effective reranking of retrieved documents (pushing relevant information closer to the start of the input context) or ranked list truncation (retrieving fewer documents when appropriate; Arampatzis et al., 2009) may be promising directions for improving how language-model-based readers use retrieved context."
+                }
+            ]
+        }
+    ],
+    "qa_multi_document_compare": [
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "What is the typical size of the models investigated in the context utilization analysis compared to the model used for open-ended long text generation?",
+            "answer": "The model used for open-ended long text generation (RoBERTa base) has 125 million parameters. In contrast, the context utilization analysis investigates models ranging from 7 billion parameters (Llama-2-7B) up to 70 billion parameters (Llama-2-70B), and other large models like MPT-30B.",
+            "ref": [
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "It is worth noting that the layer and model parameters of RoBERTa (125M) are close to BART (140M), so it can be used to compare the inference speed directly."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We experiment with MPT-30B-Instruct, which has a maximum context length of 8192 tokens.\n\n**Closed Models.** We use the OpenAI API to experiment with GPT-3.5-Turbo and GPT-3.5-Turbo (16K).<sup>5</sup> GPT-3.5-Turbo has a maximum context length of 4K tokens, and GPT-3.5-Turbo (16K) is a version with an extended maximum context length of 16K tokens. We evaluate Claude-1.3 and Claude-1.3 (100K) with the Anthropic API; Claude-1.3 has a maximum context length of 8K tokens, and Claude-1.3 (100K) has an extended context length of 100K tokens.<sup>6</sup>"
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We evaluate Llama-2 (Touvron et al., 2023b) on multi-document QA with 20 total documents in each input context. The Llama tokenizer produces longer sequences than the tokenizers for our previously-studied models, so we discard 20 examples (out of 2655) that exceed Llama-2’s maximum context length of 4096 tokens. We experiment with models of varying sizes (7B, 13B, and 70B parameters), with and without additional"
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "How do the two studies differ in their focus on inference efficiency?",
+            "answer": "One study explicitly focuses on improving and measuring inference efficiency for long text generation, reporting speeds of 133 to 1753 tokens/second and speedups of 2.9x to 13.3x compared to autoregressive models. The other study, while evaluating large language models, primarily focuses on how effectively models use long contexts rather than generation speed, though it mentions the cost of evaluating large models.",
+            "ref": [
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "Pre-trained autoregressive (AR) language models such as BART and GPTs have dominated **Open-ended Long Text Generation (Open-LTG)**. However, the AR nature will decrease the inference efficiency along with the increase of generation length, which hinder their application in Open-LTG. To improve inference efficiency, we alternatively explore the potential of the pre-trained masked language models (MLMs) along with a representative iterative non-autoregressive (NAR) decoding strategy for Open-LTG."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "Experiments on the storytelling and multi-paragraph opinionated article writing tasks show that pre-trained MLMs can achieve more than  $3 \\times \\to 13 \\times$  speedup with better performance than strong AR models. Our code is available at GitHub<sup>†</sup>."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "Figure 5 illustrate the generation speed with the NVIDIA A100 GPU, which all run with the batch size equal to 1 on each test dataset. Our model can speed up the inference from  $3 \\times$  to  $13 \\times$  with different target lengths, i.e., from 133 token/s to 391 token/s for the ROC dataset, from 137 token/s to 882 token/s for the WP dataset, and from 132 token/s to 1753 token/s for the WikiPlots dataset. Although the smaller iteration step can further accelerate the speed, the perplexity drops significantly."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Evaluating GPT-4 on the full multi-document QA and key-value retrieval experiments would cost upwards of \\$6000. See Appendix D for GPT-4 results and discussion."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Our results indicate that prompting language models with longer input contexts is a trade-off—providing the language model with more information may help it perform the downstream task, but it also increases the amount of content that the model must reason over, potentially decreasing accuracy. Even if a language model can take in 16K tokens, is it actually beneficial to provide 16K tokens of context? The answer to this question is ultimately downstream task-specific since it depends on the marginal value of the added context and the model’s ability to effectively use long input contexts, but we perform a case study with open-domain question answering on NaturalQuestions-Open to better understand this trade-off in existing language models."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "What are the primary challenges identified by each study when dealing with long text or long input contexts in language models?",
+            "answer": "One study identifies the 'collapse problem' of pre-trained masked language models for long text generation, where they generate uninformative content with high-frequency and repeated tokens. The other study identifies that language model performance degrades significantly when relevant information is in the middle of long contexts, exhibiting a U-shaped performance curve (primacy and recency bias).",
+            "ref": [
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "Our preliminary study shows that pre-trained MLMs can merely generate short text and will collapse for long text modeling. To enhance the long text generation capability of MLMs, we introduce two simple yet effective strategies for the iterative NAR model: dynamic sliding window attention (DSWA) and linear temperature decay (LTD). It can alleviate long-distance collapse problems and achieve longer text generation with a flexible trade-off between performance and inference speedup."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "Results As shown in Table [2,](#page-3-0) For the ROC dataset, the RoBERTa base model obtains comparable performance with BART. However, the generation quality significantly decreases for the WP dataset, which involves much longer targets. Specifically, most of the generated results are made up of duplicated function words or punctuations, e.g., \"it\", \"to\", \"the\", and \".\", etc, which makes the\nmodel outputs unreadable and meaningless. One intuitive question is *What causes the collapse prob**lem in Open-LTG when using pre-trained MLMs?*"
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We find that performance can degrade significantly when changing the position of relevant information, indicating that current language models do not robustly make use of information in long input contexts. In particular, we observe that performance is often highest when relevant information occurs at the beginning or end of the input context, and significantly degrades when models must access relevant information in the middle of long contexts, even for explicitly long-context models."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We find that changing the position of relevant information in the input context can substantially affect model performance, indicating that current language models do not robustly access and use information in long input contexts. Furthermore, we observe a distinctive U-shaped performance curve (Figure 1); language model performance is highest when relevant information occurs at the very beginning (primacy bias) or end of its\ninput context (recency bias), and performance significantly degrades when models must access and use information in the middle of their input context (§2.3)."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "What types of language model architectures are primarily investigated in each study?",
+            "answer": "One study primarily investigates an encoder-based masked language model (RoBERTa) for non-autoregressive generation. The other study investigates a broader range of architectures, including decoder-only models (like GPT-3.5-Turbo, Claude-1.3, Llama-2) and encoder-decoder models (like Flan-T5-XXL, Flan-UL2).",
+            "ref": [
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "Pre-trained autoregressive (AR) language models such as BART and GPTs have dominated **Open-ended Long Text Generation (Open-LTG)**. However, the AR nature will decrease the inference efficiency along with the increase of generation length, which hinder their application in Open-LTG. To improve inference efficiency, we alternatively explore the potential of the pre-trained masked language models (MLMs) along with a representative iterative non-autoregressive (NAR) decoding strategy for Open-LTG."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "We fill this gap by first conducting a preliminary study to calibrate the potential and limitations of a pre-trained MLM, i.e., RoBERTa (Liu et al., 2019)<sup>†</sup>, on two story generation corpora, i.e., ROCStories (ROC) (Mostafazadeh et al., 2016) and WritingPrompts (WP) (Fan et al., 2018). To achieve conditional generation, we simply use RoBERTa as both the encoder and the decoder with mixed attention (He et al., 2018) to achieve encoder-decoder cross-attention."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "Pre-trained MLMs are typically used as the encoder to extract the representations of sentences instead of generating texts. Previous works (Dong et al., 2019; Wang et al., 2019) have indicated that the MLM encoder can support text generation tasks via attention masks or Gibbs sampling. In contrast, we introduce mixed attention and parameter sharing to the encoder-based model to solve the sequence to sequence tasks, as shown in Figure 1."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We empirically investigate this question via controlled experiments with a variety of state-of-the-art open (MPT-30B-Instruct, LongChat-13B (16K)) and closed (OpenAI’s GPT-3.5-Turbo and Anthropic’s Claude-1.3) language models in settings that require accessing and using information within an input context."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "The open models we evaluated are all decoder-only models—at each timestep, they may only attend to prior tokens. To better understand the potential effects of model architecture on how language model use context, we compare decoder-only and encoder-decoder language models.\n\nWe experiment with Flan-T5-XXL (Raffel et al., 2020; Chung et al., 2022) and Flan-UL2 (Tay et al., 2023). Flan-T5-XXL is trained with a sequences of 512 tokens (encoder and decoder). Flan-UL2 is initially trained with sequences of 512 tokens (encoder and decoder), but is then pre-trained for an extra 100K steps with 1024 tokens (encoder and decoder) before instruction fine-tuning on sequences with 2048 tokens in the encoder and 512 tokens in the decoder."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "What are the main types of tasks used to evaluate model performance in each study?",
+            "answer": "One study evaluates models on open-ended long text generation tasks such as storytelling (ROCStories, WritingPrompts) and multi-paragraph article writing (OPINION), using metrics like BLEU, ROUGE, and BERTScore. The other study evaluates models on multi-document question answering and synthetic key-value retrieval tasks, primarily using accuracy as a metric.",
+            "ref": [
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "Experiments on the storytelling and multi-paragraph opinionated article writing tasks show that pre-trained MLMs can achieve more than  $3 \\times \\to 13 \\times$  speedup with better performance than strong AR models. Our code is available at GitHub<sup>†</sup>."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "Experiments on two Open-LTG tasks (i.e., storytelling and multi-paragraph opinionated article writing) with four widely-used datasets demonstrate that the pre-trained MLM can achieve better performance (BLEU score, ROUGE score, BERT score, and Perplexity) than multiple strong AR models without extra post-training, structure modification, or using more model parameters."
+                },
+                {
+                    "paper_title": "Open-ended Long Text Generation via Masked Language Modeling",
+                    "content": "We utilize BLEU (B-n) (Papineni et al., 2002), ROUGE (R-n) (Lin, 2004), Lexical Repetition (LR-n, 4-gram repetition for n-times) (Shao et al., 2019), Semantic Repetition (SR-n, average top-n semantic similarity between any two sentences) (Guan et al., 2021b)<sup>¶</sup>, average semantic overlap (S-m, average semantic similarity of all the sentences), Distinct (D-n) (Li et al., 2016) and BERTScore (Zhang et al., 2019) for the storytelling task. As for the multi-paragraph opinionated articles writing, we utilize B-n, R-n, and METEOR (Banerjee and Lavie, 2005) to evaluate the results."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We analyze the performance of language models on two tasks that require identifying relevant information in their input contexts: multi-document question answering and key-value retrieval."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We first experiment with multi-document question answering, which requires models to reason over provided documents to find relevant information and use it to answer a given question; this task mimics the retrieval-augmented generation setup underlying many commercial generative search and question answering applications (e.g., Bing Chat)."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "We study this question with a synthetic key-value retrieval task, which is designed to be a minimal testbed for the basic ability to retrieve matching tokens from the input context. In this task, models are given a collection of JSON-formatted key-value pairs and must return the value associated with a specific key."
+                },
+                {
+                    "paper_title": "Lost in the Middle: How Language Models Use Long Contexts",
+                    "content": "Following Kandpal et al. (2022) and Mallen et al. (2023), we use accuracy as our primary evaluation metric, judging whether any of the cor-\n<sup>4</sup>Since there might be a prior over “search results” appearing in ranked order, we explored randomly ordering the  $k-1$  distracter documents and mentioning that the documents are randomly ordered in the task description, but found the same trends. See Appendix C for more details.\nrect answers (as taken from the NaturalQuestions annotations) appear in the predicted output."
+                }
+            ]
+        }
+    ]
+}

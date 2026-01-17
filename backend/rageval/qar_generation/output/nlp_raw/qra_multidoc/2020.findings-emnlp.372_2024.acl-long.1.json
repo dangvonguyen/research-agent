@@ -1,0 +1,296 @@
+{
+    "qa_multi_document_information_integration": [
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "What are the reported memory and speed improvements achieved by TinyBERT and Quantized Side Tuning?",
+            "answer": "TinyBERT<sub>4</sub> achieves a 7.3x smaller model size and 9.4x faster inference compared to BERT<sub>BASE</sub>, while TinyBERT<sub>4</sub> is 7.5x smaller and 9.4x faster in model efficiency. Quantized Side Tuning (QST) can reduce the total memory footprint by up to 2.3x and speed up the finetuning process by up to 3x compared to state-of-the-art methods. For full finetuning, QST can reduce the total memory footprint by up to 7x. Specifically, QST speeds up training by 3.2x and reduces memory footprint by 1.7x compared to QLoRA for LLaMA-2-70B.",
+            "ref": [
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "TinyBERT<sub>1</sub> with 4 layers is empirically effective and achieves more than 96.8% the performance of its teacher BERT<sub>BASE</sub> on GLUE benchmark, while being 7.3x smaller and 9.4x faster on inference."
+                },
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "We show in the experiments that our TinyBERT<sub>4</sub> can achieve more than 96.8% the performance of teacher BERT<sub>BASE</sub> on GLUE tasks, while having much fewer parameters ( $\\sim 13.3\\%$ ) and less inference time ( $\\sim 10.6\\%$ ), and significantly outperforms other state-of-the-art baselines with 4 layers on BERT distillation;"
+                },
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "Compared with the teacher BERT<sub>BASE</sub>, TinyBERT<sub>4</sub> is 7.5x smaller and 9.4x faster in the model efficiency, while maintaining competitive performances."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Experiments show that QST can reduce the total memory footprint by up to 2.3 $\\times$  and speed up the finetuning process by up to 3 $\\times$  while achieving competent performance compared with the state-of-the-art. When it comes to full finetuning, QST can reduce the total memory footprint up to 7 $\\times$ ."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Particularly, QST achieves around  $2.5\\times$  speed up compared with the baselines."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Table 7: Chatbot performance on QLoRA and QST.\n\n| Method      | Training Time | Memory | Score |\n|-------------|---------------|--------|-------|\n| LLaMA-2-70B | -             | -      | 6.86  |\n| QLoRA-70B   | ~80h          | 96.3   | 6.61  |\n| QST-70B     | ~25h          | 56.1   | 7.07  |\n\nQST speeds up the training by  $3.2 \\times$  and reduces memory footprint by  $1.7 \\times$ , with even an improved score of 0.46 compared with QLoRA. Notably, QST’s chatbot performance outperforms the original LLaMA-2-70B, achieving an improvement of 0.21."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "What are the key techniques employed by TinyBERT and Quantized Side Tuning to make large language models more efficient?",
+            "answer": "TinyBERT employs a novel Transformer distillation method and a two-stage learning framework. The Transformer distillation involves three types of loss functions for the embedding layer, hidden states and attention matrices of Transformer layers, and the prediction layer logits. The two-stage learning framework includes general distillation on a large-scale text corpus and task-specific distillation on an augmented task-specific dataset. Quantized Side Tuning (QST) uses a dual-stage process: first, it quantizes an LLM’s model weights into 4-bit. Second, it introduces a separate side network that utilizes the hidden states of the LLM to make task-specific predictions, avoiding back-propagation through the LLM. QST also leverages low-rank adaptors and gradient-free downsample modules (like LoRA, Adapter, MaxPooling, and AvgPooling) to reduce trainable parameters and optimizer states.",
+            "ref": [
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "To accelerate inference and reduce model size while maintaining accuracy, we first propose a novel *Transformer distillation* method that is specially designed for knowledge distillation (KD) of the Transformer-based models. By leveraging this new KD method, the plenty of knowledge encoded in a large “teacher” BERT can be effectively transferred to a small “student” TinyBERT. Then, we introduce a new *two-stage learning* framework for TinyBERT, which performs Transformer distillation at both the pre-training and task-specific learning stages. This framework ensures that TinyBERT can capture the general-domain as well as the task-specific knowledge in BERT."
+                },
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "To build a competitive TinyBERT, we firstly propose a new *Transformer distillation* method to distill the knowledge embedded in teacher BERT. Specifically, we design three types of loss functions to fit different representations from BERT layers: 1) the output of the embedding layer; 2) the hidden states and attention matrices derived from the Transformer layer; 3) the logits output by the prediction layer. The attention based fitting is inspired by the recent findings (Clark et al., 2019) that the attention weights learned by BERT can capture substantial linguistic knowledge, and it thus encourages the linguistic knowledge can be well transferred from teacher BERT to student TinyBERT. Then, we propose a novel *two-stage learning* framework including the *general distillation* and the *task-specific distillation*, as illustrated in Figure 1. At general distillation stage, the original BERT without fine-tuning acts as the teacher model. The student TinyBERT mimics the teacher’s behavior through the proposed Transformer distillation on general-domain corpus. After that, we obtain a general TinyBERT that is used as the initialization of student model for the further distillation. At the task-specific distillation stage, we first do the data augmentation, then perform the distillation on the augmented dataset using the fine-tuned BERT as the teacher model. It should be pointed out that both the two stages are essential to improve the performance and generalization capability of TinyBERT."
+                },
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "Using the above distillation objectives (i.e. Equations 7, 8, 9 and 10), we can unify the distillation loss of the corresponding layers between the teacher and the student network:\n\n$$\\mathcal{L}_{\\text{layer}} = \\begin{cases} \\mathcal{L}_{\\text{embd}}, & m=0 \\\\ \\mathcal{L}_{\\text{hidn}} + \\mathcal{L}_{\\text{attn}}, & M \\ge m > 0 \\\\ \\mathcal{L}_{\\text{pred}}, & m = M + 1 \\end{cases} \\quad (11)$$"
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "First, QST quantizes an LLM’s model weights into 4-bit to reduce the memory footprint of the LLM’s original weights. Second, QST introduces a *side network* separated from the LLM, which utilizes the hidden states of the LLM to make task-specific predictions. Using a separate side network avoids performing back-propagation through the LLM, thus reducing the memory requirement of the intermediate activations. Finally, QST leverages several low-rank adaptors and gradient-free downsample modules to significantly reduce the trainable parameters, so as to save the memory footprint of the optimizer states."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "QST first quantizes an LLM from 16-bit into 4-bit, formulated as follows."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "To address this problem, we leverage several different downsample methods, including LoRA (He et al., 2021), Adapter (Edalat et al., 2022), MaxPooling (Le-Cun et al., 1998) and AvgPooling."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "Which common benchmark is used to evaluate the performance of both TinyBERT and Quantized Side Tuning?",
+            "answer": "Both TinyBERT and Quantized Side Tuning (QST) use the General Language Understanding Evaluation (GLUE) benchmark to evaluate their performance. The GLUE benchmark includes tasks such as CoLA, SST-2, MRPC, STS-B, QQP, MNLI, QNLI, and RTE.",
+            "ref": [
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "TinyBERT<sub>1</sub> with 4 layers is empirically effective and achieves more than 96.8% the performance of its teacher BERT<sub>BASE</sub> on GLUE benchmark, while being 7.3x smaller and 9.4x faster on inference."
+                },
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "We evaluate TinyBERT on the General Language Understanding Evaluation (GLUE) (Wang et al., 2018) benchmark, which consists of 2 single-sentence tasks: CoLA (Warstadt et al., 2019), SST-2 (Socher et al., 2013), 3 sentence similarity tasks: MRPC (Dolan and Brockett, 2005), STS-B (Cer et al., 2017), QQP (Chen et al., 2018), and 4 natural language inference tasks: MNLI (Williams et al., 2018), QNLI (Rajpurkar et al., 2016), RTE (Bentivogli et al., 2009) and WNLI (Levesque et al., 2012). The metrics for these tasks can be found in the GLUE paper (Wang et al., 2018)."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "For NLU experiments, we use the GLUE (Wang et al., 2018) (General Language Understanding Evaluation) and MMLU (Hendrycks et al., 2020) (Massively Multitask Language Understanding) benchmarks. The GLUE benchmark provides a comprehensive evaluation of models across a range of linguistic tasks. These tasks encompass linguistic acceptability as examined in CoLA (Warstadt et al., 2019), sentiment analysis as portrayed in SST2 (Socher et al., 2013), tasks probing similarity and paraphrase distinctions such as MRPC (Dolan and Brockett, 2005), QQP (Iyer, 2017), and STS-B (Cer et al., 2017), in addition to natural language inference tasks including MNLI (Williams et al., 2017), QNLI (Rajpurkar et al., 2016), and RTE (Bentivogli et al., 2009)."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Table 1: Experiments results on GLUE benchmark (using BF16 data type)."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "What are the primary challenges related to large model deployment and finetuning that TinyBERT and Quantized Side Tuning aim to solve?",
+            "answer": "TinyBERT aims to solve the challenges of computationally expensive pre-trained language models (PLMs) that have a large number of parameters and long inference times, making them difficult to deploy efficiently on resource-restricted devices like mobile phones. Quantized Side Tuning (QST) addresses the substantial memory demands of LLM finetuning, which typically stem from model weights, optimizer states, and intermediate activations. Existing methods often fail to mitigate the memory footprint from all three sources simultaneously, with finetuning a 16-bit LLaMA model with 65 billion parameters requiring over 780GB of memory.",
+            "ref": [
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "Language model pre-training, such as BERT, has significantly improved the performances of many natural language processing tasks. However, pre-trained language models are usually computationally expensive, so it is difficult to efficiently execute them on resource-restricted devices."
+                },
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "However, PLMs usually have a large number of parameters and take long inference time, which are difficult to be deployed on edge devices such as mobile phones."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Finetuning large language models (LLMs) has been empirically effective on a variety of downstream tasks. Existing approaches to finetuning an LLM either focus on parameter-efficient finetuning, which only updates a small number of trainable parameters, or attempt to reduce the memory footprint during the training phase of the finetuning. Typically, the memory footprint during finetuning stems from three contributors: model weights, optimizer states, and intermediate activations. However, existing works still require considerable memory, and none can simultaneously mitigate the memory footprint of all three sources."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Nevertheless, the process of LLM finetuning is characterized by its substantial memory demands. For instance, finetuning a 16-bit LLaMA model with 65 billion parameters requires more than 780GB of memory (Dettmers et al., 2023)."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Information Integration Question",
+            "question": "How do TinyBERT and Quantized Side Tuning utilize information from intermediate layers of their base models?",
+            "answer": "TinyBERT utilizes information from intermediate layers of its teacher BERT through a Transformer-layer distillation method. This includes attention-based distillation, where the student learns to fit the attention matrices of the teacher, and hidden states-based distillation, where the student fits the output hidden states of the Transformer layers. Additionally, embedding-layer distillation is performed to transfer knowledge from the embedding layer. Quantized Side Tuning (QST) uses a separate side network that leverages the hidden states of the quantized LLM. Specifically, the hidden state of the i-th layer of the side network is formulated by combining the downsampled output of the corresponding quantized LLM layer's hidden state and the output of the previous layer of the side network.",
+            "ref": [
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "Specifically, we design three types of loss functions to fit different representations from BERT layers: 1) the output of the embedding layer; 2) the hidden states and attention matrices derived from the Transformer layer; 3) the logits output by the prediction layer. The attention based fitting is inspired by the recent findings (Clark et al., 2019) that the attention weights learned by BERT can capture substantial linguistic knowledge, and it thus encourages the linguistic knowledge can be well transferred from teacher BERT to student TinyBERT."
+                },
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "The proposed Transformer-layer distillation includes the *attention based distillation* and *hidden states based distillation*, which is shown in Figure 2. The attention based distillation is motivated by the recent findings that attention weights learned by BERT can capture rich linguistic knowledge (Clark et al., 2019). This kind of linguistic knowledge includes the syntax and coreference information, which is essential for natural language understanding. Thus we propose the attention based distillation to encourage that the linguistic knowledge can be transferred from teacher (BERT) to student (TinyBERT). Specifically, the student learns to fit the matrices of multi-head attention in the teacher network, and the objective is defined as:\n\n$$\\mathcal{L}_{\\text{attn}} = \\frac{1}{h} \\sum_{i=1}^{h} \\text{MSE}(\\mathbf{A}_i^S, \\mathbf{A}_i^T), \\quad (7)$$\n\nwhere  $h$  is the number of attention heads,  $\\mathbf{A}_i \\in \\mathbb{R}^{l \\times l}$  refers to the attention matrix corresponding to the  $i$ -th head of teacher or student,  $l$  is the input text length, and  $\\text{MSE}(\\cdot)$  means the *mean squared error* loss function. In this work, the (unnormalized) attention matrix  $\\mathbf{A}_i$  is used as the fitting target instead of its softmax output  $\\text{softmax}(\\mathbf{A}_i)$ , since our experiments show that the former setting has a faster convergence rate and better performances.\n\nIn addition to the attention based distillation, we also distill the knowledge from the output of Transformer layer, and the objective is as follows:\n\n$$\\mathcal{L}_{\\text{hidn}} = \\text{MSE}(\\mathbf{H}^S \\mathbf{W}_h, \\mathbf{H}^T), \\quad (8)$$\n\nwhere the matrices  $\\mathbf{H}^S \\in \\mathbb{R}^{l \\times d'}$  and  $\\mathbf{H}^T \\in \\mathbb{R}^{l \\times d}$  refer to the hidden states of student and teacher networks respectively, which are calculated by Equation 4. The scalar values  $d$  and  $d'$  denote the hidden sizes of teacher and student models, and  $d'$  is often smaller than  $d$  to obtain a smaller student network. The matrix  $\\mathbf{W}_h \\in \\mathbb{R}^{d' \\times d}$  is a learnable linear transformation, which transforms the hidden states of student network into the same space as the teacher network's states."
+                },
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "Embedding-layer Distillation. Similar to the hidden states based distillation, we also perform embedding-layer distillation and the objective is:\n\n$$\\mathcal{L}_{\\text{embd}} = \\text{MSE}(\\mathbf{E}^S \\mathbf{W}_e, \\mathbf{E}^T), \\quad (9)$$\n\nwhere the matrices  $\\mathbf{E}^S$  and  $\\mathbf{H}^T$  refer to the embeddings of student and teacher networks, respectively. In this paper, they have the same shape as the hidden state matrices. The matrix  $\\mathbf{W}_e$  is a linear transformation playing a similar role as  $\\mathbf{W}_h$  ."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Second, QST introduces a *side network* separated from the LLM, which utilizes the hidden states of the LLM to make task-specific predictions."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Our side network  $g$  serves as a lightweight version of the quantized LLM  $f$  . The hidden state and weight dimension of  $g$  are  $r$  times smaller than those of  $f$  , where  $r$  is the reduction factor. During the forward pass, the hidden state of the  $i^{\\text{th}}$  layer of the side network  $h_{g_i}$  is formulated by  $h_{g_i}^{16bit} = (1 - \\beta_i) * \\text{downsample}_r(h_f^{16bit}_i) + \\beta_i * h_{g_{i-1}}^{16bit}$ , where  $h_f^{16bit}$  is the hidden state of the  $i^{\\text{th}}$  layer of  $f$  and can be computed using Eq. (3)."
+                }
+            ]
+        }
+    ],
+    "qa_multi_document_compare": [
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "How do the average GLUE benchmark scores compare for the 4-layer distilled model and the quantized side tuning method applied to OPT-6.7B?",
+            "answer": "The 4-layer distilled model, TinyBERT<sub>4</sub>, achieves an average GLUE score of 77.0. For the quantized side tuning method (QST) applied to OPT-6.7B, it achieves an average GLUE score of 84.2, which is a 1.3% accuracy drop compared to QLoRA's 85.5.",
+            "ref": [
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "TinyBERT<sub>1</sub> with 4 layers is empirically effective and achieves more than 96.8% the performance of its teacher BERT<sub>BASE</sub> on GLUE benchmark, while being 7.3x smaller and 9.4x faster on inference.\nTinyBERT<sub>4</sub> can achieve more than 96.8% the performance of teacher BERT<sub>BASE</sub> on GLUE tasks, while having much fewer parameters ( $\\sim 13.3\\%$ ) and less inference time ( $\\sim 10.6\\%$ ), and significantly outperforms other state-of-the-art baselines with 4 layers on BERT distillation;"
+                },
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "Table 1: Results are evaluated on the test set of GLUE official benchmark. The best results for each group of student models are in-bold. The architecture of TinyBERT<sub>4</sub> and BERT<sub>TINY</sub> is ( $M=4$ ,  $d_t=312$ ,  $d_i=1200$ ), BERT<sub>SMALL</sub> is ( $M=4$ ,  $d=512$ ,  $d_i=2048$ ), BERT<sub>4</sub>-PKD and DistilBERT<sub>4</sub> is ( $M=4$ ,  $d=768$ ,  $d_i=3072$ ) and the architecture of BERT<sub>6</sub>-PKD, DistilBERT<sub>6</sub> and TinyBERT<sub>6</sub> is ( $M=6$ ,  $d=768$ ,  $d_i=3072$ ). All models are learned in a single-task manner. The inference speedup is evaluated on a single NVIDIA K80 GPU. † denotes that the comparison between MobileBERT<sub>TINY</sub> and TinyBERT<sub>4</sub> may not be fair since the former has 24 layers and is task-agnostically distilled from IB-BERT<sub>LARGE</sub> while the later is a 4-layers model task-specifically distilled from BERT<sub>BASE</sub>.\n| System                         | #Params | #FLOPs | Speedup | MNLI(m/mn) | QQP  | QNLI | SST-2 | CoLA | STS-B | MRPC | RTE  | Avg  |\n|--------------------------------|---------|--------|---------|------------|------|------|-------|------|-------|------|------|------|\n| BERT <sub>BASE</sub> (Teacher) | 109M    | 22.5B  | 1.0x    | 83.9/83.4  | 71.1 | 90.9 | 93.4  | 52.8 | 85.2  | 87.5 | 67.0 | 79.5 |\n| BERT <sub>TINY</sub>           | 14.5M   | 1.2B   | 9.4x    | 75.4/74.9  | 66.5 | 84.8 | 87.6  | 19.5 | 77.1  | 83.2 | 62.6 | 70.2 |\n| BERT <sub>SMALL</sub>          | 29.2M   | 3.4B   | 5.7x    | 77.6/77.0  | 68.1 | 86.4 | 89.7  | 27.8 | 77.0  | 83.4 | 61.8 | 72.1 |\n| BERT <sub>4</sub> -PKD         | 52.2M   | 7.6B   | 3.0x    | 79.9/79.3  | 70.2 | 85.1 | 89.4  | 24.8 | 79.8  | 82.6 | 62.3 | 72.6 |\n| DistilBERT <sub>4</sub>        | 52.2M   | 7.6B   | 3.0x    | 78.9/78.0  | 68.5 | 85.2 | 91.4  | 32.8 | 76.1  | 82.4 | 54.1 | 71.9 |\n| MobileBERT <sub>TINY</sub> †   | 15.1M   | 3.1B   | -       | 81.5/81.6  | 68.9 | 89.5 | 91.7  | 46.7 | 80.1  | 87.9 | 65.1 | 77.0 |\n| TinyBERT <sub>4</sub> (ours)   | 14.5M   | 1.2B   | 9.4x    | 82.5/81.8  | 71.3 | 87.7 | 92.6  | 44.1 | 80.4  | 86.4 | 66.6 | 77.0 |\n| BERT <sub>6</sub> -PKD         | 67.0M   | 11.3B  | 2.0x    | 81.5/81.0  | 70.7 | 89.0 | 92.0  | -    | -     | 85.0 | 65.5 | -    |\n| PD                             | 67.0M   | 11.3B  | 2.0x    | 82.8/82.2  | 70.4 | 88.9 | 91.8  | -    | -     | 86.8 | 65.3 | -    |\n| DistilBERT <sub>6</sub>        | 67.0M   | 11.3B  | 2.0x    | 82.6/81.3  | 70.1 | 88.9 | 92.5  | 49.0 | 81.3  | 86.9 | 58.4 | 76.8 |\n| TinyBERT <sub>6</sub> (ours)   | 67.0M   | 11.3B  | 2.0x    | 84.6/83.2  | 71.6 | 90.4 | 93.1  | 51.1 | 83.7  | 87.3 | 70.0 | 79.4 | "
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Table 1: Experiments results on GLUE benchmark (using BF16 data type).\n| Method                                              | # Param. (%) | Memory (GB) | RTE                  | MRPC                 | STS-B                | CoLA                 | SST-2                | QNLI                 | QQP                  | MNLI                 | Avg. |\n|-----------------------------------------------------|--------------|-------------|----------------------|----------------------|----------------------|----------------------|----------------------|----------------------|----------------------|----------------------|------|\n| \\textbf{OPT-1.3B (batchsize=16, sequence length=512)} |              |             |                      |                      |                      |                      |                      |                      |                      |                      |      |\n| QLoRA                                               | 4.41%        | 31.3        | 81.3 <sub>±1.6</sub> | 83.3 <sub>±1.1</sub> | 89.9 <sub>±0.5</sub> | 62.1 <sub>±2.3</sub> | 94.9 <sub>±0.1</sub> | 86.3 <sub>±0.2</sub> | 87.1 <sub>±0.1</sub> | 76.0 <sub>±0.3</sub> | 82.6 |\n| LST                                                 | 2.39%        | 20.9        | 82.0 <sub>±2.2</sub> | 83.4 <sub>±1.3</sub> | 88.9 <sub>±0.4</sub> | 59.7 <sub>±3.1</sub> | 94.3 <sub>±0.3</sub> | 86.1 <sub>±0.3</sub> | 86.4 <sub>±0.6</sub> | 77.8 <sub>±0.5</sub> | 82.2 |\n| LoRA                                                | 2.36%        | 32.9        | 82.7 <sub>±1.9</sub> | 83.4 <sub>±0.9</sub> | 89.3 <sub>±0.2</sub> | 62.5 <sub>±1.7</sub> | 93.7 <sub>±0.7</sub> | 81.4 <sub>±0.3</sub> | 86.9 <sub>±0.3</sub> | 81.2 <sub>±0.1</sub> | 82.6 |\n| Adapter                                             | 0.48%        | 32.5        | 82.2 <sub>±0.8</sub> | 82.7 <sub>±1.4</sub> | 89.7 <sub>±1.6</sub> | 60.0 <sub>±1.0</sub> | 93.8 <sub>±0.2</sub> | 83.6 <sub>±0.1</sub> | 86.3 <sub>±0.4</sub> | 80.5 <sub>±0.1</sub> | 82.4 |\n| QST                                                 | \\textbf{0.45%}| 17.7        | 79.5 <sub>±2.5</sub> | 81.7 <sub>±1.1</sub> | 88.4 <sub>±1.1</sub> | 59.7 <sub>±2.9</sub> | 94.3 <sub>±0.3</sub> | 85.7 <sub>±0.5</sub> | 84.3 <sub>±0.7</sub> | 77.1 <sub>±0.6</sub> | 81.3 |\n| \\textbf{OPT-2.7B (batchsize=16, sequence length=512)} |              |             |                      |                      |                      |                      |                      |                      |                      |                      |      |\n| QLoRA                                               | 3.57%        | 47.0        | 83.6 <sub>±1.5</sub> | 84.8 <sub>±1.2</sub> | 91.6 <sub>±0.6</sub> | 63.7 <sub>±2.6</sub> | 95.6 <sub>±0.2</sub> | 88.7 <sub>±0.1</sub> | 89.5 <sub>±0.2</sub> | 78.3 <sub>±0.4</sub> | 84.4 |\n| LST                                                 | 2.39%        | 30.7        | 82.5 <sub>±2.9</sub> | 83.9 <sub>±1.5</sub> | 89.1 <sub>±0.9</sub> | 60.7 <sub>±3.5</sub> | 95.3 <sub>±0.4</sub> | 87.3 <sub>±0.2</sub> | 88.8 <sub>±1.0</sub> | 80.4 <sub>±0.7</sub> | 83.5 |\n| LoRA                                                | 1.90%        | 50.4        | 84.7 <sub>±1.4</sub> | 84.6 <sub>±0.8</sub> | 90.9 <sub>±0.1</sub> | 64.5 <sub>±2.4</sub> | 95.3 <sub>±0.6</sub> | 83.0 <sub>±7.4</sub> | 90.7 <sub>±0.1</sub> | 82.6 <sub>±0.2</sub> | 84.5 |\n| Adapter                                             | 0.37%        | 49.9        | 84.4 <sub>±0.7</sub> | 83.7 <sub>±1.4</sub> | 91.5 <sub>±1.9</sub> | 63.4 <sub>±3.8</sub> | 95.4 <sub>±0.3</sub> | 83.6 <sub>±0.2</sub> | 90.2 <sub>±0.3</sub> | 81.1 <sub>±0.1</sub> | 84.2 |\n| QST                                                 | 0.43%        | \\textbf{24.4}| 80.1 <sub>±2.1</sub> | 83.7 <sub>±1.2</sub> | 88.9 <sub>±1.4</sub> | 62.0 <sub>±1.4</sub> | 95.2 <sub>±0.8</sub> | 86.6 <sub>±0.6</sub> | 86.5 <sub>±0.9</sub> | 80.4 <sub>±0.6</sub> | 83.0 |\n| \\textbf{OPT-6.7B (batchsize=16, sequence length=512)} |              |             |                      |                      |                      |                      |                      |                      |                      |                      |      |\n| QLoRA                                               | 2.33%        | 63.6        | 84.5 <sub>±1.2</sub> | 85.9 <sub>±0.7</sub> | 92.0 <sub>±0.8</sub> | 64.3 <sub>±2.8</sub> | 96.2 <sub>±0.1</sub> | 90.2 <sub>±0.2</sub> | 90.7 <sub>±0.2</sub> | 79.8 <sub>±0.3</sub> | 85.5 |\n| QST                                                 | 0.42%        | 27.5        | 80.8 <sub>±1.4</sub> | 85.2 <sub>±1.0</sub> | 89.6 <sub>±0.7</sub> | 62.8 <sub>±2.6</sub> | 96.4 <sub>±0.6</sub> | 87.3 <sub>±1.1</sub> | 89.4 <sub>±0.8</sub> | 81.6 <sub>±0.5</sub> | 84.2 |"
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "For larger models such as OPT-6.7B, we focus on comparing QST with QLoRA. This is because QLoRA has similar accuracy with the other baselines, but LoRA, Adapter, and LST all have excessively huge memory footprints of weights when it comes to finetuning OPT-6.7B<sup>2</sup>. Compared with QLoRA, QST reduces the memory footprint and trainable parameters by  $2.3\\times$  and  $5.5\\times$ , while only introducing a 1.3% accuracy drop."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "What is the typical scale of language models that each method is designed to optimize or distill?",
+            "answer": "The model distillation method (TinyBERT) is designed to optimize and distill knowledge from large pre-trained language models like BERT<sub>BASE</sub>, which contains 109 million parameters, into smaller student models such as TinyBERT<sub>4</sub> with 14.5 million parameters. In contrast, the quantized side tuning (QST) method is designed for much larger language models, with evaluations conducted on models ranging from 1.3 billion to 70 billion parameters, including the OPT series (e.g., OPT-1.3B to OPT-66B) and the LLaMA-2 series (e.g., LLaMA-2-7B to LLaMA-2-70B).",
+            "ref": [
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "To accelerate inference and reduce model size while maintaining accuracy, we first propose a novel *Transformer distillation* method that is specially designed for knowledge distillation (KD) of the Transformer-based models. By leveraging this new KD method, the plenty of knowledge encoded in a large “teacher” BERT can be effectively transferred to a small “student” TinyBERT."
+                },
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "The original BERT<sub>BASE</sub> ( $N=12$ ,  $d=768$ ,  $d_i=3072$  and  $h=12$ ) is used as the teacher model that contains 109M parameters. We use  $g(m) = 3 \\times m$  as the layer mapping function, so TinyBERT<sub>4</sub> learns from every 3 layers of BERT<sub>BASE</sub>. The learning weight  $\\lambda$  of each layer is set to 1. Besides, for a direct comparisons with baselines, we also instantiate a TinyBERT<sub>6</sub> ( $M=6$ ,  $d'=768$ ,  $d'_i=3072$  and  $h=12$ ) with the same architecture as BERT<sub>6</sub>-PKD (Sun et al., 2019) and DistilBERT<sub>6</sub> (Sanh et al., 2019)."
+                },
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "We instantiate a tiny student model (the number of layers  $M=4$ , the hidden size  $d'=312$ , the feed-forward/filter size  $d'_f=1200$  and the head number  $h=12$ ) that has a total of 14.5M parameters. This model is referred to as TinyBERT<sub>4</sub>."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Finetuning large language models (LLMs) has been empirically effective on a variety of downstream tasks. Existing approaches to finetuning an LLM either focus on parameter-efficient finetuning, which only updates a small number of trainable parameters, or attempt to reduce the memory footprint during the training phase of the finetuning. Typically, the memory footprint during finetuning stems from three contributors: model weights, optimizer states, and intermediate activations. However, existing works still require considerable memory, and none can simultaneously mitigate the memory footprint of all three sources. In this paper, we present *quantized side tuning* (QST), which enables memory-efficient and fast finetuning of LLMs by operating through a dual-stage process. First, QST quantizes an LLM’s model weights into 4-bit to reduce the memory footprint of the LLM’s original weights. Second, QST introduces a *side network* separated from the LLM, which utilizes the hidden states of the LLM to make task-specific predictions. Using a separate side network avoids performing back-propagation through the LLM, thus reducing the memory requirement of the intermediate activations. Finally, QST leverages several low-rank adaptors and gradient-free downsample modules to significantly reduce the trainable parameters, so as to save the memory footprint of the optimizer states. Experiments show that QST can reduce the total memory footprint by up to 2.3 $\\times$  and speed up the finetuning process by up to 3 $\\times$  while achieving competent performance compared with the state-of-the-art. When it comes to full finetuning, QST can reduce the total memory footprint up to 7 $\\times$ ."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "For instance, finetuning a 16-bit LLaMA model with 65 billion parameters requires more than 780GB of memory (Dettmers et al., 2023)."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "To validate the effectiveness of our QST, we conduct extensive evaluations for different types of LLMs (e.g., OPT, LLaMA 2), with 1.3B to 70B parameters, on various benchmarks."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "We use decoder-only LLMs such as the OPT series (OPT-1.3B, OPT-2.7B, OPT-6.7B, OPT-13B, OPT-30B, and OPT-66B) and the LLaMA-2 series (LLaMA-2-7B, LLaMA-2-13B, and LLaMA-2-70B)."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "How do the speed improvements compare between the model distillation technique and the quantized side tuning method?",
+            "answer": "The model distillation technique, specifically TinyBERT<sub>4</sub>, achieves a 9.4x faster *inference* speed compared to its teacher BERT<sub>BASE</sub>. The quantized side tuning (QST) method, on the other hand, speeds up the *finetuning* process by up to 3x compared to state-of-the-art methods like QLoRA. For LLaMA-2-70B, QST speeds up training by 3.2x compared to QLoRA.",
+            "ref": [
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "TinyBERT<sub>1</sub> with 4 layers is empirically effective and achieves more than 96.8% the performance of its teacher BERT<sub>BASE</sub> on GLUE benchmark, while being 7.3x smaller and 9.4x faster on inference."
+                },
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "Table 1: Results are evaluated on the test set of GLUE official benchmark. The best results for each group of student models are in-bold. The architecture of TinyBERT<sub>4</sub> and BERT<sub>TINY</sub> is ( $M=4$ ,  $d_t=312$ ,  $d_i=1200$ ), BERT<sub>SMALL</sub> is ( $M=4$ ,  $d=512$ ,  $d_i=2048$ ), BERT<sub>4</sub>-PKD and DistilBERT<sub>4</sub> is ( $M=4$ ,  $d=768$ ,  $d_i=3072$ ) and the architecture of BERT<sub>6</sub>-PKD, DistilBERT<sub>6</sub> and TinyBERT<sub>6</sub> is ( $M=6$ ,  $d=768$ ,  $d_i=3072$ ). All models are learned in a single-task manner. The inference speedup is evaluated on a single NVIDIA K80 GPU. † denotes that the comparison between MobileBERT<sub>TINY</sub> and TinyBERT<sub>4</sub> may not be fair since the former has 24 layers and is task-agnostically distilled from IB-BERT<sub>LARGE</sub> while the later is a 4-layers model task-specifically distilled from BERT<sub>BASE</sub>.\n| System                         | #Params | #FLOPs | Speedup | MNLI(m/mn) | QQP  | QNLI | SST-2 | CoLA | STS-B | MRPC | RTE  | Avg  |\n|--------------------------------|---------|--------|---------|------------|------|------|-------|------|-------|------|------|------|\n| BERT <sub>BASE</sub> (Teacher) | 109M    | 22.5B  | 1.0x    | 83.9/83.4  | 71.1 | 90.9 | 93.4  | 52.8 | 85.2  | 87.5 | 67.0 | 79.5 |\n| BERT <sub>TINY</sub>           | 14.5M   | 1.2B   | 9.4x    | 75.4/74.9  | 66.5 | 84.8 | 87.6  | 19.5 | 77.1  | 83.2 | 62.6 | 70.2 |\n| BERT <sub>SMALL</sub>          | 29.2M   | 3.4B   | 5.7x    | 77.6/77.0  | 68.1 | 86.4 | 89.7  | 27.8 | 77.0  | 83.4 | 61.8 | 72.1 |\n| BERT <sub>4</sub> -PKD         | 52.2M   | 7.6B   | 3.0x    | 79.9/79.3  | 70.2 | 85.1 | 89.4  | 24.8 | 79.8  | 82.6 | 62.3 | 72.6 |\n| DistilBERT <sub>4</sub>        | 52.2M   | 7.6B   | 3.0x    | 78.9/78.0  | 68.5 | 85.2 | 91.4  | 32.8 | 76.1  | 82.4 | 54.1 | 71.9 |\n| MobileBERT <sub>TINY</sub> †   | 15.1M   | 3.1B   | -       | 81.5/81.6  | 68.9 | 89.5 | 91.7  | 46.7 | 80.1  | 87.9 | 65.1 | 77.0 |\n| TinyBERT <sub>4</sub> (ours)   | 14.5M   | 1.2B   | 9.4x    | 82.5/81.8  | 71.3 | 87.7 | 92.6  | 44.1 | 80.4  | 86.4 | 66.6 | 77.0 |\n| BERT <sub>6</sub> -PKD         | 67.0M   | 11.3B  | 2.0x    | 81.5/81.0  | 70.7 | 89.0 | 92.0  | -    | -     | 85.0 | 65.5 | -    |\n| PD                             | 67.0M   | 11.3B  | 2.0x    | 82.8/82.2  | 70.4 | 88.9 | 91.8  | -    | -     | 86.8 | 65.3 | -    |\n| DistilBERT <sub>6</sub>        | 67.0M   | 11.3B  | 2.0x    | 82.6/81.3  | 70.1 | 88.9 | 92.5  | 49.0 | 81.3  | 86.9 | 58.4 | 76.8 |\n| TinyBERT <sub>6</sub> (ours)   | 67.0M   | 11.3B  | 2.0x    | 84.6/83.2  | 71.6 | 90.4 | 93.1  | 51.1 | 83.7  | 87.3 | 70.0 | 79.4 | "
+                },
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "Compared with the teacher BERT<sub>BASE</sub>, TinyBERT<sub>4</sub> is 7.5x smaller and 9.4x faster in the model efficiency, while maintaining competitive performances."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Experiments show that QST can reduce the total memory footprint by up to 2.3 $\\times$  and speed up the finetuning process by up to 3 $\\times$  while achieving competent performance compared with the state-of-the-art. When it comes to full finetuning, QST can reduce the total memory footprint up to 7 $\\times$ ."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Table 3: Experiments on FLOPS per token of different methods.\n| Method  | FLOPS per token ( $10^{-5}$ ) |             |             |\n|---------|-------------------------------|-------------|-------------|\n|         | LLaMA-2-7B                    | LLaMA-2-13B | LLaMA-2-70B |\n| QLoRA   | 11.7                          | 16.0        | 38.1        |\n| LST     | 11.0                          | 19.0        | 80.7        |\n| LoRA    | 11.3                          | 15.6        | 37.2        |\n| Adapter | 11.2                          | 15.6        | 27.2        |\n| QST     | 4.4                           | 6.1         | 15.3        |"
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Particularly, QST achieves around  $2.5\\times$  speed up compared with the baselines."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Table 7: Chatbot performance on QLoRA and QST.\n| Method      | Training Time | Memory | Score |\n|-------------|---------------|--------|-------|\n| LLaMA-2-70B | -             | -      | 6.86  |\n| QLoRA-70B   | ~80h          | 96.3   | 6.61  |\n| QST-70B     | ~25h          | 56.1   | 7.07  |"
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "QST speeds up the training by  $3.2 \\times$  and reduces memory footprint by  $1.7 \\times$ , with even an improved score of 0.46 compared with QLoRA."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "Which approach offers greater memory footprint reduction, the model distillation method or the quantized side tuning method?",
+            "answer": "The model distillation method (TinyBERT) focuses on reducing the *model size*, with TinyBERT<sub>4</sub> being 7.3x to 7.5x smaller than its teacher BERT<sub>BASE</sub>. The quantized side tuning (QST) method explicitly targets *total memory footprint reduction* during finetuning, achieving up to 2.3x reduction compared to state-of-the-art methods like QLoRA and up to 7x reduction compared to full finetuning for large language models. For instance, QST reduces the memory footprint by 1.8x compared to QLoRA on average.",
+            "ref": [
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "TinyBERT<sub>1</sub> with 4 layers is empirically effective and achieves more than 96.8% the performance of its teacher BERT<sub>BASE</sub> on GLUE benchmark, while being 7.3x smaller and 9.4x faster on inference."
+                },
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "TinyBERT<sub>4</sub> can achieve more than 96.8% the performance of teacher BERT<sub>BASE</sub> on GLUE tasks, while having much fewer parameters ( $\\sim 13.3\\%$ ) and less inference time ( $\\sim 10.6\\%$ ), and significantly outperforms other state-of-the-art baselines with 4 layers on BERT distillation;"
+                },
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "Compared with the teacher BERT<sub>BASE</sub>, TinyBERT<sub>4</sub> is 7.5x smaller and 9.4x faster in the model efficiency, while maintaining competitive performances."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Experiments show that QST can reduce the total memory footprint by up to 2.3 $\\times$  and speed up the finetuning process by up to 3 $\\times$  while achieving competent performance compared with the state-of-the-art. When it comes to full finetuning, QST can reduce the total memory footprint up to 7 $\\times$ ."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Figure 1: (a) Memory requirement comparison and (b) Predictive performance comparison of different finetuning techniques.\nFigure 1(a) shows the memory footprint of different methods for finetuning LLaMA-2-70b. The chart compares Full Finetuning, QLoRA, LST, and QST (Ours). The memory components are: Weights (blue), Optimizer states (pink), and Intermediate activations (orange). Full Finetuning requires 140GB weights, 420GB optimizer states, and 197GB intermediate activations. QLoRA reduces weights and optimizer states to 13GB and 36GB respectively, while keeping 197GB intermediate activations. LST reduces intermediate activations and optimizer states to 78GB and 24GB respectively, while keeping 140GB weights. QST (Ours) reduces all components to 69GB weights, 4GB optimizer states, and 36GB intermediate activations."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "QST improves the accuracy by 0.1% on average while reducing the memory footprint by 1.8 $\\times$  compared with QLoRA."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Compared with QLoRA, QST reduces the memory footprint and trainable parameters by  $2.3\\times$  and  $5.5\\times$ , while only introducing a 1.3% accuracy drop."
+                }
+            ]
+        },
+        {
+            "question type": "Multi-document Comparison Question",
+            "question": "What is the approximate number of parameters for the smallest distilled model and the relative reduction in trainable parameters for the quantized side tuning method?",
+            "answer": "The smallest distilled model, TinyBERT<sub>4</sub>, has a total of 14.5 million parameters. For the quantized side tuning (QST) method, it significantly reduces trainable parameters; for instance, it reduces them by 5.5x compared to QLoRA for OPT-6.7B. The trainable parameters for QST are a very small percentage of the total model parameters, such as 0.45% for OPT-1.3B, 0.43% for OPT-2.7B, and 0.42% for OPT-6.7B.",
+            "ref": [
+                {
+                    "paper_title": "TinyBERT: Distilling BERT for Natural Language Understanding",
+                    "content": "We instantiate a tiny student model (the number of layers  $M=4$ , the hidden size  $d'=312$ , the feed-forward/filter size  $d'_f=1200$  and the head number  $h=12$ ) that has a total of 14.5M parameters. This model is referred to as TinyBERT<sub>4</sub>."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "QST also reduces the trainable parameters by around  $10\\times$  and  $5\\times$  compared with QLoRA and the other baselines, respectively."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Compared with QLoRA, QST reduces the memory footprint and trainable parameters by  $2.3\\times$  and  $5.5\\times$ , while only introducing a 1.3% accuracy drop."
+                },
+                {
+                    "paper_title": "Quantized Side Tuning: Fast and Memory-Efficient Tuning of Quantized Large Language Models",
+                    "content": "Table 1: Experiments results on GLUE benchmark (using BF16 data type).\n| Method                                              | # Param. (%) | Memory (GB) | RTE                  | MRPC                 | STS-B                | CoLA                 | SST-2                | QNLI                 | QQP                  | MNLI                 | Avg. |\n|-----------------------------------------------------|--------------|-------------|----------------------|----------------------|----------------------|----------------------|----------------------|----------------------|----------------------|----------------------|------|\n| \\textbf{OPT-1.3B (batchsize=16, sequence length=512)} |              |             |                      |                      |                      |                      |                      |                      |                      |                      |      |\n| QLoRA                                               | 4.41%        | 31.3        | 81.3 <sub>±1.6</sub> | 83.3 <sub>±1.1</sub> | 89.9 <sub>±0.5</sub> | 62.1 <sub>±2.3</sub> | 94.9 <sub>±0.1</sub> | 86.3 <sub>±0.2</sub> | 87.1 <sub>±0.1</sub> | 76.0 <sub>±0.3</sub> | 82.6 |\n| LST                                                 | 2.39%        | 20.9        | 82.0 <sub>±2.2</sub> | 83.4 <sub>±1.3</sub> | 88.9 <sub>±0.4</sub> | 59.7 <sub>±3.1</sub> | 94.3 <sub>±0.3</sub> | 86.1 <sub>±0.3</sub> | 86.4 <sub>±0.6</sub> | 77.8 <sub>±0.5</sub> | 82.2 |\n| LoRA                                                | 2.36%        | 32.9        | 82.7 <sub>±1.9</sub> | 83.4 <sub>±0.9</sub> | 89.3 <sub>±0.2</sub> | 62.5 <sub>±1.7</sub> | 93.7 <sub>±0.7</sub> | 81.4 <sub>±0.3</sub> | 86.9 <sub>±0.3</sub> | 81.2 <sub>±0.1</sub> | 82.6 |\n| Adapter                                             | 0.48%        | 32.5        | 82.2 <sub>±0.8</sub> | 82.7 <sub>±1.4</sub> | 89.7 <sub>±1.6</sub> | 60.0 <sub>±1.0</sub> | 93.8 <sub>±0.2</sub> | 83.6 <sub>±0.1</sub> | 86.3 <sub>±0.4</sub> | 80.5 <sub>±0.1</sub> | 82.4 |\n| QST                                                 | \\textbf{0.45%}| 17.7        | 79.5 <sub>±2.5</sub> | 81.7 <sub>±1.1</sub> | 88.4 <sub>±1.1</sub> | 59.7 <sub>±2.9</sub> | 94.3 <sub>±0.3</sub> | 85.7 <sub>±0.5</sub> | 84.3 <sub>±0.7</sub> | 77.1 <sub>±0.6</sub> | 81.3 |\n| \\textbf{OPT-2.7B (batchsize=16, sequence length=512)} |              |             |                      |                      |                      |                      |                      |                      |                      |                      |      |\n| QLoRA                                               | 3.57%        | 47.0        | 83.6 <sub>±1.5</sub> | 84.8 <sub>±1.2</sub> | 91.6 <sub>±0.6</sub> | 63.7 <sub>±2.6</sub> | 95.6 <sub>±0.2</sub> | 88.7 <sub>±0.1</sub> | 89.5 <sub>±0.2</sub> | 78.3 <sub>±0.4</sub> | 84.4 |\n| LST                                                 | 2.39%        | 30.7        | 82.5 <sub>±2.9</sub> | 83.9 <sub>±1.5</sub> | 89.1 <sub>±0.9</sub> | 60.7 <sub>±3.5</sub> | 95.3 <sub>±0.4</sub> | 87.3 <sub>±0.2</sub> | 88.8 <sub>±1.0</sub> | 80.4 <sub>±0.7</sub> | 83.5 |\n| LoRA                                                | 1.90%        | 50.4        | 84.7 <sub>±1.4</sub> | 84.6 <sub>±0.8</sub> | 90.9 <sub>±0.1</sub> | 64.5 <sub>±2.4</sub> | 95.3 <sub>±0.6</sub> | 83.0 <sub>±7.4</sub> | 90.7 <sub>±0.1</sub> | 82.6 <sub>±0.2</sub> | 84.5 |\n| Adapter                                             | 0.37%        | 49.9        | 84.4 <sub>±0.7</sub> | 83.7 <sub>±1.4</sub> | 91.5 <sub>±1.9</sub> | 63.4 <sub>±3.8</sub> | 95.4 <sub>±0.3</sub> | 83.6 <sub>±0.2</sub> | 90.2 <sub>±0.3</sub> | 81.1 <sub>±0.1</sub> | 84.2 |\n| QST                                                 | 0.43%        | \\textbf{24.4}| 80.1 <sub>±2.1</sub> | 83.7 <sub>±1.2</sub> | 88.9 <sub>±1.4</sub> | 62.0 <sub>±1.4</sub> | 95.2 <sub>±0.8</sub> | 86.6 <sub>±0.6</sub> | 86.5 <sub>±0.9</sub> | 80.4 <sub>±0.6</sub> | 83.0 |\n| \\textbf{OPT-6.7B (batchsize=16, sequence length=512)} |              |             |                      |                      |                      |                      |                      |                      |                      |                      |      |\n| QLoRA                                               | 2.33%        | 63.6        | 84.5 <sub>±1.2</sub> | 85.9 <sub>±0.7</sub> | 92.0 <sub>±0.8</sub> | 64.3 <sub>±2.8</sub> | 96.2 <sub>±0.1</sub> | 90.2 <sub>±0.2</sub> | 90.7 <sub>±0.2</sub> | 79.8 <sub>±0.3</sub> | 85.5 |\n| QST                                                 | 0.42%        | 27.5        | 80.8 <sub>±1.4</sub> | 85.2 <sub>±1.0</sub> | 89.6 <sub>±0.7</sub> | 62.8 <sub>±2.6</sub> | 96.4 <sub>±0.6</sub> | 87.3 <sub>±1.1</sub> | 89.4 <sub>±0.8</sub> | 81.6 <sub>±0.5</sub> | 84.2 |"
+                }
+            ]
+        }
+    ]
+}
