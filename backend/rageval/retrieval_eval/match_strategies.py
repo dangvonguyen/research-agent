@@ -5,9 +5,10 @@ chunk is relevant to a ground truth reference.
 """
 
 import re
-import unicodedata
 from abc import ABC, abstractmethod
 from difflib import SequenceMatcher
+
+from app.tools.parsers.markdown_parser import MarkdownParser
 
 
 class MatchStrategy(ABC):
@@ -510,3 +511,152 @@ class RegexAnchorMatch(MatchStrategy):
         print(0)
 
         return False
+
+
+class SectionSimilarityMatch(MatchStrategy):
+    """Section-based similarity matching strategy using MarkdownParser.
+
+    Splits the retrieved document into markdown sections and computes similarity
+    between the ground truth reference and each section. Returns True if
+    any section has sufficient similarity.
+
+    This is useful when:
+    - The document contains multiple distinct sections
+    - The reference corresponds to a specific section
+    - You want to avoid noise from unrelated sections affecting similarity
+    """
+
+    def __init__(
+        self,
+        min_similarity: float = 0.8,
+        min_section_length: int = 50,
+    ):
+        """Initialize section similarity matcher.
+
+        Args:
+            min_similarity: Minimum similarity ratio (0.0 to 1.0)
+            min_section_length: Minimum character length for a section to be considered
+        """
+        self.min_similarity = min_similarity
+        self.min_section_length = min_section_length
+        self.parser = MarkdownParser(min_content_length=min_section_length)
+
+    def _get_sections(self, text: str) -> list[str]:
+        """Split text into sections using MarkdownParser.
+
+        Args:
+            text: Text to split
+
+        Returns:
+            List of section content strings
+        """
+        sections_dict = self.parser.parse_markdown_sections(text)
+
+        sections = []
+        for title, content in sections_dict.items():
+            # Combine title and content
+            if title:
+                section_text = f"{title}\n{content}"
+            else:
+                section_text = content
+
+            sections.append(section_text.strip())
+
+        return sections if sections else [text]
+
+    def _compute_similarity_v0(self, section: str, ground_truth: str) -> float:
+        """Compute similarity between a section and ground truth using sliding window.
+
+        Args:
+            section: Section text
+            ground_truth: Ground truth reference text
+
+        Returns:
+            Similarity ratio (0.0 to 1.0)
+        """
+        normalized_section = normalize_text(section)
+        normalized_gt = normalize_text(ground_truth)
+
+        if not normalized_section or not normalized_gt:
+            return 0.0
+
+        # For short texts, use direct comparison
+        if len(normalized_gt) <= 100:
+            matcher = SequenceMatcher(None, normalized_section, normalized_gt)
+            return matcher.ratio()
+
+        # For longer texts, use sliding window to find best match
+        window_size = len(normalized_gt)
+        best_ratio = 0.0
+
+        step = max(1, window_size // 4)
+        for i in range(0, max(1, len(normalized_section) - window_size + 1), step):
+            window = normalized_section[i : i + window_size + window_size // 2]
+            matcher = SequenceMatcher(None, window, normalized_gt)
+            ratio = matcher.ratio()
+            best_ratio = max(best_ratio, ratio)
+
+            if best_ratio >= 0.95:
+                return best_ratio
+
+        # Also check overall similarity
+        overall_matcher = SequenceMatcher(None, normalized_section, normalized_gt)
+        best_ratio = max(best_ratio, overall_matcher.ratio())
+
+        return best_ratio
+
+    def _compute_similarity(self, retrieved: str, ground_truth: str) -> bool:
+        """Check if normalized token overlap exceeds threshold.
+
+        Args:
+            retrieved: Retrieved chunk text
+            ground_truth: Ground truth reference text
+
+        Returns:
+            True if overlap ratio >= min_overlap
+        """
+        normalized_retrieved = normalize_text(retrieved)
+        normalized_ground_truth = normalize_text(ground_truth)
+
+        r_tokens = set(normalized_retrieved.split())
+        g_tokens = set(normalized_ground_truth.split())
+
+        if not g_tokens:
+            return False
+
+        overlap = len(r_tokens & g_tokens) / len(g_tokens)
+        return overlap >= self.min_similarity
+
+    def is_relevant(self, retrieved: str, ground_truth: str) -> bool:
+        """Determine if retrieved chunk is relevant by checking each section.
+
+        Strategy:
+        1. Split retrieved text into markdown sections using MarkdownParser
+        2. Compute similarity between each section and ground truth
+        3. Return True if any section has similarity >= threshold
+
+        Args:
+            retrieved: Retrieved chunk text
+            ground_truth: Ground truth reference text
+
+        Returns:
+            True if any section is relevant, False otherwise
+        """
+        if not retrieved or not ground_truth:
+            return False
+
+        # Get sections from retrieved text
+        sections = self._get_sections(retrieved)
+
+        count = 0
+
+        # Check each section
+        for section in sections:
+            similarity = self._compute_similarity(section, ground_truth)
+            if similarity >= self.min_similarity:
+                # return True
+                count += 1
+
+        if count > 1:
+            print(count)
+        return bool(count)
