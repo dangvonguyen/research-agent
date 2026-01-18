@@ -44,31 +44,22 @@ def remove_references_section(content: str) -> str:
     in_references = False
 
     for i, line in enumerate(lines):
-        # Check if this line is a heading (starts with #)
         stripped = line.lstrip()
         if stripped.startswith("#"):
-            # Check if this heading contains "references" (case-insensitive)
-            # Remove the # symbols and check the text
+            # Check if this heading contains "references"
             heading_text = re.sub(r"^#+\s*", "", stripped).lower().strip()
             if "reference" in heading_text or "bibliography" in heading_text:
-                # Start of references section - skip this line and everything after
                 in_references = True
                 continue
 
-            # If we encounter another heading while in references section,
-            # it means we've reached the next section (or end of references)
             if in_references:
-                # We've reached the next section, stop skipping
                 in_references = False
-                # Include this new section heading
                 result_lines.append(line)
                 continue
 
-        # If we're in references section, skip this line
         if in_references:
             continue
 
-        # Otherwise, include this line
         result_lines.append(line)
 
     return "\n".join(result_lines)
