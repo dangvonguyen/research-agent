@@ -83,8 +83,8 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024  # 50MB
 
     # LLM settings
-    DEFAULT_LLM_MODEL: str = "models/gemini-2.5-flash"
-    DEFAULT_LLM_PROVIDER: str = "gemini"
+    DEFAULT_LLM_MODEL: str = "gemini-2.5-flash"
+    DEFAULT_LLM_PROVIDER: str = "google_genai"
     TIMEOUT: Optional[float] = None
     MAX_TOKENS: Optional[int] = None
 
@@ -95,7 +95,7 @@ class Settings(BaseSettings):
 
     # LLM Provider API Keys
     ANTHROPIC_API_KEY: Optional[str] = None
-    GEMINI_API_KEY: Optional[str] = None
+    GOOGLE_GENAI_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
 
     # Search API Keys

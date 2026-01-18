@@ -4,7 +4,7 @@ from typing import Any, Protocol
 from uuid import UUID
 
 from llama_index.core.embeddings import BaseEmbedding
-from llama_index.embeddings.gemini import GeminiEmbedding
+from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.embeddings.openai import OpenAIEmbedding
 from pydantic import BaseModel, Field
@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 class EmbeddingProvider(str, Enum):
     """Supported embedding providers."""
 
+    GOOGLE_GENAI = "google_genai"
     OPENAI = "openai"
-    GEMINI = "gemini"
     OLLAMA = "ollama"
 
 
@@ -75,17 +75,17 @@ class OpenAIConfig:
         return kwargs
 
 
-class GeminiConfig:
-    """Gemini provider configuration."""
+class GoogleGenAIConfig:
+    """Google GenAI provider configuration."""
 
     def get_embedding_class(self) -> type[BaseEmbedding]:
-        return GeminiEmbedding
+        return GoogleGenAIEmbedding
 
     def build_kwargs(self, model: EmbeddingModel, settings: Any) -> dict[str, Any]:
-        api_key = getattr(settings, "GEMINI_API_KEY", None)
+        api_key = getattr(settings, "GOOGLE_GENAI_API_KEY", None)
         if not api_key:
             raise ValueError(
-                f"GEMINI_API_KEY is required for model '{model.model_name}'"
+                f"GOOGLE_GENAI_API_KEY is required for model '{model.model_name}'"
             )
 
         kwargs = {
@@ -124,8 +124,8 @@ class EmbeddingFactory:
 
     # Provider registry - easy to extend with new providers
     _PROVIDERS: dict[EmbeddingProvider, ProviderConfig] = {
+        EmbeddingProvider.GOOGLE_GENAI: GoogleGenAIConfig(),
         EmbeddingProvider.OPENAI: OpenAIConfig(),
-        EmbeddingProvider.GEMINI: GeminiConfig(),
         EmbeddingProvider.OLLAMA: OllamaConfig(),
     }
 
