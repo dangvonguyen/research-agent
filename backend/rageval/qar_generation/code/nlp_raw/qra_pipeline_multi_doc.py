@@ -7,7 +7,7 @@ from typing import Any
 
 from tqdm import tqdm
 
-from ..data_processing.postprocess import postprocess
+from ..data_processing.postprocess import CONFIG_KEY_TO_QUESTION_TYPE, postprocess
 from ..utils import get_client, read_config_json, read_prompt, write_config_json
 
 logging.basicConfig(
@@ -85,11 +85,15 @@ def process_tasks_and_assign(
         return
 
     for i, config_key in enumerate(config_keys):
+        # Get expected question type from mapping
+
+        expected_question_type = CONFIG_KEY_TO_QUESTION_TYPE.get(config_key)
         result_dict[config_key] = postprocess(
             client=client,
             response=responses[i],
             system_prompt=tasks[i]["system_prompt"],
             user_prompt=tasks[i]["user_prompt"],
+            expected_question_type=expected_question_type,
         )
 
 

@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -6,7 +7,7 @@ from typing import Any
 
 from tqdm import tqdm
 
-from ..data_processing.postprocess import postprocess
+from ..data_processing.postprocess import CONFIG_KEY_TO_QUESTION_TYPE, postprocess
 from ..utils import get_client, read_config_json, read_prompt, write_config_json
 
 logging.basicConfig(
@@ -41,11 +42,14 @@ def process_tasks_and_assign(
         return
 
     for i, config_key in enumerate(config_keys):
+        # Get expected question type from mapping
+        expected_question_type = CONFIG_KEY_TO_QUESTION_TYPE.get(config_key)
         result_dict[config_key] = postprocess(
             client=client,
             response=responses[i],
             system_prompt=tasks[i]["system_prompt"],
             user_prompt=tasks[i]["user_prompt"],
+            expected_question_type=expected_question_type,
         )
 
 
@@ -106,7 +110,9 @@ def process_qra_document(
                 {
                     "system_prompt": prompt_map[REF_KEY]["system_prompt"],
                     "user_prompt": prompt_map[REF_KEY]["user_prompt"].format(
-                        doc=doc_content, qa_pairs=config[config_key], title=title
+                        doc=doc_content,
+                        qa_pairs=json.dumps(config[config_key], ensure_ascii=False),
+                        title=title,
                     ),
                 }
             )
@@ -120,7 +126,7 @@ def process_qra_document(
         out_path.parent.mkdir(parents=True, exist_ok=True)
         write_config_json(out_path, config)
     except Exception as e:
-        logger.error(f"Failed to process {file_path}: ", e)
+        logger.exception(f"Failed to process {file_path}: {e}")
 
 
 def generate_qra(
@@ -184,6 +190,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate QRA for a single NLP research paper document."
     )
+    print("a")
     parser.add_argument(
         "--model-name",
         type=str,
