@@ -5,7 +5,7 @@ from typing import Any, Optional, cast
 from llama_index.core import Settings
 from llama_index.core.llms import LLM
 from llama_index.llms.anthropic import Anthropic
-from llama_index.llms.gemini import Gemini
+from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.llms.ollama import Ollama
 from llama_index.llms.openai import OpenAI
 from pydantic import BaseModel, Field
@@ -19,7 +19,7 @@ class LLMProvider(str, Enum):
     """Supported LLM providers."""
 
     ANTHROPIC = "anthropic"
-    GEMINI = "gemini"
+    GOOGLE_GENAI = "google_genai"
     OPENAI = "openai"
     OLLAMA = "ollama"
 
@@ -46,9 +46,9 @@ class LLMFactory:
             "llm_class": Anthropic,
             "api_key_attr": "ANTHROPIC_API_KEY",
         },
-        LLMProvider.GEMINI: {
-            "llm_class": Gemini,
-            "api_key_attr": "GEMINI_API_KEY",
+        LLMProvider.GOOGLE_GENAI: {
+            "llm_class": GoogleGenAI,
+            "api_key_attr": "GOOGLE_GENAI_API_KEY",
         },
         LLMProvider.OPENAI: {
             "llm_class": OpenAI,
@@ -171,6 +171,7 @@ class LLMService:
     def get_default_llm(self) -> LLM:
         """Get the default LLM."""
         return self._default_llm
+
 
 # Global service instance
 llm_service = LLMService()
