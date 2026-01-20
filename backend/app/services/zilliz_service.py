@@ -2,6 +2,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
+import cohere
 from pymilvus import DataType, Function, FunctionType, MilvusClient
 
 from app.core.config import settings
@@ -20,6 +21,7 @@ class ZillizService:
         self.vector_dimension = settings.ZILLIZ_VECTOR_DIMENSION
         self.client: MilvusClient | None = None
         self._collection_created = False
+        self._reranker: Any | None = None
 
     def connect(self) -> None:
         """
@@ -744,6 +746,65 @@ class ZillizService:
         except Exception as e:
             logger.exception("Error performing BM25 search in Zilliz: %s", str(e))
             raise
+
+    async def rerank(
+        self,
+        query: str,
+        documents: list[str],
+        top_k: int | None = None,
+    ) -> list[dict[str, Any]] | None:
+        """Rerank documents using Cohere reranking API.
+
+        Args:
+            query: User query string
+            documents: List of document texts to rerank
+            top_k: Optional limit on number of results to return
+
+        Returns:
+            List of dicts with index, score, text (or None on error)
+            Format: [{"index": int, "score": float, "text": str}, ...]
+        """
+        if not documents:
+            return []
+
+        try:
+            if self._reranker is None:
+                logger.info(
+                    "Initializing Cohere client for reranking (model: %s)",
+                    settings.RERANK_MODEL,
+                )
+                self._reranker = cohere.AsyncClientV2(api_key=settings.COHERE_API_KEY)
+                logger.info("Cohere client initialized successfully")
+
+            # Call Cohere rerank API
+            result = await self._reranker.rerank(
+                query=query,
+                documents=documents,
+                model=settings.RERANK_MODEL,
+                top_n=top_k if top_k else len(documents),
+            )
+
+            # Convert result to list of dicts
+            reranked = []
+            for item in result.results:
+                reranked.append(
+                    {
+                        "index": item.index,
+                        "score": float(item.relevance_score),
+                        "text": documents[item.index],
+                    }
+                )
+
+            logger.info(
+                "Reranked %d documents, returning top %d",
+                len(documents),
+                len(reranked),
+            )
+            return reranked
+
+        except Exception as e:
+            logger.exception("Error during reranking: %s", str(e))
+            return None
 
 
 # Create singleton instance

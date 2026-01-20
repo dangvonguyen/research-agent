@@ -93,6 +93,12 @@ class Settings(BaseSettings):
     EMBEDDING_PROVIDER: str = "openai"
     EMBEDDING_DIMENSION: int | None = None
 
+    # Reranking settings
+    RERANK_MODEL: str = "rerank-english-v3.0"
+    RERANK_DEVICE: str = "cpu"
+
+    COHERE_API_KEY: str
+
     # LLM Provider API Keys
     ANTHROPIC_API_KEY: Optional[str] = None
     GOOGLE_GENAI_API_KEY: Optional[str] = None
