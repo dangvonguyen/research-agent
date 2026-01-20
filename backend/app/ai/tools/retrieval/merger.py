@@ -1,8 +1,8 @@
-"""Merger tool for combining and deduplicating retrieval results."""
+"""Merger tool for combining, deduplicating, and reranking retrieval results."""
 
 import logging
 from collections import defaultdict
-from typing import Any
+from typing import Any, Literal
 
 from llama_index.core.workflow import Context
 from pydantic import BaseModel, Field
@@ -17,299 +17,247 @@ class MergerToolInput(BaseModel):
     """Input schema for MergerTool."""
 
     top_k: int = Field(
-        default=10,
+        default=20,
         ge=1,
         le=50,
-        description="Maximum number of results to return after merging and deduplication",
+        description="Maximum number of results to return after merging",
     )
-    rerank_strategy: str = Field(
-        default="max_score",
-        description=(
-            "Re-ranking strategy: 'max_score' (best score wins), "
-            "'avg_score' (average across strategies)"
-        ),
+    strategy: Literal["rrf"] = Field(
+        default="rrf",
+        # description=(
+        #     "Merge strategy: "
+        #     "'rrf' - merge semantic + keyword with Reciprocal Rank Fusion, "
+        #     "'metadata' - return metadata results directly without reranking"
+        # ),
     )
 
 
 class MergerTool(BaseTool):
-    """Merge and deduplicate retrieval results with automatic normalization.
-
-    Combines outputs from all retrieval tools, applies score normalization,
-    deduplicates by chunk_id, and re-ranks results. Has return_direct=True
-    to terminate agent immediately.
-    """
+    """Merge and deduplicate retrieval results with RRF or metadata-only mode."""
 
     name = "merge_results"
     input_schema = MergerToolInput
-    description = """Combine and deduplicate results from all retrieval tools.
+    description = """FINAL MERGE STEP FOR RETRIEVAL WORKFLOWS.
 
-This tool MUST be called as the FINAL step after using retrieval tools.
+This tool merges and deduplicates results from all previously executed retrieval tools.
 
-Features:
-- Merge semantic, keyword, and metadata results
-- Normalize BM25 scores to [0, 1] range
-- Deduplicate by chunk_id
-- Re-rank using max_score, or avg_score
-- Return top_k results
+MODES:
+- rrf: Merge semantic + keyword results with Reciprocal Rank Fusion
+- metadata: Return metadata search results directly (no reranking)
 
-Use when:
+WHEN TO USE:
 - You have completed all necessary retrieval operations
-- You are ready to return final results to the user
+- You are ready to return the final answer to the user
 
-Do NOT use when:
-- Before calling any retrieval tools
-- In the middle of retrieval strategy
+IMPORTANT RULES:
+- Do NOT call before retrieval tools
+- This tool must be called exactly once per workflow
+- Calling this tool terminates the agent immediately
 """
 
     async def arun(
-        self, ctx: Context, top_k: int = 10, rerank_strategy: str = "max_score"
+        self,
+        ctx: Context,
+        top_k: int = 20,
+        strategy: Literal["rrf"] = "rrf",
     ) -> ToolOutput:
         """Merge retrieval results from context store.
 
         Args:
             ctx: Workflow context with persisted tool results
             top_k: Maximum results to return
-            rerank_strategy: Scoring strategy
+            strategy: Merge strategy (rrf or metadata)
 
         Returns:
             ToolOutput with merged results
         """
         try:
-            # Retrieve persisted results (structure: {tool_name: [result1, result2, ...]})
+            top_k = 20
+            strategy = "rrf"
+            # Retrieve persisted results from context
             retrieval_results: dict[str, list[dict[str, Any]]] = await ctx.store.get(
                 "retrieval_results", default={}
             )
 
             if not retrieval_results:
-                return ToolOutput(
-                    type="error-json",
-                    value={
-                        "error": "no_retrieval_tools_called",
-                        "message": "No retrieval tools have been called",
-                    },
+                return self._error(
+                    "no_retrieval_tools_called",
+                    "No retrieval tools have been called",
                 )
 
-            # Collect all outputs and errors from all tool invocations
-            semantic_outputs = []
-            lexical_outputs = []
-            metadata_outputs = []
-            errors = []
+            # Merge results based on strategy
+            merged, errors = self._merge_results(retrieval_results, strategy)
 
-            for tool_name, result_list in retrieval_results.items():
-                for result in result_list:
-                    output = result["output"]
-
-                    if result["status"] == "error":
-                        errors.append(
-                            {
-                                "error": output.get("error"),
-                                "message": output.get("message"),
-                            }
-                        )
-                        continue
-
-                    # Collect successful outputs by tool type
-                    if tool_name == "semantic_search":
-                        semantic_outputs.append(output)
-                    elif tool_name == "keyword_search":
-                        lexical_outputs.append(output)
-                    elif tool_name == "metadata_search":
-                        metadata_outputs.append(output)
-
-            # Check if all tools failed
-            if not any([semantic_outputs, lexical_outputs, metadata_outputs]):
-                return ToolOutput(
-                    type="error-json",
-                    value={
-                        "error": "all_retrieval_tools_failed",
-                        "message": "All retrieval tools failed to return results",
-                        "errors": errors,
-                    },
+            if not merged:
+                return self._error(
+                    "all_retrieval_tools_failed",
+                    "All retrieval tools failed to return results",
+                    errors=errors,
                 )
 
-            # Merge all outputs
-            merged_result = self.merge_retrieval_outputs(
-                semantic_outputs=semantic_outputs,
-                lexical_outputs=lexical_outputs,
-                metadata_outputs=metadata_outputs,
-                top_k=top_k,
-                rerank_strategy=rerank_strategy,
-            )
-
-            # Add merge operation metadata
-            merged_result["merge_metadata"] = {
-                "tools_used": list(retrieval_results.keys()),
-                "total_calls": sum(
-                    len(results) for results in retrieval_results.values()
-                ),
-                "rerank_strategy": rerank_strategy,
-                "had_errors": bool(errors),
-                "errors": errors or None,
-            }
+            # Apply RRF ranking if strategy is rrf, otherwise just truncate
+            if strategy == "rrf":
+                final = self._apply_rrf(merged, top_k)
+            else:
+                final = merged[:top_k]
 
             logger.info(
-                "Merged %d results from %d tool calls (strategy: %s)",
-                merged_result["count"],
-                merged_result["merge_metadata"]["total_calls"],
-                rerank_strategy,
+                "Merged %d tools → %d results (strategy: %s)",
+                len(retrieval_results),
+                len(final),
+                strategy,
             )
 
-            return ToolOutput(type="json", value=merged_result)
+            return ToolOutput(
+                type="json",
+                value={"count": len(final), "records": final},
+            )
 
         except Exception as e:
             logger.exception("MergerTool failed unexpectedly: %s", str(e))
-            error_data = {
-                "error": "merge_retrieval_results_failed",
-                "message": "Failed to merge retrieval results",
-            }
-            return ToolOutput(type="error-json", value=error_data)
+            return self._error(
+                "merge_failed",
+                "Failed to merge retrieval results",
+            )
 
-    def as_tool(self):
-        """Convert to FunctionTool with return_direct=True for immediate termination."""
-        tool = super().as_tool()
-
-        # Set return_direct in tool metadata
-        tool.metadata.return_direct = True
-
-        return tool
-
-    @staticmethod
-    def normalize_bm25_score(bm25_score: float, max_bm25: float = 10.0) -> float:
-        """Normalize BM25 score to [0, 1] range.
+    def _merge_results(
+        self,
+        retrieval_results: dict[str, list[dict[str, Any]]],
+        strategy: Literal["rrf", "metadata"],
+    ) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+        """Merge and deduplicate results based on strategy.
 
         Args:
-            bm25_score: Raw BM25 score (unbounded, typically 0-10)
-            max_bm25: Expected maximum for scaling
+            retrieval_results: Dict of tool_name -> list of results
+            strategy: Merge strategy (rrf or metadata)
 
         Returns:
-            Capped normalized score in [0, 1]
+            Tuple of (merged results, errors)
         """
-        return min(bm25_score / max_bm25, 1.0)
+        chunks: dict[str, dict[str, Any]] = {}
+        errors: list[dict[str, str]] = []
 
-    @staticmethod
-    def deduplicate_and_rerank(
-        results: list[dict[str, Any]], strategy: str = "max_score"
-    ) -> list[dict[str, Any]]:
-        """Deduplicate by chunk_id and re-rank by strategy.
+        # Define which tools to use based on strategy
+        allowed_tools = (
+            {"metadata_search"}
+            if strategy == "metadata"
+            else {"semantic_search", "keyword_search"}
+        )
 
-        Groups results by chunk_id, applies ranking strategy, and sorts descending.
+        for tool_name, results in retrieval_results.items():
+            for result in results:
+                output = result.get("output", {})
 
-        Args:
-            results: Results with text, score, metadata, and strategy fields
-            strategy: max_score (highest) | avg_score (mean)
+                if result.get("status") == "error":
+                    errors.append(
+                        {
+                            "error": output.get("error"),
+                            "message": output.get("message"),
+                        }
+                    )
+                    continue
 
-        Returns:
-            Deduplicated results sorted by score descending
-        """
-        if not results:
-            return []
+                if tool_name not in allowed_tools:
+                    continue
 
-        # Group by chunk_id using defaultdict
-        chunks_by_id: dict[str, list[dict]] = defaultdict(list)
+                for record in output.get("records", []):
+                    chunk_id = record.get("metadata", {}).get("chunk_id")
+                    if not chunk_id:
+                        continue
 
-        for result in results:
-            chunk_id = result.get("metadata", {}).get("chunk_id")
-            if not chunk_id:
-                logger.warning("Result missing chunk_id, skipping")
-                continue
+                    # Deduplicate: track strategy and keep first occurrence
+                    if chunk_id not in chunks:
+                        chunks[chunk_id] = {
+                            **record,
+                            "strategy": tool_name.replace("_search", ""),
+                            "strategies": [],
+                        }
 
-            chunks_by_id[chunk_id].append(result)
-
-        # Merge duplicates based on strategy
-        merged_results = []
-
-        for chunk_results in chunks_by_id.values():
-            if strategy == "max_score":
-                # Use result with highest score
-                best_result = max(chunk_results, key=lambda x: x.get("score", 0.0))
-                merged_results.append(best_result)
-
-            elif strategy == "avg_score":
-                # Average scores across all strategies
-                avg_score = sum(r.get("score", 0.0) for r in chunk_results) / len(
-                    chunk_results
-                )
-                merged = chunk_results[0].copy()
-                merged["score"] = avg_score
-                merged["strategies"] = [
-                    r.get("strategy", "unknown") for r in chunk_results
-                ]
-                merged_results.append(merged)
-
-        # Sort by score descending
-        merged_results.sort(key=lambda x: x.get("score", 0.0), reverse=True)
+                    # Track which strategies found this chunk
+                    chunks[chunk_id]["strategies"].append(
+                        tool_name.replace("_search", "")
+                    )
 
         logger.info(
-            "Deduplication: %d results -> %d unique chunks",
-            len(results),
-            len(merged_results),
+            "Merged %d tools → %d unique chunks (strategy: %s)",
+            len(retrieval_results),
+            len(chunks),
+            strategy,
         )
 
-        return merged_results
+        return list(chunks.values()), errors
 
-    @staticmethod
-    def merge_retrieval_outputs(
-        semantic_outputs: list[dict[str, Any]] | None = None,
-        lexical_outputs: list[dict[str, Any]] | None = None,
-        metadata_outputs: list[dict[str, Any]] | None = None,
-        top_k: int = 10,
-        rerank_strategy: str = "max_score",
-    ) -> dict[str, Any]:
-        """Merge outputs from multiple retrieval tool calls.
+    def _apply_rrf(
+        self, results: list[dict[str, Any]], top_k: int
+    ) -> list[dict[str, Any]]:
+        """Apply RRF ranking to merged results.
 
         Args:
-            semantic_outputs: List of DenseRetrieverTool outputs
-            lexical_outputs: List of LexicalRetrieverTool outputs
-            metadata_outputs: List of MetadataRetrieverTool outputs
-            top_k: Maximum results after merging
-            rerank_strategy: max_score | avg_score
+            results: Merged results grouped by strategy
+            top_k: Maximum results to return
 
         Returns:
-            {"count": int, "records": list, "total_before_dedup": int, "strategies_used": list}
+            Top-k results ranked by RRF score
         """
-        all_results = []
+        # Group results by strategy for ranking
+        results_by_strategy: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
-        # Process all semantic outputs
-        if semantic_outputs:
-            for output in semantic_outputs:
-                if output and output.get("records"):
-                    for record in output["records"]:
-                        record["strategy"] = "semantic"
-                        all_results.append(record)
+        for result in results:
+            strategy = result.get("strategy", "unknown")
+            results_by_strategy[strategy].append(result)
 
-        # Process all lexical outputs with BM25 normalization
-        if lexical_outputs:
-            for output in lexical_outputs:
-                if output and output.get("records"):
-                    for record in output["records"]:
-                        original_score = record.get("score", 0.0)
-                        record["score"] = MergerTool.normalize_bm25_score(
-                            original_score
-                        )
-                        record["original_bm25_score"] = original_score
-                        record["strategy"] = "lexical"
-                        all_results.append(record)
+        # Compute RRF scores
+        rrf_scores = self._compute_rrf_scores(results_by_strategy)
 
-        # Process all metadata outputs (assign neutral score)
-        if metadata_outputs:
-            for output in metadata_outputs:
-                if output and output.get("records"):
-                    for record in output["records"]:
-                        record["score"] = 0.5  # Neutral score for unranked results
-                        record["strategy"] = "metadata"
-                        all_results.append(record)
+        # Attach RRF scores to results
+        for result in results:
+            chunk_id = result.get("metadata", {}).get("chunk_id")
+            if chunk_id:
+                result["rrf_score"] = rrf_scores.get(chunk_id, 0.0)
 
-        # Deduplicate and re-rank
-        merged = MergerTool.deduplicate_and_rerank(
-            all_results, strategy=rerank_strategy
-        )
+        # Sort by RRF score descending
+        results.sort(key=lambda x: x.get("rrf_score", 0.0), reverse=True)
 
-        # Limit to top_k
-        top_results = merged[:top_k]
+        logger.info("RRF ranking: %d results → top %d", len(results), top_k)
 
-        return {
-            "count": len(top_results),
-            "records": top_results,
-            "total_before_dedup": len(all_results),
-            "strategies_used": sorted({r.get("strategy") for r in all_results}),
-        }
+        return results[:top_k]
+
+    @staticmethod
+    def _compute_rrf_scores(
+        results_by_strategy: dict[str, list[dict[str, Any]]], k: int = 60
+    ) -> dict[str, float]:
+        """Compute RRF scores for chunks across strategies.
+
+        Args:
+            results_by_strategy: Dict mapping strategy name to ranked result list
+            k: RRF constant (default 60)
+
+        Returns:
+            Dict mapping chunk_id to RRF score
+        """
+        rrf_scores: dict[str, float] = defaultdict(float)
+
+        for _, strategy_results in results_by_strategy.items():
+            for rank, result in enumerate(strategy_results, start=1):
+                chunk_id = result.get("metadata", {}).get("chunk_id")
+                if not chunk_id:
+                    continue
+
+                # RRF formula: 1 / (k + rank)
+                rrf_scores[chunk_id] += 1.0 / (k + rank)
+
+        return rrf_scores
+
+    @staticmethod
+    def _error(code: str, message: str, **extra) -> ToolOutput:
+        """Create error ToolOutput."""
+        payload = {"error": code, "message": message}
+        if extra:
+            payload.update(extra)
+        return ToolOutput(type="error-json", value=payload)
+
+    def as_tool(self):
+        """Convert to FunctionTool with return_direct=True."""
+        tool = super().as_tool()
+        tool.metadata.return_direct = True
+        return tool

@@ -15,7 +15,6 @@ from app.ai.tools.retrieval import (
     DenseRetrieverTool,
     LexicalRetrieverTool,
     MergerTool,
-    MetadataRetrieverTool,
 )
 from app.services.rag_service import RAGService
 from app.types import ToolResultOutput
@@ -128,7 +127,11 @@ class RetrievalAgent(BaseAgent):
     comprehensive, deduplicated, and re-ranked results.
     """
 
-    def __init__(self, rag_service: RAGService | None = None):
+    def __init__(
+        self,
+        rag_service: RAGService | None = None,
+        system_prompt: str | None = None,
+    ):
         self._rag_service = rag_service
         self._llm: LLM | None = None
 
@@ -174,13 +177,11 @@ class RetrievalAgent(BaseAgent):
         # Create all retrieval tool instances
         dense_tool = DenseRetrieverTool(rag_service=rag_service)
         lexical_tool = LexicalRetrieverTool()
-        metadata_tool = MetadataRetrieverTool()
         merger_tool = MergerTool()
 
         return [
             dense_tool.as_tool(),
             lexical_tool.as_tool(),
-            metadata_tool.as_tool(),
             merger_tool.as_tool(),
         ]
 

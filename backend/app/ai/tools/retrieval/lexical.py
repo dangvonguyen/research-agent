@@ -18,10 +18,10 @@ class LexicalRetrievalInput(BaseModel):
         description="Keywords or terms to search for (e.g., 'ResNet', 'BERT', 'attention mechanism')"
     )
     top_k: int = Field(
-        default=10,
-        ge=1,
+        default=30,
+        ge=20,
         le=50,
-        description="Maximum number of matching chunks to retrieve (1-50)",
+        description="Maximum number of matching chunks to retrieve (20-50)",
     )
     metadata_filter: str | None = Field(
         default=None,

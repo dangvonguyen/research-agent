@@ -6,8 +6,9 @@ from typing import Optional
 
 import tiktoken
 
+from app.tools.parsers.text_processor import TextProcessor
+
 from .markdown_parser import MarkdownParser
-from .text_processor import TextProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class ChunkingStrategies:
     """Different chunking strategies for splitting paper content into chunks."""
 
     # Hard limit for all chunks across all strategies
-    MAX_CHUNK_TOKENS_HARD_LIMIT = 8000
+    MAX_CHUNK_TOKENS_HARD_LIMIT = 18000
 
     def __init__(
         self,
@@ -35,7 +36,6 @@ class ChunkingStrategies:
         self.max_chunk_tokens = max_chunk_tokens
         self.max_section_tokens = max_section_tokens
         self._tokenizer = tiktoken.encoding_for_model(model_name)
-        self.text_processor = TextProcessor(max_chunk_tokens)
         self.markdown_parser = MarkdownParser(min_content_length=0)
 
     def count_tokens(self, text: str) -> int:
@@ -52,9 +52,7 @@ class ChunkingStrategies:
 
         return sentences
 
-    def chunk_by_sentence(
-        self, content: str, chunk_separator: str = "\n\n"
-    ) -> list[str]:
+    def chunk_by_sentence(self, content: str, chunk_separator: str = "\n") -> list[str]:
         """
         Chunk content by sentences. Combines sentences until token limit is reached.
 
@@ -81,7 +79,7 @@ class ChunkingStrategies:
             separator_size = self.count_tokens(chunk_separator) if current_chunk else 0
             new_size = current_chunk_size + separator_size + sentence_size
 
-            # If a single sentence exceeds the limit, add it as its own chunk
+            # If a single sentence exceeds the limit, split it further
             if sentence_size > self.max_chunk_tokens:
                 # Save current chunk if any
                 if current_chunk:
@@ -89,8 +87,9 @@ class ChunkingStrategies:
                     current_chunk = []
                     current_chunk_size = 0
 
-                # Add the large sentence as its own chunk
-                chunks.append(sentence)
+                # Split the long sentence into smaller pieces
+                split_chunks = self._split_long_text(sentence)
+                chunks.extend(split_chunks)
             elif new_size > self.max_chunk_tokens and current_chunk:
                 # Current chunk is full, start a new one
                 chunks.append(chunk_separator.join(current_chunk))
@@ -135,6 +134,29 @@ class ChunkingStrategies:
         truncated_tokens = tokens[:max_tokens]
         return self._tokenizer.decode(truncated_tokens)
 
+    def _split_long_text(self, text: str) -> list[str]:
+        """
+        Split long text into chunks that fit within max_chunk_tokens.
+
+        Args:
+            text: Text to split
+
+        Returns:
+            List of chunks, each within max_chunk_tokens
+        """
+        if self.count_tokens(text) <= self.max_chunk_tokens:
+            return [text]
+
+        chunks = []
+        tokens = self._tokenizer.encode(text)
+
+        for i in range(0, len(tokens), self.max_chunk_tokens):
+            chunk_tokens = tokens[i : i + self.max_chunk_tokens]
+            chunk_text = self._tokenizer.decode(chunk_tokens)
+            chunks.append(chunk_text)
+
+        return chunks
+
     def _enforce_hard_limit(self, chunks: list[str]) -> list[str]:
         """
         Enforce hard limit of 8000 tokens on all chunks.
@@ -162,61 +184,38 @@ class ChunkingStrategies:
                 truncated_chunks.append(chunk)
         return truncated_chunks
 
-    def chunk_by_section_rule_based(
-        self, markdown_content: str, max_tokens: Optional[int] = None
-    ) -> list[str]:
+    def chunk_by_section_rule_based(self, markdown_content: str) -> list[str]:
         """
-        Chunk content by sections (rule-based). Each section is one chunk,
-        but sections exceeding max_tokens are truncated (redundant part removed).
+        Chunk content by sections (rule-based). Each section becomes one chunk.
+        No max token limit per chunk, only hard limit is enforced.
 
         Args:
             markdown_content: Markdown content to chunk
-            max_tokens: Maximum tokens per chunk (defaults to max_section_tokens)
 
         Returns:
-            List of chunk strings
+            List of chunk strings (one per section)
         """
         if not markdown_content.strip():
             return []
-
-        max_tokens = max_tokens or self.max_section_tokens
 
         # Parse markdown into sections
         sections = self.markdown_parser.parse_markdown_sections(markdown_content)
 
         chunks = []
-        for section_title, section_content in sections.items():
-            section_tokens = self.count_tokens(section_content)
-
+        for _section_title, section_content in sections.items():
             # Skip empty sections
-            if section_tokens == 0:
+            if not section_content.strip():
                 continue
 
-            if section_tokens <= max_tokens:
-                # Section fits in one chunk
-                chunks.append(section_content)
-            else:
-                # Section exceeds limit, truncate to max_tokens (remove redundant part)
-                logger.debug(
-                    "Section '%s' exceeds %d tokens (%d tokens), truncating to %d tokens",
-                    section_title,
-                    max_tokens,
-                    section_tokens,
-                    max_tokens,
-                )
-                truncated_content = self._truncate_to_tokens(
-                    section_content, max_tokens
-                )
-                chunks.append(truncated_content)
+            chunks.append(section_content)
 
-        # Enforce hard limit of 8000 tokens on all chunks (in case max_tokens > 8000)
+        # Enforce hard limit on all chunks
         chunks = self._enforce_hard_limit(chunks)
 
         logger.debug(
-            "Split content into %d chunks using rule-based strategy (%d sections, max %d tokens per section, hard limit %d)",
+            "Split content into %d chunks using rule-based strategy (%d sections, hard limit %d)",
             len(chunks),
             len(sections),
-            max_tokens,
             self.MAX_CHUNK_TOKENS_HARD_LIMIT,
         )
 
@@ -227,7 +226,7 @@ class ChunkingStrategies:
     ) -> list[str]:
         """
         Chunk content recursively by sections. First splits by sections,
-        then for each section, uses TextProcessor.split_into_chunks() to chunk recursively.
+        then for each section, chunks by sentences with token limit.
 
         Args:
             markdown_content: Markdown content to chunk

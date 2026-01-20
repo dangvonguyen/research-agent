@@ -16,10 +16,10 @@ class DenseRetrieverInput(BaseModel):
 
     query: str = Field(description="The query to retrieve relevant context for")
     top_k: int = Field(
-        default=10,
-        ge=1,
+        default=30,
+        ge=20,
         le=50,
-        description="Maximum number of relevant chunks to retrieve (1-50)",
+        description="Maximum number of relevant chunks to retrieve (20-50)",
     )
     metadata_filter: str | None = Field(
         default=None,

@@ -285,6 +285,39 @@ class MarkdownParser:
 
         return " ".join(content_parts).strip()
 
+    @staticmethod
+    def remove_references_section(content: str) -> str:
+        """
+        Remove the references section from markdown content.
+
+        Removes everything from the references heading until the next section heading
+        or until the end of the document.
+        """
+        lines = content.split("\n")
+        result_lines = []
+        in_references = False
+
+        for _, line in enumerate(lines):
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
+                # Check if this heading contains "references"
+                heading_text = re.sub(r"^#+\s*", "", stripped).lower().strip()
+                if "reference" in heading_text or "bibliography" in heading_text:
+                    in_references = True
+                    continue
+
+                if in_references:
+                    in_references = False
+                    result_lines.append(line)
+                    continue
+
+            if in_references:
+                continue
+
+            result_lines.append(line)
+
+        return "\n".join(result_lines)
+
     def parse_markdown_sections(self, markdown_text: str) -> dict[str, str]:
         """
         Parse markdown text into sections and their content, preserving all markdown syntax.
@@ -300,6 +333,8 @@ class MarkdownParser:
         # Find all headings in the raw markdown text using regex
         # Pattern matches markdown headings: # Heading, ## Heading, etc.
         heading_pattern = r"^(#{1,6})\s+(.+)$"
+        markdown_text = MarkdownParser.preprocess_footnote_sups(markdown_text)
+        markdown_text = MarkdownParser.remove_references_section(markdown_text)
         lines = markdown_text.split("\n")
 
         heading_positions = []  # List of (line_number, heading_level, heading_text)
@@ -350,6 +385,8 @@ class MarkdownParser:
                     "numbers": current_numbers,
                 }
             )
+
+        return {i["title"]: i["content"] for i in sections_data}
 
         # Second pass: merge short parent sections with first child
         sections = {}

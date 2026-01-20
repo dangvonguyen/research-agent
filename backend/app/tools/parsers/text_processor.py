@@ -13,53 +13,29 @@ logger = logging.getLogger(__name__)
 class TextProcessor:
     """Handles text splitting, chunking, and token counting."""
 
-    TABLE_TO_TEXT_PROMPT = """
-You will be given a table in Markdown format (with a Caption).
+    TABLE_TO_TEXT_PROMPT = """You are given a table in Markdown format, including its caption.
 
-You need to generate a natural language description of the contents of the table.
+Your task is to produce a coherent natural-language description that describes the information presented in the table.
 
-
-
-You can only generate content from the table content.
-
-Do not generate other related or unrelated information.
-
-
+Rules:
+- Use only the information explicitly contained in the table.
+- Do not add interpretations, background knowledge, or external details.
+- Do not mention anything that cannot be directly inferred from the table entries.
 
 Example:
-
-
-
-Table (Markdown)
-
 Table 1: PPL and WER figures for the dev and tsr-HE/CO(MMON) sets with 4-gram model and TLM.
-
-
-
 |     |        | dev | tsr-HE | tsr-CO |
-
 |-----|--------|-----|--------|--------|
-
 | PPL | 4-gram | 117 | 117    | 106    |
-
 |     | TLM    | 54  | 54     | 55     |
-
 | WER | 4-gram | 7.8 | 7.2    | 9.5    |
-
 |     | TLM    | 5.8 | 5.3    | 7.3    |
 
-
-
 Description:
-
 The table reports perplexity (PPL) and word error rate (WER) results for the dev, tsr-HE, and tsr-CO datasets using two language models: a 4-gram model and a TLM. For PPL, the 4-gram model yields values of 117 on both dev and tsr-HE, and 106 on tsr-CO, while the TLM achieves lower PPL values of 54 on dev and tsr-HE, and 55 on tsr-CO. For WER, the 4-gram model records error rates of 7.8 on dev, 7.2 on tsr-HE, and 9.5 on tsr-CO, whereas the TLM reduces WER to 5.8, 5.3, and 7.3 on the respective datasets.
 
-
-
 Table:
-
-{Table}
-
+{table}
 """
 
     def __init__(self, max_chunk_words: int, llm: Optional[LLM] = None):
@@ -197,7 +173,7 @@ Table:
                     else table_markdown
                 )
 
-            prompt = self.TABLE_TO_TEXT_PROMPT.format(Table=table_content)
+            prompt = self.TABLE_TO_TEXT_PROMPT.format(table=table_content)
             response = await self.llm.acomplete(prompt)
 
             if response and hasattr(response, "text"):
@@ -216,7 +192,9 @@ Table:
             logger.exception("Error converting table to text: %s", str(e))
             return table_markdown
 
-    async def split_into_paragraphs_async(self, content: str) -> list[str]:
+    async def split_into_paragraphs_async(
+        self, content: str, convert_tables: bool = False
+    ) -> list[str]:
         """
         Split content into paragraphs, converting tables to natural language text if LLM is available.
         Image-only paragraphs are attached to the previous paragraph to ensure
@@ -224,6 +202,7 @@ Table:
 
         Args:
             content: Content to split
+            convert_tables: Whether to convert tables to text
 
         Returns:
             List of paragraphs (tables converted to text if LLM available, images attached to previous paragraph)
@@ -234,7 +213,7 @@ Table:
         if self.llm:
             converted_paragraphs = []
             for paragraph in paragraphs:
-                if self.is_table_paragraph(paragraph):
+                if self.is_table_paragraph(paragraph) and convert_tables:
                     converted = await self.convert_table_to_text(paragraph)
                     converted_paragraphs.append(converted)
                 else:
@@ -362,7 +341,9 @@ Table:
 
         return paragraphs
 
-    async def split_into_chunks_async(self, content: str) -> list[str]:
+    async def split_into_chunks_async(
+        self, content: str, convert_tables: bool = False
+    ) -> list[str]:
         """
         Split content into chunks by paragraph, converting tables to text if LLM is available.
 
@@ -379,7 +360,7 @@ Table:
             return []
 
         # Split into paragraphs (tables converted to text if LLM available)
-        paragraphs = await self.split_into_paragraphs_async(content)
+        paragraphs = await self.split_into_paragraphs_async(content, convert_tables)
 
         return self._create_chunks_from_paragraphs(paragraphs)
 

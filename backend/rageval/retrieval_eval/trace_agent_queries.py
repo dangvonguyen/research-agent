@@ -1,20 +1,27 @@
 """Trace retrieval agent tool invocations to capture optimized queries.
 
 This script:
-1. Runs the retrieval agent on each query
+1. Runs the retrieval agent on each query with a specific prompt variant
 2. Captures which tools the agent calls and with what arguments
 3. Saves tool invocations for later evaluation
 
-This enables Level 2 (Agent-level) evaluation and provides optimized queries
-for Level 1 (Tool-level) evaluation.
+Prompt Variants:
+- baseline: Simple prompt, exact user query, RRF merge
+- pe: Prompt-engineered with query expansion, rerank merge
+
+Usage:
+    python trace_agent_queries.py --variant baseline
+    python trace_agent_queries.py --variant pe
 """
 
+import argparse
 import asyncio
 import json
 import logging
 import sys
 from collections import defaultdict
 from dataclasses import asdict, dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +33,10 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.ai.agents.retrieval import RetrievalAgent
+from app.ai.prompts import (
+    RETRIEVAL_AGENT_PROMPT_BASELINE,
+    RETRIEVAL_AGENT_PROMPT_PE,
+)
 from app.services.llm_service import default_llm
 
 logger = logging.getLogger(__name__)
@@ -33,6 +44,22 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
+
+
+class PromptVariant(str, Enum):
+    """Available prompt variants for A/B testing."""
+
+    BASELINE = "baseline"
+    PE = "pe"
+
+    @property
+    def prompt(self) -> str:
+        """Get the prompt string for this variant."""
+        if self == PromptVariant.BASELINE:
+            return RETRIEVAL_AGENT_PROMPT_BASELINE
+        elif self == PromptVariant.PE:
+            return RETRIEVAL_AGENT_PROMPT_PE
+        raise ValueError(f"Unknown variant: {self}")
 
 
 @dataclass
@@ -58,10 +85,12 @@ class TraceResult:
 class AgentTracer:
     """Traces retrieval agent tool invocations."""
 
-    def __init__(self, max_concurrency: int = 2):
+    def __init__(self, variant: PromptVariant, max_concurrency: int = 2):
+        self.variant = variant
         self.max_concurrency = max_concurrency
 
-        retrieval_agent_def = RetrievalAgent()
+        # Create agent with the specified prompt variant
+        retrieval_agent_def = RetrievalAgent(system_prompt=variant.prompt)
         self.agent = retrieval_agent_def.create(llm=default_llm)
 
     def load_queries(self, dataset_path: str) -> list[dict[str, Any]]:
@@ -122,25 +151,44 @@ class AgentTracer:
         )
 
     async def trace_all_queries(
-        self, dataset_path: str, output_path: str
+        self,
+        dataset_path: str,
+        output_path: str,
+        start_index: int = 0,
+        end_index: int | None = None,
     ) -> list[TraceResult]:
-        """Trace all queries and save results."""
-        queries = self.load_queries(dataset_path)
+        """Trace queries and save results.
 
-        semaphore = asyncio.Semaphore(self.max_concurrency)
+        Args:
+            dataset_path: Path to JSONL dataset
+            output_path: Path to save traced results
+            start_index: Start index in dataset (for resuming)
+            end_index: End index (exclusive), None for all remaining
+        """
+        all_queries = self.load_queries(dataset_path)
+        queries = all_queries[start_index:end_index]
+
+        logger.info(
+            f"Tracing {len(queries)} queries (index {start_index} to {end_index or len(all_queries)})"
+        )
+
         results: list[TraceResult] = []
 
-        async def _run(query_item):
-            async with semaphore:
-                return await self.trace_query(query_item)
+        for i, query_item in enumerate(queries):
+            global_idx = start_index + i
+            logger.info(
+                f"[{global_idx}/{len(all_queries)}] Processing query: {query_item['query']['query_id']}"
+            )
 
-        for i in range(0, len(queries)):
-            result = await _run(queries[i])
+            result = await self.trace_query(query_item)
             results.append(result)
 
             # Save incrementally (in case of crash)
-            if i % 10 == 0:
+            if (i + 1) % 10 == 0:
                 await self.save_results(results, output_path)
+                logger.info(f"Checkpoint saved at {i + 1} queries")
+
+            await asyncio.sleep(2)  # Rate limiting
 
         # Final save
         await self.save_results(results, output_path)
@@ -152,13 +200,9 @@ class AgentTracer:
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
 
-        tmp_path = out.with_suffix(".tmp")
-
-        async with aiofiles.open(tmp_path, "w") as f:
+        async with aiofiles.open(output_path, "w") as f:
             for r in results:
                 await f.write(json.dumps(asdict(r)) + "\n")
-
-        tmp_path.replace(output_path)
 
     def generate_summary(self, results: list[TraceResult]) -> dict[str, Any]:
         """Generate summary statistics from traced executions."""
@@ -194,24 +238,81 @@ class AgentTracer:
         return summary
 
 
+def parse_args() -> argparse.Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Trace retrieval agent tool invocations with different prompt variants."
+    )
+    parser.add_argument(
+        "--variant",
+        type=str,
+        choices=[v.value for v in PromptVariant],
+        required=True,
+        help="Prompt variant to use (baseline or pe)",
+    )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="/home/jarvis/Workspaces/research-agent/backend/rageval/qar_generation/results/DRAGONBALL_query.jsonl",
+        help="Path to the query dataset (JSONL)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="/home/jarvis/Workspaces/research-agent/backend/rageval/retrieval_eval/traced_queries",
+        help="Output directory for traced results",
+    )
+    parser.add_argument(
+        "--start-index",
+        type=int,
+        default=0,
+        help="Start index in dataset (for resuming)",
+    )
+    parser.add_argument(
+        "--end-index",
+        type=int,
+        default=None,
+        help="End index in dataset (exclusive, None for all)",
+    )
+    return parser.parse_args()
+
+
 async def main():
     """Main entry point."""
-    # Configuration
-    dataset_path = "/home/jarvis/Workspaces/research-agent/backend/rageval/qar_generation/results/DRAGONBALL_query.jsonl"
-    output_path = "/home/jarvis/Workspaces/research-agent/backend/rageval/retrieval_eval/traced_queries/agent_tool_calls.jsonl"
-    summary_path = "/home/jarvis/Workspaces/research-agent/backend/rageval/retrieval_eval/traced_queries/summary.json"
+    args = parse_args()
+
+    # Parse variant
+    variant = PromptVariant(args.variant)
+
+    # Build output paths with variant name
+    path = "/home/jarvis/Workspaces/research-agent/backend/rageval/retrieval_eval/agent/openai_final/traced_queries"
+    output_dir = Path(path)
+    output_path = output_dir / f"traced_{variant.value}.jsonl"
+    summary_path = output_dir / f"summary_{variant.value}.json"
+
+    logger.info(f"Running with variant: {variant.value}")
+    logger.info(f"Output: {output_path}")
 
     # Run tracing
-    tracer = AgentTracer()
-    traced_results = await tracer.trace_all_queries(dataset_path, output_path)
+    tracer = AgentTracer(variant=variant)
+    traced_results = await tracer.trace_all_queries(
+        dataset_path=args.dataset,
+        output_path=str(output_path),
+        start_index=args.start_index,
+        end_index=args.end_index,
+    )
 
     # Generate summary
     summary = tracer.generate_summary(traced_results)
+    summary["variant"] = variant.value
 
     # Save summary
-    Path(summary_path).parent.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     async with aiofiles.open(summary_path, "w") as f:
         await f.write(json.dumps(summary, indent=2))
+
+    logger.info(f"Tracing complete. Results saved to {output_path}")
+    logger.info(f"Summary: {summary}")
 
 
 if __name__ == "__main__":
