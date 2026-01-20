@@ -1,0 +1,23 @@
+{
+  "total_papers": 50,
+  "aggregate_statistics": {
+    "sentence_based": {
+      "min_chunks": 14,
+      "max_chunks": 53,
+      "avg_chunks": 33.62,
+      "total_papers": 50
+    },
+    "rule_based": {
+      "min_chunks": 12,
+      "max_chunks": 57,
+      "avg_chunks": 30.06,
+      "total_papers": 50
+    },
+    "recursive": {
+      "min_chunks": 23,
+      "max_chunks": 72,
+      "avg_chunks": 48.68,
+      "total_papers": 50
+    }
+  }
+}

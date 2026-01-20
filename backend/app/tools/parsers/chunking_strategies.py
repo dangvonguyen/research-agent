@@ -185,7 +185,7 @@ class ChunkingStrategies:
     ) -> list[str]:
         """
         Chunk content recursively by sections. First splits by sections,
-        then for each section, accumulates paragraphs until token limit is reached.
+        then for each section, uses TextProcessor.split_into_chunks() to chunk recursively.
 
         Args:
             markdown_content: Markdown content to chunk
@@ -202,49 +202,18 @@ class ChunkingStrategies:
         # Parse markdown into sections
         sections = self.markdown_parser.parse_markdown_sections(markdown_content)
 
+        # Create a TextProcessor with the correct max_tokens
+        temp_processor = TextProcessor(max_chunk_words=max_tokens)
+
         chunks = []
         for _section_title, section_content in sections.items():
-            # Split section into paragraphs
-            paragraphs = self.text_processor.split_into_paragraphs(section_content)
-
-            if not paragraphs:
+            if not section_content.strip():
                 # Empty section, skip
                 continue
 
-            # Accumulate paragraphs into chunks
-            current_chunk = []
-            current_chunk_size = 0
-
-            for paragraph in paragraphs:
-                paragraph_size = self.count_tokens(paragraph)
-
-                # If a single paragraph exceeds the limit, add it as its own chunk
-                if paragraph_size > max_tokens:
-                    # Save current chunk if any
-                    if current_chunk:
-                        chunks.append("\n\n".join(current_chunk))
-                        current_chunk = []
-                        current_chunk_size = 0
-
-                    # Add the large paragraph as its own chunk
-                    chunks.append(paragraph)
-                else:
-                    separator_tokens = self.count_tokens("\n\n") if current_chunk else 0
-                    new_size = current_chunk_size + separator_tokens + paragraph_size
-
-                    if new_size > max_tokens and current_chunk:
-                        # Current chunk is full, start a new one
-                        chunks.append("\n\n".join(current_chunk))
-                        current_chunk = [paragraph]
-                        current_chunk_size = paragraph_size
-                    else:
-                        # Add to current chunk
-                        current_chunk.append(paragraph)
-                        current_chunk_size = new_size
-
-            # Add any remaining chunk
-            if current_chunk:
-                chunks.append("\n\n".join(current_chunk))
+            # Use TextProcessor.split_into_chunks() which already implements recursive chunking
+            section_chunks = temp_processor.split_into_chunks(section_content)
+            chunks.extend(section_chunks)
 
         logger.debug(
             "Split content into %d chunks using recursive strategy (%d sections, max %d tokens per chunk)",
