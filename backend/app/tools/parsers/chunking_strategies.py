@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 class ChunkingStrategies:
     """Different chunking strategies for splitting paper content into chunks."""
 
+    # Hard limit for all chunks across all strategies
+    MAX_CHUNK_TOKENS_HARD_LIMIT = 8000
+
     def __init__(
         self,
         max_chunk_tokens: int = 500,
@@ -102,10 +105,14 @@ class ChunkingStrategies:
         if current_chunk:
             chunks.append(chunk_separator.join(current_chunk))
 
+        # Enforce hard limit of 8000 tokens on all chunks
+        chunks = self._enforce_hard_limit(chunks)
+
         logger.debug(
-            "Split content into %d chunks using sentence-based strategy (max %d tokens)",
+            "Split content into %d chunks using sentence-based strategy (max %d tokens, hard limit %d)",
             len(chunks),
             self.max_chunk_tokens,
+            self.MAX_CHUNK_TOKENS_HARD_LIMIT,
         )
 
         return chunks
@@ -127,6 +134,33 @@ class ChunkingStrategies:
         # Truncate to max_tokens and decode back
         truncated_tokens = tokens[:max_tokens]
         return self._tokenizer.decode(truncated_tokens)
+
+    def _enforce_hard_limit(self, chunks: list[str]) -> list[str]:
+        """
+        Enforce hard limit of 8000 tokens on all chunks.
+
+        Args:
+            chunks: List of chunk strings
+
+        Returns:
+            List of chunks, all truncated to MAX_CHUNK_TOKENS_HARD_LIMIT if needed
+        """
+        truncated_chunks = []
+        for chunk in chunks:
+            chunk_tokens = self.count_tokens(chunk)
+            if chunk_tokens > self.MAX_CHUNK_TOKENS_HARD_LIMIT:
+                logger.debug(
+                    "Chunk exceeds hard limit (%d tokens), truncating to %d tokens",
+                    chunk_tokens,
+                    self.MAX_CHUNK_TOKENS_HARD_LIMIT,
+                )
+                truncated_chunk = self._truncate_to_tokens(
+                    chunk, self.MAX_CHUNK_TOKENS_HARD_LIMIT
+                )
+                truncated_chunks.append(truncated_chunk)
+            else:
+                truncated_chunks.append(chunk)
+        return truncated_chunks
 
     def chunk_by_section_rule_based(
         self, markdown_content: str, max_tokens: Optional[int] = None
@@ -154,6 +188,10 @@ class ChunkingStrategies:
         for section_title, section_content in sections.items():
             section_tokens = self.count_tokens(section_content)
 
+            # Skip empty sections
+            if section_tokens == 0:
+                continue
+
             if section_tokens <= max_tokens:
                 # Section fits in one chunk
                 chunks.append(section_content)
@@ -171,11 +209,15 @@ class ChunkingStrategies:
                 )
                 chunks.append(truncated_content)
 
+        # Enforce hard limit of 8000 tokens on all chunks (in case max_tokens > 8000)
+        chunks = self._enforce_hard_limit(chunks)
+
         logger.debug(
-            "Split content into %d chunks using rule-based strategy (%d sections, max %d tokens per section)",
+            "Split content into %d chunks using rule-based strategy (%d sections, max %d tokens per section, hard limit %d)",
             len(chunks),
             len(sections),
             max_tokens,
+            self.MAX_CHUNK_TOKENS_HARD_LIMIT,
         )
 
         return chunks
@@ -215,11 +257,15 @@ class ChunkingStrategies:
             section_chunks = temp_processor.split_into_chunks(section_content)
             chunks.extend(section_chunks)
 
+        # Enforce hard limit of 8000 tokens on all chunks
+        chunks = self._enforce_hard_limit(chunks)
+
         logger.debug(
-            "Split content into %d chunks using recursive strategy (%d sections, max %d tokens per chunk)",
+            "Split content into %d chunks using recursive strategy (%d sections, max %d tokens per chunk, hard limit %d)",
             len(chunks),
             len(sections),
             max_tokens,
+            self.MAX_CHUNK_TOKENS_HARD_LIMIT,
         )
 
         return chunks
