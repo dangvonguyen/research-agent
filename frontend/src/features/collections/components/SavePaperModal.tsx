@@ -22,12 +22,19 @@ import type { Collection } from "../types";
 interface SavePaperModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialUrl?: string;
+  initialTab?: "query" | "url" | "upload";
 }
 
-export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
+export function SavePaperModal({
+  isOpen,
+  onClose,
+  initialUrl = "",
+  initialTab = "query",
+}: SavePaperModalProps) {
   const { collectionId } = useParams<{ collectionId?: string }>();
-  const [activeTab, setActiveTab] = useState("query");
-  const [url, setUrl] = useState("");
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [url, setUrl] = useState(initialUrl);
   const [query, setQuery] = useState("");
   const [maxResult, setMaxResult] = useState(5);
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>(
@@ -47,7 +54,7 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
   });
   const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Reset state when modal closes
+  // Reset state when modal closes or update when initialUrl/initialTab changes
   useEffect(() => {
     if (!isOpen) {
       setIsLoading(false);
@@ -69,8 +76,12 @@ export function SavePaperModal({ isOpen, onClose }: SavePaperModalProps) {
         clearTimeout(pollingTimeoutRef.current);
         pollingTimeoutRef.current = null;
       }
+    } else {
+      // When modal opens, set initial values
+      setUrl(initialUrl);
+      setActiveTab(initialTab);
     }
-  }, [isOpen, collectionId]);
+  }, [isOpen, collectionId, initialUrl, initialTab]);
 
   // Fetch collections when modal opens
   useEffect(() => {
