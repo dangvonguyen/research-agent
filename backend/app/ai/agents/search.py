@@ -4,7 +4,7 @@ from llama_index.core.agent.workflow import FunctionAgent
 from llama_index.core.llms import LLM
 from llama_index.core.tools import BaseTool as LlamaBaseTool
 
-from app.ai.prompts import SEARCH_AGENT_PROMPT
+from app.ai.prompt_agents import SEARCH_AGENT_PROMPT
 from app.ai.tools.research_search import ResearchSearchTool
 
 from .base import BaseAgent
@@ -24,7 +24,7 @@ class SearchAgent(BaseAgent):
     @property
     def name(self) -> str:
         """Unique identifier for the agent."""
-        return "search_agent"
+        return "web_search_agent"
 
     @property
     def description(self) -> str:
@@ -80,4 +80,3 @@ class SearchAgent(BaseAgent):
             tools=self.get_tools(),
             llm=llm,
         )
-

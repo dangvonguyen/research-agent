@@ -5,12 +5,12 @@ from collections.abc import Callable
 from llama_index.core.agent.workflow import FunctionAgent
 from llama_index.core.llms import LLM
 
-from app.ai.prompts import ORCHESTRATOR_AGENT_PROMPT
+from app.ai.prompt_agents import ORCHESTRATOR_AGENT_PROMPT
+from app.ai.tools import ImageAnalysisTool
 
-from .analysis import AnalysisAgent
 from .registry import agent_registry
+from .retrieval import RetrievalAgent
 from .search import SearchAgent
-from .synthesis import SynthesisAgent
 
 
 def initialize_agent_registry() -> None:
@@ -20,9 +20,8 @@ def initialize_agent_registry() -> None:
     """
 
     # Register all available agents
-    # agent_registry.register(AnalysisAgent)
-    # agent_registry.register(SynthesisAgent)
     agent_registry.register(SearchAgent)
+    agent_registry.register(RetrievalAgent)
 
 
 def create_orchestrator_agent(llm: LLM, event_callback: Callable) -> FunctionAgent:
@@ -44,9 +43,15 @@ def create_orchestrator_agent(llm: LLM, event_callback: Callable) -> FunctionAge
         llm=llm, event_callback=event_callback
     )
 
+    image_tool = ImageAnalysisTool()
+
+    tools = [
+        image_tool.as_tool(),
+    ]
+
     return FunctionAgent(
         name="Orchestrator_agent",
         system_prompt=ORCHESTRATOR_AGENT_PROMPT,
-        tools=delegation_tools,
+        tools=[*tools, *delegation_tools],
         llm=llm,
     )

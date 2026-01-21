@@ -10,13 +10,14 @@ from llama_index.core.memory import BaseMemory
 from llama_index.core.tools import BaseTool as LlamaBaseTool
 from llama_index.core.workflow import Context
 
-from app.ai.prompts import RETRIEVAL_AGENT_PROMPT
+from app.ai.prompt_agents import RETRIEVAL_AGENT_PROMPT
 from app.ai.tools.retrieval import (
     DenseRetrieverTool,
     LexicalRetrieverTool,
-    MergerTool,
+    MergeTool,
 )
 from app.services.rag_service import RAGService
+from app.services.zilliz_service import zilliz_service
 from app.types import ToolResultOutput
 
 from .base import BaseAgent
@@ -131,13 +132,15 @@ class RetrievalAgent(BaseAgent):
         self,
         rag_service: RAGService | None = None,
         system_prompt: str | None = None,
+        collection_names: list[str] | None = None,
     ):
         self._rag_service = rag_service
         self._llm: LLM | None = None
+        self._collection_names = collection_names
 
     @property
     def name(self) -> str:
-        return "retrieval_agent"
+        return "local_search_agent"
 
     @property
     def description(self) -> str:
@@ -182,7 +185,7 @@ class RetrievalAgent(BaseAgent):
         return [
             dense_tool.as_tool(),
             lexical_tool.as_tool(),
-            merger_tool.as_tool(),
+            merge_tool.as_tool(),
         ]
 
     def create(self, llm: LLM) -> StatefulRetrievalFunctionAgent:

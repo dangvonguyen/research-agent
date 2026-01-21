@@ -1,11 +1,11 @@
 from .dense import DenseRetrieverTool
 from .lexical import LexicalRetrieverTool
-from .merger import MergerTool
+from .merge import MergeTool
 from .metadata import MetadataRetrieverTool
 
 __all__ = [
     "DenseRetrieverTool",
     "LexicalRetrieverTool",
-    "MergerTool",
+    "MergeTool",
     "MetadataRetrieverTool",
 ]
