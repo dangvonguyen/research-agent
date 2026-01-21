@@ -647,6 +647,7 @@ class ChatRequest(BaseModel):
 
     conversation_id: UUID
     message_id: UUID  # ID of the user message just created
+    collection_names: list[str] | None = None
 
 
 class Response[T](BaseModel):

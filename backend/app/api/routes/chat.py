@@ -47,7 +47,11 @@ async def chat(session: SessionDep, chat_request: ChatRequest) -> ChatResponse:
         raise ValueError(f"User_message {user_message_id} not found")
 
     # Generate reply
-    ai_response = await chat_service.chat(user_message.content, history[:-1])
+    ai_response = await chat_service.chat(
+        user_message.content,
+        history[:-1],
+        collection_names=chat_request.collection_names,
+    )
     ai_message_db = await save_message(
         session, conversation_id, Role.ASSISTANT, ai_response
     )
@@ -86,7 +90,11 @@ async def stream_chat(
         try:
             # Stream from AI service with typed events
             async for event in chat_service.stream_chat(
-                user_message.content, history[:-1], conversation_id, ai_message_id
+                user_message.content,
+                history[:-1],
+                conversation_id,
+                ai_message_id,
+                collection_names=chat_request.collection_names,
             ):
                 # Wrap event and send to client
                 chunk = StreamChatChunk.create(event=event)

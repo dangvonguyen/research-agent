@@ -177,10 +177,15 @@ class RetrievalAgent(BaseAgent):
     def get_tools(self) -> list[LlamaBaseTool]:
         rag_service = self._get_rag_service()
 
-        # Create all retrieval tool instances
-        dense_tool = DenseRetrieverTool(rag_service=rag_service)
-        lexical_tool = LexicalRetrieverTool()
-        merger_tool = MergerTool()
+        # Create all retrieval tool instances with collection filter
+        dense_tool = DenseRetrieverTool(
+            rag_service=rag_service,
+            collection_names=self._collection_names,
+        )
+        lexical_tool = LexicalRetrieverTool(
+            collection_names=self._collection_names,
+        )
+        merge_tool = MergeTool(zilliz_service)
 
         return [
             dense_tool.as_tool(),

@@ -159,13 +159,17 @@ class AgentRegistry:
         return tools
 
     def create_delegation_tools_with_streaming(
-        self, llm: LLM, event_callback: Callable
+        self,
+        llm: LLM,
+        event_callback: Callable,
+        collection_names: list[str] | None = None,
     ) -> list[FunctionTool]:
         """Create delegation tools that emit sub-agent events.
 
         Args:
             llm: Language model
             event_callback: Async function(event, agent_name, agent_type)
+            collection_names: Optional list of collection names to filter retrieval
 
         Returns:
             List of FunctionTools with streaming support
@@ -174,7 +178,12 @@ class AgentRegistry:
 
         for metadata in self.list_enabled_agents():
             agent_class = self._agents[metadata.name]
-            instance = agent_class()
+            # Pass collection_names to agents that support it (like RetrievalAgent)
+            try:
+                instance = agent_class(collection_names=collection_names)
+            except TypeError:
+                # Agent doesn't accept collection_names parameter
+                instance = agent_class()
 
             # Create async wrapper that captures LLM and agent instance
             # Use default argument to capture instance in closure

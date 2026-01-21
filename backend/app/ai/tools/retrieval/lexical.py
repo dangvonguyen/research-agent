@@ -67,6 +67,43 @@ Example:
 - metadata_filter: year > 2020 AND venue == "ACL"
 """
 
+    def __init__(self, collection_names: list[str] | None = None):
+        """Initialize LexicalRetrieverTool.
+
+        Args:
+            collection_names: Optional list of collection names to filter results
+        """
+        self._collection_names = collection_names
+
+    def _build_filter(self, metadata_filter: str | None) -> str | None:
+        """Build combined filter expression with collection names.
+
+        Args:
+            metadata_filter: User-provided filter expression
+
+        Returns:
+            Combined filter expression or None
+        """
+        filters = []
+
+        # Add collection filter if specified
+        if self._collection_names:
+            # Use array_contains_any for filtering by collection names
+            escaped_names = [f'"{name}"' for name in self._collection_names]
+            collection_filter = (
+                f"array_contains_any(collection_names, [{', '.join(escaped_names)}])"
+            )
+            filters.append(collection_filter)
+
+        # Add user-provided filter
+        if metadata_filter:
+            filters.append(f"({metadata_filter})")
+
+        if not filters:
+            return None
+
+        return " AND ".join(filters)
+
     async def arun(
         self,
         query: str,
@@ -84,11 +121,14 @@ Example:
             ToolOutput with JSON containing BM25-ranked chunks and scores
         """
         try:
+            # Build combined filter with collection names
+            combined_filter = self._build_filter(metadata_filter)
+
             # Perform BM25 search
             search_results = zilliz_service.bm25_search(
                 query_text=query,
                 limit=top_k,
-                filter_expr=metadata_filter,
+                filter_expr=combined_filter,
                 output_fields=[
                     "chunk_id",
                     "paper_id",

@@ -24,12 +24,17 @@ def initialize_agent_registry() -> None:
     agent_registry.register(RetrievalAgent)
 
 
-def create_orchestrator_agent(llm: LLM, event_callback: Callable) -> FunctionAgent:
+def create_orchestrator_agent(
+    llm: LLM,
+    event_callback: Callable,
+    collection_names: list[str] | None = None,
+) -> FunctionAgent:
     """Create the top-level orchestrator agent.
 
     Args:
         llm: Language model for the orchestrator
         event_callback: Callback for streaming events
+        collection_names: Optional list of collection names to filter retrieval
 
     Returns:
         Configured FunctionAgent for orchestration
@@ -40,7 +45,7 @@ def create_orchestrator_agent(llm: LLM, event_callback: Callable) -> FunctionAge
 
     # Get delegation tools from registry
     delegation_tools = agent_registry.create_delegation_tools_with_streaming(
-        llm=llm, event_callback=event_callback
+        llm=llm, event_callback=event_callback, collection_names=collection_names
     )
 
     image_tool = ImageAnalysisTool()

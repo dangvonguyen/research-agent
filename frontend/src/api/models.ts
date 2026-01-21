@@ -32,6 +32,7 @@ export type MessageReasoningPart = components["schemas"]["MessageReasoningPart"]
 export type MessageTextPart = components["schemas"]["MessageTextPart"];
 export type MessageToolCallPart = components["schemas"]["MessageToolCallPart"];
 export type MessageToolResultPart = components["schemas"]["MessageToolResultPart"];
+export type MessageUIEventPart = components["schemas"]["MessageUIEventPart"];
 export type PaperContent = components["schemas"]["PaperContent"];
 export type PaperCreate = components["schemas"]["PaperCreate"];
 export type PaperResponse = components["schemas"]["PaperResponse"];

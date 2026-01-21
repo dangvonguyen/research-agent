@@ -136,7 +136,7 @@ export function SavePaperModal({
       // Create crawler job
       const jobResponse = await apiClient.crawlerJobs.create({
         config_name: "default_acl_anthology",
-        urls: isQueryMode ? undefined : [url.trim()],
+        urls: isQueryMode ? undefined : [url.trim().replace(/\.pdf$/, "")],
         query: isQueryMode ? query.trim() : undefined,
         max_papers: maxResult,
       });
@@ -664,16 +664,6 @@ export function SavePaperModal({
               </div>
             </TabsContent>
           </Tabs>
-        </div>
-
-        <div className="flex gap-2 pt-4 border-t mt-4">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="flex-1 bg-transparent"
-          >
-            Cancel
-          </Button>
         </div>
       </DialogContent>
     </Dialog>

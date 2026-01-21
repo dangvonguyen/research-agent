@@ -1,22 +1,18 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { apiClient } from "@/api";
-import type { Role, ToolResultOutput } from "@/api/models";
+import type { CollectionResponse, Role, ToolResultOutput } from "@/api/models";
 import {
+  type CitationsData,
   InlineCitation,
   InlineCitationCard,
   InlineCitationCardBody,
   InlineCitationCardTrigger,
   InlineCitationCarousel,
   InlineCitationCarouselContent,
-  InlineCitationCarouselItem,
   InlineCitationCarouselHeader,
   InlineCitationCarouselIndex,
-  InlineCitationCarouselPrev,
+  InlineCitationCarouselItem,
   InlineCitationCarouselNext,
+  InlineCitationCarouselPrev,
   InlineCitationSource,
-  type CitationsData,
   MessageAttachment,
   MessageAttachments,
   MessageContent,
@@ -33,8 +29,22 @@ import {
   ToolOutput,
   Message as UIMessage,
 } from "@/components/ai-elements";
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { cn } from "@/lib/utils";
+import { ChevronDown, Library, Square, SquareCheck } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { SavePaperModal } from "../../collections/components/SavePaperModal";
 import { useChat } from "../hooks/useChat";
 import type {
   Attachment,
@@ -45,8 +55,8 @@ import type {
   ToolState,
 } from "../types";
 import ChatComposer from "./ChatComposer";
-import { SavePaperModal } from "../../collections/components/SavePaperModal";
 
+import { apiClient } from "@/api";
 interface ChatProps {
   id: string;
   initialMessages: Message[];
@@ -60,6 +70,10 @@ function Chat({ id, initialMessages }: ChatProps) {
   const [isSavePaperModalOpen, setIsSavePaperModalOpen] = useState(false);
   const [paperUrlToSave, setPaperUrlToSave] = useState<string>("");
 
+  // Collection filtering state
+  const [collections, setCollections] = useState<CollectionResponse[]>([]);
+  const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
+
   const bottomRef = useAutoScroll({
     deps: messages,
     shouldScroll: (latest) => latest.role === "user",
@@ -71,7 +85,7 @@ function Chat({ id, initialMessages }: ChatProps) {
     setMessages((prev) => {
       if (prev.some((msg) => msg.id === messageId)) {
         return prev.map((msg) =>
-          msg.id === messageId ? { ...msg, content: contentParts } : msg
+          msg.id === messageId ? { ...msg, content: contentParts } : msg,
         );
       } else {
         return [
@@ -95,6 +109,25 @@ function Chat({ id, initialMessages }: ChatProps) {
       toast.error(msg);
       sessionStorage.removeItem("toastError");
     }
+  }, []);
+
+  // Fetch collections on mount
+  useEffect(() => {
+    apiClient.collections
+      .list()
+      .then(setCollections)
+      .catch((err) => {
+        console.error("Failed to fetch collections:", err);
+      });
+  }, []);
+
+  // Handle collection toggle
+  const handleCollectionToggle = useCallback((collectionName: string) => {
+    setSelectedCollections((prev) =>
+      prev.includes(collectionName)
+        ? prev.filter((name) => name !== collectionName)
+        : [...prev, collectionName],
+    );
   }, []);
 
   const handleSendMessage = async (content: string, files?: File[]) => {
@@ -127,6 +160,8 @@ function Chat({ id, initialMessages }: ChatProps) {
       await startChat({
         conversation_id: id,
         message_id: userMessage.id,
+        collection_names:
+          selectedCollections.length > 0 ? selectedCollections : undefined,
       });
 
       if (shouldNavigate) {
@@ -140,7 +175,7 @@ function Chat({ id, initialMessages }: ChatProps) {
 
   const findToolResult = (
     toolCallId: string,
-    contentParts: MessageContentPart[]
+    contentParts: MessageContentPart[],
   ): MessageToolResultPart | undefined => {
     return contentParts.find((part): part is MessageToolResultPart => {
       return part.type === "tool-result" && part.tool_call_id === toolCallId;
@@ -149,7 +184,7 @@ function Chat({ id, initialMessages }: ChatProps) {
 
   const getToolState = (
     result: MessageToolResultPart | undefined,
-    isStreaming: boolean
+    isStreaming: boolean,
   ): ToolState => {
     if (!result) {
       return isStreaming ? "input-streaming" : "input-available";
@@ -167,7 +202,7 @@ function Chat({ id, initialMessages }: ChatProps) {
   };
 
   const parseToolOutput = (
-    output: ToolResultOutput
+    output: ToolResultOutput,
   ): {
     output?: unknown;
     error?: string;
@@ -204,7 +239,7 @@ function Chat({ id, initialMessages }: ChatProps) {
     part: MessageContentPart,
     index: number,
     message: Message,
-    role: Role
+    role: Role,
   ) => {
     switch (part.type) {
       case "text": {
@@ -298,7 +333,7 @@ function Chat({ id, initialMessages }: ChatProps) {
 
             // Filter out invalid citations
             const validCitations = citationsArray.filter(
-              (citation) => citation && citation.url
+              (citation) => citation && citation.url,
             );
 
             if (validCitations.length === 0) return null;
@@ -366,12 +401,83 @@ function Chat({ id, initialMessages }: ChatProps) {
 
   return (
     <div className="w-full h-screen overflow-y-scroll scrollbar">
+      {/* Collection Selector - Top Left */}
+      {collections.length > 0 && (
+        <div className="absolute top-4 z-20 px-6 py-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer rounded-xl gap-2 pl-3 pr-2 bg-background hover:bg-accent/50 transition-colors"
+              >
+                <Library className="h-4 w-4" />
+                {selectedCollections.length > 0 ? (
+                  <span className="text-sm font-medium">
+                    {selectedCollections.length === 1
+                      ? selectedCollections[0]
+                      : `${selectedCollections.length} collections`}
+                  </span>
+                ) : (
+                  <span className="text-sm text-muted-foreground">
+                    All collections
+                  </span>
+                )}
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64 rounded-xl p-1">
+              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal px-2 py-1.5">
+                Filter by collection
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {collections.map((collection) => {
+                const isSelected = selectedCollections.includes(
+                  collection.name,
+                );
+                return (
+                  <DropdownMenuItem
+                    key={collection.id}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      handleCollectionToggle(collection.name);
+                    }}
+                    className="cursor-pointer rounded-lg gap-3 px-2 py-2"
+                  >
+                    {isSelected ? (
+                      <SquareCheck className="h-4 w-4 text-primary flex-shrink-0" />
+                    ) : (
+                      <Square className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    )}
+                    <span className="truncate">{collection.name}</span>
+                  </DropdownMenuItem>
+                );
+              })}
+              {selectedCollections.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      setSelectedCollections([]);
+                    }}
+                    className="cursor-pointer rounded-lg px-2 py-2 text-muted-foreground text-sm"
+                  >
+                    Clear selection
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
+
       <div
         className={cn(
           "grid w-full h-screen mx-auto px-8 max-w-208",
           messages.length === 0
             ? "grid-rows-[40vh_auto]"
-            : "grid-rows-[1fr_auto]"
+            : "grid-rows-[1fr_auto]",
         )}
       >
         {/* Messages Container */}
@@ -401,7 +507,7 @@ function Chat({ id, initialMessages }: ChatProps) {
 
                 <MessageContent className="w-full">
                   {message.content.map((part, index) =>
-                    renderContentPart(part, index, message, message.role)
+                    renderContentPart(part, index, message, message.role),
                   )}
                 </MessageContent>
               </UIMessage>

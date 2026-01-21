@@ -45,7 +45,10 @@ class ChatService:
         )
 
     async def chat(
-        self, user_message: list[MessageContentPart], history: list[MessageDB]
+        self,
+        user_message: list[MessageContentPart],
+        history: list[MessageDB],
+        collection_names: list[str] | None = None,
     ) -> str:
         # Extract text from content parts
         user_text = extract_text_from_content(user_message)
@@ -67,6 +70,7 @@ class ChatService:
         history: list[MessageDB],
         conversation_id: UUID,
         message_id: UUID,
+        collection_names: list[str] | None = None,
     ) -> AsyncGenerator[StreamEvent, None]:
         """Stream chat response with AI tool support."""
         # Extract text from content parts
@@ -80,7 +84,9 @@ class ChatService:
             multiplexer = EventMultiplexer()
 
             # Create orchestrator agent
-            orchestrator = create_orchestrator_agent(self.llm, multiplexer.emit_event)
+            orchestrator = create_orchestrator_agent(
+                self.llm, multiplexer.emit_event, collection_names=collection_names
+            )
 
             # Run orchestrator
             handler = orchestrator.run(user_msg=user_text, chat_history=chat_history)

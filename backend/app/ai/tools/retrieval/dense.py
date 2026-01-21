@@ -68,13 +68,48 @@ Example:
 year > 2020 AND venue == "ACL"
 """
 
-    def __init__(self, rag_service: RAGService):
+    def __init__(
+        self,
+        rag_service: RAGService,
+        collection_names: list[str] | None = None,
+    ):
         """Initialize DenseRetrieverTool.
 
         Args:
             rag_service: RAGService instance for performing retrieval
+            collection_names: Optional list of collection names to filter results
         """
         self.rag_service = rag_service
+        self._collection_names = collection_names
+
+    def _build_filter(self, metadata_filter: str | None) -> str | None:
+        """Build combined filter expression with collection names.
+
+        Args:
+            metadata_filter: User-provided filter expression
+
+        Returns:
+            Combined filter expression or None
+        """
+        filters = []
+
+        # Add collection filter if specified
+        if self._collection_names:
+            # Use array_contains_any for filtering by collection names
+            escaped_names = [f'"{name}"' for name in self._collection_names]
+            collection_filter = (
+                f"array_contains_any(collection_names, [{', '.join(escaped_names)}])"
+            )
+            filters.append(collection_filter)
+
+        # Add user-provided filter
+        if metadata_filter:
+            filters.append(f"({metadata_filter})")
+
+        if not filters:
+            return None
+
+        return " AND ".join(filters)
 
     async def arun(
         self,
@@ -93,11 +128,14 @@ year > 2020 AND venue == "ACL"
             ToolOutput with JSON containing chunks and metadata
         """
         try:
+            # Build combined filter with collection names
+            combined_filter = self._build_filter(metadata_filter)
+
             # Retrieve context only
             chunks = await self.rag_service.retrieve_chunks(
                 query=query,
                 top_k=top_k,
-                metadata_filter=metadata_filter,
+                metadata_filter=combined_filter,
             )
 
             # Format chunks for JSON output

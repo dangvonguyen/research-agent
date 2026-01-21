@@ -653,6 +653,8 @@ export interface components {
              * Format: uuid
              */
             message_id: string;
+            /** Collection Names */
+            collection_names?: string[] | null;
         };
         /**
          * ChatResponse
@@ -949,7 +951,7 @@ export interface components {
             /** @default user */
             role: components["schemas"]["Role"];
             /** Content */
-            content: (components["schemas"]["MessageTextPart"] | components["schemas"]["MessageFilePart"] | components["schemas"]["MessageReasoningPart"] | components["schemas"]["MessageToolCallPart"] | components["schemas"]["MessageToolResultPart"])[];
+            content: (components["schemas"]["MessageTextPart"] | components["schemas"]["MessageFilePart"] | components["schemas"]["MessageReasoningPart"] | components["schemas"]["MessageToolCallPart"] | components["schemas"]["MessageToolResultPart"] | components["schemas"]["MessageUIEventPart"])[];
             /** Id */
             id?: string | null;
             /** Attachments */
@@ -963,7 +965,7 @@ export interface components {
             /** @default user */
             role: components["schemas"]["Role"];
             /** Content */
-            content: (components["schemas"]["MessageTextPart"] | components["schemas"]["MessageFilePart"] | components["schemas"]["MessageReasoningPart"] | components["schemas"]["MessageToolCallPart"] | components["schemas"]["MessageToolResultPart"])[];
+            content: (components["schemas"]["MessageTextPart"] | components["schemas"]["MessageFilePart"] | components["schemas"]["MessageReasoningPart"] | components["schemas"]["MessageToolCallPart"] | components["schemas"]["MessageToolResultPart"] | components["schemas"]["MessageUIEventPart"])[];
             /**
              * Id
              * Format: uuid
@@ -1064,6 +1066,24 @@ export interface components {
             /** Tool Name */
             tool_name: string;
             output: components["schemas"]["ToolResultOutput"];
+        };
+        /**
+         * MessageUIEventPart
+         * @description UI event content part for structured UI elements like paper cards.
+         */
+        MessageUIEventPart: {
+            /**
+             * Type
+             * @default ui-event
+             * @constant
+             */
+            type: "ui-event";
+            /** Event Type */
+            event_type: string;
+            /** Data */
+            data: {
+                [key: string]: unknown;
+            };
         };
         /**
          * PaperContent
