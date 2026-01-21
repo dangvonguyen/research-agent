@@ -92,6 +92,8 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "text-embedding-3-small"
     EMBEDDING_PROVIDER: str = "openai"
     EMBEDDING_DIMENSION: int | None = None
+    EMBEDDING_DOCUMENT_PREFIX: str | None = None
+    EMBEDDING_QUERY_PREFIX: str | None = None
 
     # Reranking settings
     RERANK_MODEL: str = "rerank-english-v3.0"

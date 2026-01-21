@@ -177,6 +177,8 @@ class EmbeddingService:
     def __init__(self):
         """Initialize embedding service with default provider."""
         self._embed_model: BaseEmbedding
+        self._document_prefix: str | None = settings.EMBEDDING_DOCUMENT_PREFIX
+        self._query_prefix: str | None = settings.EMBEDDING_QUERY_PREFIX
 
         self.set_default_embed_model()
 
@@ -207,6 +209,48 @@ class EmbeddingService:
 
         model = EmbeddingModel(model_name=model_name, provider=provider, kwargs=kwargs)
         self._embed_model = EmbeddingFactory.create_embedding(model)
+
+    def _apply_prefix(self, text: str, prefix: str | None) -> str:
+        """Apply prefix to text if configured."""
+        if prefix:
+            return f"{prefix}{text}"
+        return text
+
+    async def embed_query(self, query: str) -> list[float]:
+        """Embed a query with optional query prefix.
+
+        Args:
+            query: The query text to embed
+
+        Returns:
+            Embedding vector
+        """
+        prefixed = self._apply_prefix(query, self._query_prefix)
+        return await self._embed_model.aget_text_embedding(prefixed)
+
+    async def embed_document(self, text: str) -> list[float]:
+        """Embed a document chunk with optional document prefix.
+
+        Args:
+            text: The document text to embed
+
+        Returns:
+            Embedding vector
+        """
+        prefixed = self._apply_prefix(text, self._document_prefix)
+        return await self._embed_model.aget_text_embedding(prefixed)
+
+    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Embed multiple document chunks with optional document prefix.
+
+        Args:
+            texts: List of document texts to embed
+
+        Returns:
+            List of embedding vectors
+        """
+        prefixed = [self._apply_prefix(t, self._document_prefix) for t in texts]
+        return await self._embed_model.aget_text_embedding_batch(prefixed)
 
     async def embed_paper_chunks(self, paper_id: UUID) -> None:
         """
@@ -251,9 +295,7 @@ class EmbeddingService:
                 title_embedding = None
                 if paper.title:
                     try:
-                        title_embedding = await self._embed_model.aget_text_embedding(
-                            paper.title
-                        )
+                        title_embedding = await self.embed_document(paper.title)
                         logger.debug(
                             "Generated title embedding for paper '%s'", paper.title
                         )
@@ -268,9 +310,7 @@ class EmbeddingService:
                 abstract_embedding = None
                 if paper.abstract:
                     try:
-                        abstract_embedding = (
-                            await self._embed_model.aget_text_embedding(paper.abstract)
-                        )
+                        abstract_embedding = await self.embed_document(paper.abstract)
                         logger.debug(
                             "Generated abstract embedding for paper '%s'", paper.title
                         )
@@ -333,10 +373,8 @@ class EmbeddingService:
                         continue
 
                     try:
-                        # Generate embedding for chunk content
-                        embedding = await self._embed_model.aget_text_embedding(
-                            content.content
-                        )
+                        # Generate embedding for chunk content (with document prefix)
+                        embedding = await self.embed_document(content.content)
 
                         if not embedding:
                             logger.warning(
