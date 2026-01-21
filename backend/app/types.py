@@ -454,6 +454,14 @@ class MessageToolResultPart(BaseModel):
     output: "ToolResultOutput"
 
 
+class MessageUIEventPart(BaseModel):
+    """UI event content part for structured UI elements like paper cards."""
+
+    type: Literal["ui-event"] = "ui-event"
+    event_type: str  # e.g., "paper_recommendations"
+    data: dict[str, Any]  # Structured data for the UI event
+
+
 class ToolResultOutput(BaseModel):
     """Result of a tool call. Supports multiple output types."""
 
@@ -468,6 +476,7 @@ MessageContentPart = (
     | MessageReasoningPart
     | MessageToolCallPart
     | MessageToolResultPart
+    | MessageUIEventPart
 )
 
 
@@ -539,6 +548,7 @@ class StreamContentType(str, Enum):
     REASONING = "reasoning"
     TOOL_CALL = "tool-call"
     TOOL_RESULT = "tool-result"
+    UI_EVENT = "ui-event"
 
 
 class AgentType(str, Enum):
@@ -546,6 +556,18 @@ class AgentType(str, Enum):
 
     ORCHESTRATOR = "orchestrator"
     SUB_AGENT = "sub-agent"
+
+
+class CustomUIEvent:
+    """Custom event type for UI events (e.g., paper recommendations).
+
+    This is a marker class to distinguish UI events from LlamaIndex events.
+    Agents can emit this type of event to trigger UI components on the frontend.
+    """
+
+    def __init__(self, event_type: str, data: dict[str, Any]):
+        self.event_type = event_type
+        self.data = data
 
 
 # Base class with shared metadata

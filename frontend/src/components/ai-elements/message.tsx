@@ -19,6 +19,20 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import {
+  InlineCitation,
+  InlineCitationCard,
+  InlineCitationCardBody,
+  InlineCitationCardTrigger,
+  InlineCitationCarousel,
+  InlineCitationCarouselContent,
+  InlineCitationCarouselItem,
+  InlineCitationCarouselHeader,
+  InlineCitationCarouselIndex,
+  InlineCitationCarouselPrev,
+  InlineCitationCarouselNext,
+  InlineCitationSource,
+} from "./inline-citation";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: "system" | "user" | "assistant";
@@ -31,7 +45,7 @@ export const Message = ({ className, from, ...props }: MessageProps) => (
       from === "user"
         ? "is-user ml-auto justify-end max-w-[70%]"
         : "is-assistant w-full",
-      className,
+      className
     )}
     {...props}
   />
@@ -49,7 +63,7 @@ export const MessageContent = ({
       "is-user:dark flex w-fit flex-col gap-2 overflow-hidden text-base",
       "group-[.is-user]:ml-auto group-[.is-user]:rounded-2xl group-[.is-user]:bg-secondary group-[.is-user]:px-4 group-[.is-user]:py-2 group-[.is-user]:text-foreground",
       "group-[.is-assistant]:text-foreground",
-      className,
+      className
     )}
     {...props}
   >
@@ -115,7 +129,7 @@ type MessageBranchContextType = {
 };
 
 const MessageBranchContext = createContext<MessageBranchContextType | null>(
-  null,
+  null
 );
 
 const useMessageBranch = () => {
@@ -123,7 +137,7 @@ const useMessageBranch = () => {
 
   if (!context) {
     throw new Error(
-      "MessageBranch components must be used within MessageBranch",
+      "MessageBranch components must be used within MessageBranch"
     );
   }
 
@@ -200,7 +214,7 @@ export const MessageBranchContent = ({
     <div
       className={cn(
         "grid gap-2 overflow-hidden [&>div]:pb-0",
-        index === currentBranch ? "block" : "hidden",
+        index === currentBranch ? "block" : "hidden"
       )}
       key={branch.key}
       {...props}
@@ -294,7 +308,7 @@ export const MessageBranchPage = ({
     <ButtonGroupText
       className={cn(
         "border-none bg-transparent text-muted-foreground shadow-none",
-        className,
+        className
       )}
       {...props}
     >
@@ -306,80 +320,135 @@ export const MessageBranchPage = ({
 export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 export const MessageResponse = memo(
-  ({ className, ...props }: MessageResponseProps) => (
-    <Streamdown
-      className={cn(
-        "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-        className,
-      )}
-      components={{
-        h1: ({ children }) => (
-          <h1 className="text-2xl font-semibold mt-4 mb-2">{children}</h1>
-        ),
-        h2: ({ children }) => (
-          <h2 className="text-xl font-semibold mt-4 mb-1">{children}</h2>
-        ),
-        h3: ({ children }) => (
-          <h3 className="text-lg font-semibold mt-4 mb-1">{children}</h3>
-        ),
-        h4: ({ children }) => (
-          <h4 className="text-base font-semibold mt-4 mb-0">{children}</h4>
-        ),
-        h5: ({ children }) => (
-          <h5 className="text-base font-semibold mt-0 mb-0">{children}</h5>
-        ),
-        h6: ({ children }) => (
-          <h6 className="text-base font-normal mt-0 mb-0">{children}</h6>
-        ),
-        p: ({ children }) => (
-          <p className="whitespace-pre-wrap leading-[1.75em] [&:has(+ul)]:mb-1 [&:has(+ol)]:mb-1">
-            {children}
-          </p>
-        ),
-        a: ({ href, children, ...props }) => (
-          <a
-            href={href}
-            className="flex items-center gap-1 hover:text-blue-600"
-            {...props}
-          >
-            <span className="underline decoration-dotted underline-offset-4">
+  ({ className, children, ...props }: MessageResponseProps) => {
+    return (
+      <Streamdown
+        className={cn(
+          "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+          className
+        )}
+        {...props}
+        components={{
+          h1: ({ children }) => (
+            <h1 className="text-2xl font-semibold mt-4 mb-2">{children}</h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-xl font-semibold mt-4 mb-1">{children}</h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-lg font-semibold mt-4 mb-1">{children}</h3>
+          ),
+          h4: ({ children }) => (
+            <h4 className="text-base font-semibold mt-4 mb-0">{children}</h4>
+          ),
+          h5: ({ children }) => (
+            <h5 className="text-base font-semibold mt-0 mb-0">{children}</h5>
+          ),
+          h6: ({ children }) => (
+            <h6 className="text-base font-normal mt-0 mb-0">{children}</h6>
+          ),
+          p: ({ children }) => (
+            <p className="whitespace-pre-wrap leading-[1.75em] [&:has(+ul)]:mb-1 [&:has(+ol)]:mb-1">
               {children}
-            </span>
-            <ArrowUpRight size={14} />
-          </a>
-        ),
-        ul: ({ children }) => {
-          const filter = Array.isArray(children)
-            ? children.filter((c) => typeof c !== "string" || c.trim() !== "")
-            : children;
-          return <ul className="list-disc ml-6">{filter}</ul>;
-        },
-        ol: ({ children }) => {
-          const filter = Array.isArray(children)
-            ? children.filter((c) => typeof c !== "string" || c.trim() !== "")
-            : children;
-          return <ol className="list-decimal ml-5.5">{filter}</ol>;
-        },
-        li: ({ children }) => {
-          const filter = Array.isArray(children)
-            ? children.filter((c) => typeof c !== "string" || c.trim() !== "")
-            : children;
-          return (
-            <li className="pl-2 leading-[1.75em] marker:mr-2 marker:font-bold">
-              {filter}
-            </li>
-          );
-        },
-        blockquote: ({ children }) => (
-          <blockquote className="my-2 border-muted-foreground/40 border-l-4 pl-4 text-muted-foreground italic">
-            {children}
-          </blockquote>
-        ),
-      }}
-      {...props}
-    />
-  ),
-  (prevProps, nextProps) => prevProps.children === nextProps.children,
+            </p>
+          ),
+          a: ({ href, children, ...props }) => {
+            // Check if this is a citation link: ([Title, Source](URL))
+            // We detect this by checking if:
+            // 1. The link text contains a comma (format: "Title, Source")
+            // 2. The URL looks like a paper URL (aclanthology.org, arxiv.org, etc.)
+            const linkText =
+              typeof children === "string" ? children : String(children);
+            const url = href || "";
+
+            const isPaperUrl =
+              url.includes("aclanthology.org") ||
+              url.includes("arxiv.org") ||
+              url.includes("arxiv.org/abs/") ||
+              url.includes("arxiv.org/pdf/");
+
+            const isCitation = linkText.includes(",") && isPaperUrl;
+
+            if (isCitation) {
+              // Parse citation: "Title, Source"
+              const parts = linkText.split(",").map((s) => s.trim());
+              const citationTitle = parts[0] || "";
+
+              // Render using ai-elements inline-citation with carousel
+              return (
+                <InlineCitation>
+                  <InlineCitationCard>
+                    <InlineCitationCardTrigger sources={[url]} />
+                    <InlineCitationCardBody>
+                      <InlineCitationCarousel>
+                        <InlineCitationCarouselHeader>
+                          <InlineCitationCarouselPrev />
+                          <InlineCitationCarouselNext />
+                          <InlineCitationCarouselIndex />
+                        </InlineCitationCarouselHeader>
+                        <InlineCitationCarouselContent>
+                          <InlineCitationCarouselItem>
+                            <InlineCitationSource
+                              title={citationTitle}
+                              url={url}
+                            />
+                          </InlineCitationCarouselItem>
+                        </InlineCitationCarouselContent>
+                      </InlineCitationCarousel>
+                    </InlineCitationCardBody>
+                  </InlineCitationCard>
+                </InlineCitation>
+              );
+            }
+
+            // Regular link
+            return (
+              <a
+                href={href}
+                className="flex items-center gap-1 hover:text-blue-600"
+                {...props}
+              >
+                <span className="underline decoration-dotted underline-offset-4">
+                  {children}
+                </span>
+                <ArrowUpRight size={14} />
+              </a>
+            );
+          },
+          ul: ({ children }) => {
+            const filter = Array.isArray(children)
+              ? children.filter((c) => typeof c !== "string" || c.trim() !== "")
+              : children;
+            return <ul className="list-disc ml-6">{filter}</ul>;
+          },
+          ol: ({ children }) => {
+            const filter = Array.isArray(children)
+              ? children.filter((c) => typeof c !== "string" || c.trim() !== "")
+              : children;
+            return <ol className="list-decimal ml-5.5">{filter}</ol>;
+          },
+          li: ({ children }) => {
+            const filter = Array.isArray(children)
+              ? children.filter((c) => typeof c !== "string" || c.trim() !== "")
+              : children;
+            return (
+              <li className="pl-2 leading-[1.75em] marker:mr-2 marker:font-bold">
+                {filter}
+              </li>
+            );
+          },
+          blockquote: ({ children }) => (
+            <blockquote className="my-2 border-muted-foreground/40 border-l-4 pl-4 text-muted-foreground italic">
+              {children}
+            </blockquote>
+          ),
+        }}
+      >
+        {children}
+      </Streamdown>
+    );
+  },
+  (prevProps, nextProps) => prevProps.children === nextProps.children
 );
 
 MessageResponse.displayName = "MessageResponse";
@@ -406,7 +475,7 @@ export function MessageAttachment({
     <div
       className={cn(
         "group relative size-24 overflow-hidden rounded-lg",
-        className,
+        className
       )}
       {...props}
     >
@@ -483,7 +552,7 @@ export function MessageAttachments({
     <div
       className={cn(
         "ml-auto flex w-fit flex-wrap items-start gap-2",
-        className,
+        className
       )}
       {...props}
     >
@@ -502,7 +571,7 @@ export const MessageToolbar = ({
   <div
     className={cn(
       "mt-4 flex w-full items-center justify-between gap-4",
-      className,
+      className
     )}
     {...props}
   >

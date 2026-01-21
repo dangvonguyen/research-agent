@@ -9,6 +9,7 @@ from app.types import (
     MessageTextPart,
     MessageToolCallPart,
     MessageToolResultPart,
+    MessageUIEventPart,
     StreamContentType,
 )
 
@@ -55,6 +56,9 @@ class ContentPartBuilder:
         # Initialize accumulator based on type
         if content_type in (StreamContentType.TEXT, StreamContentType.REASONING):
             self.current_data["text"] = ""
+        elif content_type == StreamContentType.UI_EVENT:
+            # UI events use dict data, initialized from metadata or empty
+            pass
 
     def add_delta(self, index: int, delta: str | dict[str, Any]) -> None:
         """Add incremental update to current content part."""
@@ -86,6 +90,16 @@ class ContentPartBuilder:
                 self.current_data["output"] = {"type": "text", "value": delta}
             else:
                 self.current_data["output"] = {"type": "json", "value": delta}
+
+        elif self.current_type == StreamContentType.UI_EVENT:
+            # UI events are atomic - delta contains the full data
+            if isinstance(delta, dict) and "event_type" in delta and "data" in delta:
+                self.current_data["event_type"] = delta["event_type"]
+                self.current_data["data"] = delta["data"]
+            else:
+                # Fallback: treat entire delta as data
+                self.current_data["data"] = delta
+                self.current_data["event_type"] = "unknown"
 
     def end_content(self, index: int) -> None:
         """Finalize current content part."""
@@ -162,6 +176,8 @@ class ContentPartBuilder:
             return MessageToolCallPart(**data)
         elif self.current_type == StreamContentType.TOOL_RESULT:
             return MessageToolResultPart(**data)
+        elif self.current_type == StreamContentType.UI_EVENT:
+            return MessageUIEventPart(**data)
 
         raise ValueError(f"Unknown content type: {self.current_type}")
 

@@ -3,8 +3,10 @@
 import logging
 import re
 from typing import Optional
+from typing import Optional
 
 import tiktoken
+from llama_index.core.llms import LLM
 from llama_index.core.llms import LLM
 
 logger = logging.getLogger(__name__)
@@ -45,8 +47,10 @@ Table:
         Args:
             max_chunk_words: Maximum tokens per chunk
             llm: Optional LLM instance for converting tables to text
+            llm: Optional LLM instance for converting tables to text
         """
         self.max_chunk_words = max_chunk_words
+        self.llm = llm
         self.llm = llm
         if not hasattr(self, "_tokenizer"):
             self._tokenizer = tiktoken.encoding_for_model("gpt-4o-mini")
