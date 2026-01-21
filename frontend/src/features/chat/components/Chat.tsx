@@ -45,6 +45,7 @@ import type {
   ToolState,
 } from "../types";
 import ChatComposer from "./ChatComposer";
+import { SavePaperModal } from "../../collections/components/SavePaperModal";
 
 interface ChatProps {
   id: string;
@@ -56,6 +57,8 @@ function Chat({ id, initialMessages }: ChatProps) {
   const [messages, setMessages] = useState(initialMessages);
   const { status, messageId, submitChat, startChat, stopChat, contentParts } =
     useChat();
+  const [isSavePaperModalOpen, setIsSavePaperModalOpen] = useState(false);
+  const [paperUrlToSave, setPaperUrlToSave] = useState<string>("");
 
   const bottomRef = useAutoScroll({
     deps: messages,
@@ -268,8 +271,8 @@ function Chat({ id, initialMessages }: ChatProps) {
                 key={`${message.id}-${index}-ui-event`}
                 data={data}
                 onAddToLibrary={(paper) => {
-                  // TODO: Implement add to library functionality
-                  console.log("Add to library:", paper);
+                  setPaperUrlToSave(paper.url);
+                  setIsSavePaperModalOpen(true);
                 }}
               />
             );
@@ -442,6 +445,15 @@ function Chat({ id, initialMessages }: ChatProps) {
           </div>
         </div>
       </div>
+      <SavePaperModal
+        isOpen={isSavePaperModalOpen}
+        onClose={() => {
+          setIsSavePaperModalOpen(false);
+          setPaperUrlToSave("");
+        }}
+        initialUrl={paperUrlToSave}
+        initialTab="url"
+      />
     </div>
   );
 }
